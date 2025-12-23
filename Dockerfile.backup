@@ -1,27 +1,25 @@
-# Multi-stage Dockerfile for Next.js 16 standalone build with Prisma - OPTIMIZED for Alpine
+# Multi-stage Dockerfile for Next.js 16 standalone build with Prisma
 
 # 1) Base deps for installing node modules
-FROM node:22-alpine AS deps
+FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 
-# Install minimal system deps for Alpine
-# Alpine uses apk instead of apt-get
-RUN apk add --no-cache \
+# Install minimal system deps
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
   openssl ca-certificates git \
-  cairo-dev pango-dev pixman-dev jpeg-dev giflib-dev libpng-dev \
-  python3 make g++
+  libcairo2-dev libpango1.0-dev libpixman-1-dev libjpeg-dev libgif-dev libpng-dev \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
 RUN npm install --legacy-peer-deps --prefer-offline --no-audit --ignore-scripts
-
-# 2) Builder stage
-FROM node:22-alpine AS builder
+FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apk add --no-cache \
-  openssl ca-certificates git build-base python3 pkgconf \
-  cairo-dev pango-dev pixman-dev jpeg-dev giflib-dev libpng-dev
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+  openssl ca-certificates build-essential python3 pkg-config \
+  libcairo2-dev libpango1.0-dev libpixman-1-dev libjpeg-dev libgif-dev libpng-dev \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=deps /app/node_modules ./node_modules
 # Copy prisma directory for migrations and client generation (before COPY . .)
@@ -35,21 +33,29 @@ RUN npx prisma generate
 # Force webpack builder for stability with middleware
 RUN npm run build -- --webpack
 
-# 3) Runner: minimal Alpine image serving the app
-FROM node:22-alpine AS runner
+# 3) Runner: minimal image serving the app
+
+# 3) Runner: minimal image serving the app, with OpenSSL installed
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
   NEXT_TELEMETRY_DISABLED=1 \
   PORT=3000 \
   HOSTNAME=0.0.0.0
 
-# Install minimal runtime dependencies for Alpine
-# ca-certificates for HTTPS, openssl for security
-RUN apk add --no-cache \
-  ca-certificates openssl \
-  postgresql-client
+# Install OpenSSL and PostgreSQL 16 client (match server major version)
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    wget gnupg ca-certificates lsb-release && \
+    echo "deb http://apt.postgresql.org/pub/repos/apt $(. /etc/os-release; echo $VERSION_CODENAME)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+    wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg && \
+    apt-get update -y && apt-get install -y --no-install-recommends \
+    openssl postgresql-client-16 && \
+    rm -rf /var/lib/apt/lists/*
+## Install tsx globally for running TypeScript scripts in production container (notifications generator)
+RUN npm i -g tsx
 
-## Install tsx locally as dependency (not global)
+
+## Install production dependencies needed by custom server.js (socket.io, jsonwebtoken, etc.)
 COPY package.json package-lock.json ./
 RUN npm install --legacy-peer-deps --prefer-offline --no-audit --production --ignore-scripts
 

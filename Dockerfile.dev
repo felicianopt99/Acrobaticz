@@ -1,0 +1,37 @@
+# Dev Dockerfile for Next.js 16 app with custom server and hot reload - OPTIMIZED for Alpine
+# Uses nodemon to restart server.js on server changes; Next dev handles HMR for frontend
+FROM node:22-alpine AS dev
+WORKDIR /app
+
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NODE_ENV=development \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
+
+# Install minimal OS deps for Alpine (including build tools for canvas)
+RUN apk add --no-cache \
+    openssl ca-certificates git build-base python3 pkgconf \
+    cairo-dev pango-dev pixman-dev jpeg-dev giflib-dev libpng-dev
+
+# Install global tools for development
+RUN npm i -g nodemon tsx
+
+# Copy only package manifests first for better caching
+COPY package.json package-lock.json ./
+RUN npm install --legacy-peer-deps
+
+# Copy the rest of the source
+COPY . .
+
+# Ensure Prisma Client exists in the image for first run
+RUN npx prisma generate || true
+
+# Make dev entrypoint executable
+RUN chmod +x ./scripts/dev-entrypoint.sh || true
+
+# Expose dev port
+EXPOSE 3000
+
+# Default command: run custom server with nodemon for server reloads
+# Frontend code gets HMR via Next in dev mode (server.js creates Next with dev=true)
+ENTRYPOINT ["sh", "./scripts/dev-entrypoint.sh"]
