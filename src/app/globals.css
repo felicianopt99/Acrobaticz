@@ -1,3 +1,6 @@
+/* === NOTIFICATION ANIMATIONS === */
+@import '../styles/notifications.css';
+
 /* === THEME PRESETS === */
 .theme-neon {
   --background: 240 7% 8%;

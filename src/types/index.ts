@@ -64,6 +64,7 @@ export interface RolePermissions {
   canManageRentals: boolean;
   canViewReports: boolean;
   canManageMaintenance: boolean;
+  canManagePartners: boolean;
 }
 
 export interface Category {
@@ -139,7 +140,7 @@ export interface Rental {
 
 
 // New types for Quotes
-export type QuoteItemType = 'equipment' | 'service' | 'fee';
+export type QuoteItemType = 'equipment' | 'service' | 'fee' | 'subrental';
 
 export interface QuoteItem {
   id: string; // Unique ID for the quote item line
@@ -153,10 +154,14 @@ export interface QuoteItem {
   // For fee
   feeId?: string;
   feeName?: string;
+  // For subrental (from partner)
+  partnerId?: string;
+  partnerName?: string;
+  subrentalCost?: number; // What we pay the partner (per day per unit)
   // Common fields
-  quantity?: number; // For equipment/services
-  unitPrice?: number; // For equipment/services
-  days?: number; // For equipment/services
+  quantity?: number; // For equipment/services/subrentals
+  unitPrice?: number; // For equipment/services (what client pays per day per unit)
+  days?: number; // For equipment/services/subrentals
   lineTotal: number;
   description?: string; // Optional description for the item
   // For fees
@@ -232,4 +237,82 @@ export interface Notification {
   actionUrl?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Partner types for subrental and agency management
+export type PartnerType = 'provider' | 'agency' | 'both';
+
+export interface Partner {
+  id: string;
+  name: string;
+  companyName?: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  notes?: string;
+  clientId?: string;
+  partnerType: PartnerType;
+  commission?: number;
+  isActive: boolean;
+  version?: number;
+  createdBy?: string;
+  updatedBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  client?: Client;
+  subrentals?: Subrental[];
+  jobReferences?: JobReference[];
+  _count?: {
+    subrentals: number;
+    jobReferences?: number;
+  };
+}
+
+export type JobReferenceStatus = 'pending' | 'active' | 'completed' | 'archived';
+
+export interface JobReference {
+  id: string;
+  partnerId: string;
+  eventId?: string;
+  quoteId?: string;
+  clientName?: string;
+  referralNotes?: string;
+  commission?: number;
+  status: JobReferenceStatus;
+  referralDate: Date;
+  version?: number;
+  createdBy?: string;
+  updatedBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  partner?: Partner;
+  event?: Event;
+  quote?: Quote;
+}
+
+export type SubrentalStatus = 'pending' | 'active' | 'returned' | 'cancelled';
+
+export interface Subrental {
+  id: string;
+  partnerId: string;
+  eventId?: string;
+  equipmentName: string;
+  equipmentDesc?: string;
+  quantity: number;
+  dailyRate: number;
+  totalCost: number;
+  startDate: Date;
+  endDate: Date;
+  status: SubrentalStatus;
+  invoiceNumber?: string;
+  notes?: string;
+  version?: number;
+  createdBy?: string;
+  updatedBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  partner?: Partner;
+  event?: Event;
 }

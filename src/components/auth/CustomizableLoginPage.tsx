@@ -121,10 +121,12 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include cookies
         body: JSON.stringify(data),
       });
 
       console.log('Response status:', response.status);
+      console.log('Response cookies:', document.cookie);
 
       if (!response.ok) {
         const error = await response.json();
@@ -139,7 +141,12 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
         description: `Welcome back, ${result.user.name}!`,
       });
 
-      router.push('/dashboard');
+      // Wait a bit longer for cookies to be fully set
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      console.log('Cookies after delay:', document.cookie);
+      
+      router.push('/app-select');
       router.refresh();
     } catch (error) {
       console.error('Login error:', error);

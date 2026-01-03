@@ -3,7 +3,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 // @ts-ignore
 import jwt from 'jsonwebtoken';
-import { prisma } from '@/lib/db-enhanced';
+import { prisma } from '@/lib/db';
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -71,12 +71,38 @@ export async function POST(request: NextRequest) {
       token,
     });
 
+    // Check if request is secure - trust X-Forwarded-Proto header from reverse proxy
+    // In production, we're behind nginx which handles HTTPS termination
+    const xForwardedProto = request.headers.get('x-forwarded-proto');
+    const isSecure = process.env.NODE_ENV === 'production' && (xForwardedProto === 'https' || request.nextUrl.protocol === 'https:');
+
     // Set token in HTTP-only cookie
+    // Use 'Lax' sameSite to allow cookie to be sent on top-level navigation (like window.location.href)
+    // while still providing protection against CSRF attacks
     response.cookies.set('auth-token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isSecure,
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60, // 24 hours
+      path: '/',
+    });
+
+    // Also set a non-HttpOnly version for client-side detection
+    response.cookies.set('auth-cookie', 'true', {
+      httpOnly: false,
+      secure: isSecure,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60, // 24 hours
+      path: '/',
+    });
+
+    console.log('Auth token set in cookie', {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: 'strict',
+      path: '/',
+      xForwardedProto: xForwardedProto,
+      nodeEnv: process.env.NODE_ENV,
     });
 
     return response;

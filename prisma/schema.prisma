@@ -9,29 +9,35 @@ datasource db {
 }
 
 model User {
-  id             String         @id @default(cuid())
-  name           String
-  username       String         @unique
-  password       String
-  role           String
-  isActive       Boolean        @default(true)
-  version        Int            @default(1)
-  lastLoginAt    DateTime?
-  photoUrl       String?
-  nif            String?
-  iban           String?
-  contactPhone   String?
-  contactEmail   String?
-  emergencyPhone String?
-  isTeamMember   Boolean        @default(false)
-  teamTitle      String?
-  teamBio        String?
-  teamCoverPhoto String?
-  createdBy      String?
-  updatedBy      String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  notifications  Notification[]
+  id              String         @id @default(cuid())
+  name            String
+  username        String         @unique
+  password        String
+  role            String
+  isActive        Boolean        @default(true)
+  version         Int            @default(1)
+  lastLoginAt     DateTime?
+  photoUrl        String?
+  nif             String?
+  iban            String?
+  contactPhone    String?
+  contactEmail    String?
+  emergencyPhone  String?
+  isTeamMember    Boolean        @default(false)
+  teamTitle       String?
+  teamBio         String?
+  teamCoverPhoto  String?
+  createdBy       String?
+  updatedBy       String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  notifications   Notification[]
+  cloudFolders    CloudFolder[]
+  cloudFiles      CloudFile[]
+  fileActivities  FileActivity[]
+  storageQuota    StorageQuota?
+  tags            TagDefinition[]
+  batchOperations BatchOperation[]
 
   @@index([username])
   @@index([role])
@@ -112,40 +118,43 @@ model MaintenanceLog {
 }
 
 model Client {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String
   contactPerson String?
   email         String?
   phone         String?
   address       String?
   notes         String?
-  version       Int      @default(1)
+  version       Int        @default(1)
   createdBy     String?
   updatedBy     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
   events        Event[]
   quotes        Quote[]
+  partnerLinks  Partner[]  // Partners that are also clients (agency partners we work with directly)
 
   @@index([name])
   @@index([email])
 }
 
 model Event {
-  id         String   @id @default(cuid())
-  name       String
-  clientId   String
-  location   String
-  startDate  DateTime
-  endDate    DateTime
-  assignedTo String?
-  version    Int      @default(1)
-  createdBy  String?
-  updatedBy  String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  client     Client   @relation(fields: [clientId], references: [id])
-  rentals    Rental[]
+  id           String         @id @default(cuid())
+  name         String
+  clientId     String
+  location     String
+  startDate    DateTime
+  endDate      DateTime
+  assignedTo   String?
+  version      Int            @default(1)
+  createdBy    String?
+  updatedBy    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  client       Client         @relation(fields: [clientId], references: [id])
+  rentals      Rental[]
+  subrentals   Subrental[]
+  jobReferences JobReference[]
 
   @@index([clientId])
   @@index([startDate])
@@ -166,8 +175,8 @@ model Rental {
 }
 
 model Quote {
-  id             String      @id @default(cuid())
-  quoteNumber    String      @unique
+  id             String         @id @default(cuid())
+  quoteNumber    String         @unique
   name           String
   location       String
   clientId       String?
@@ -178,21 +187,22 @@ model Quote {
   startDate      DateTime
   endDate        DateTime
   subTotal       Float
-  discountAmount Float       @default(0)
-  discountType   String      @default("fixed")
-  taxRate        Float       @default(0)
-  taxAmount      Float       @default(0)
+  discountAmount Float          @default(0)
+  discountType   String         @default("fixed")
+  taxRate        Float          @default(0)
+  taxAmount      Float          @default(0)
   totalAmount    Float
-  status         String      @default("Draft")
+  status         String         @default("Draft")
   notes          String?
   terms          String?
-  version        Int         @default(1)
+  version        Int            @default(1)
   createdBy      String?
   updatedBy      String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  client         Client?     @relation(fields: [clientId], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  client         Client?        @relation(fields: [clientId], references: [id])
   items          QuoteItem[]
+  jobReferences  JobReference[]
 
   @@index([clientId])
   @@index([status])
@@ -453,4 +463,321 @@ model TranslationHistory {
   @@index([translationId])
   @@index([version])
   @@index([createdAt])
+}
+
+// Partner (can be provider, agency, or both)
+model Partner {
+  id            String         @id @default(cuid())
+  name          String
+  companyName   String?
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  website       String?
+  notes         String?
+  clientId      String?        // Link to Client if this partner is also a direct client (for agencies)
+  partnerType   String         @default("provider")  // "provider" | "agency" | "both"
+  commission    Float?         // For agency partners - commission percentage
+  isActive      Boolean        @default(true)
+  version       Int            @default(1)
+  createdBy     String?
+  updatedBy     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  client        Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  subrentals    Subrental[]
+  jobReferences JobReference[]
+
+  @@index([name])
+  @@index([isActive])
+  @@index([partnerType])
+  @@index([clientId])
+}
+
+// JobReference (track agency referrals and job sources)
+model JobReference {
+  id            String    @id @default(cuid())
+  partnerId     String
+  eventId       String?
+  quoteId       String?
+  clientName    String?   // Client name if referred by partner
+  referralNotes String?   // How/when referral came
+  commission    Float?    // Commission amount or override
+  status        String    @default("pending")  // pending, active, completed, archived
+  referralDate  DateTime  @default(now())
+  version       Int       @default(1)
+  createdBy     String?
+  updatedBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  partner       Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  event         Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  quote         Quote?    @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+
+  @@index([partnerId])
+  @@index([eventId])
+  @@index([quoteId])
+  @@index([status])
+  @@index([referralDate])
+}
+
+// Subrental (equipment rented from a partner for a specific event/period)
+model Subrental {
+  id              String    @id @default(cuid())
+  partnerId       String
+  eventId         String?
+  equipmentName   String
+  equipmentDesc   String?
+  quantity        Int       @default(1)
+  dailyRate       Float
+  totalCost       Float
+  startDate       DateTime
+  endDate         DateTime
+  status          String    @default("pending") // pending, active, returned, cancelled
+  invoiceNumber   String?
+  notes           String?
+  version         Int       @default(1)
+  createdBy       String?
+  updatedBy       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  partner         Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  event           Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([partnerId])
+  @@index([eventId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+// Cloud Storage - Google Drive Clone
+model CloudFolder {
+  id           String        @id @default(cuid())
+  name         String
+  parentId     String?
+  ownerId      String
+  color        String?       @default("#1F2937")
+  isStarred    Boolean       @default(false)
+  isTrashed    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  parent       CloudFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children     CloudFolder[] @relation("FolderHierarchy")
+  files        CloudFile[]
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  sharedFolders FolderShare[]
+  tags         FolderTag[]
+
+  @@index([ownerId])
+  @@index([parentId])
+  @@index([isTrashed])
+  @@index([isStarred])
+}
+
+model CloudFile {
+  id           String        @id @default(cuid())
+  name         String
+  originalName String
+  mimeType     String
+  size         BigInt
+  storagePath  String        // Path on external disk
+  url          String?       // Public URL if applicable
+  folderId     String?
+  ownerId      String
+  isPublic     Boolean       @default(false)
+  isStarred    Boolean       @default(false)
+  isTrashed    Boolean       @default(false)
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  folder       CloudFolder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  shares       FileShare[]
+  versions     FileVersion[]
+  activities   FileActivity[]
+  tags         FileTag[]
+
+  @@index([ownerId])
+  @@index([folderId])
+  @@index([isTrashed])
+  @@index([isStarred])
+  @@index([createdAt])
+}
+
+model FileShare {
+  id           String    @id @default(cuid())
+  fileId       String
+  sharedWith   String?   // userId or null for public link
+  permission   String    @default("view") // view, comment, edit, admin
+  shareToken   String?   @unique
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  file         CloudFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+  @@index([shareToken])
+  @@index([expiresAt])
+}
+
+model FolderShare {
+  id           String       @id @default(cuid())
+  folderId     String
+  sharedWith   String?      // userId or null for public link
+  permission   String       @default("view") // view, comment, edit, admin
+  shareToken   String?      @unique
+  expiresAt    DateTime?
+  createdAt    DateTime     @default(now())
+  folder       CloudFolder  @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([folderId])
+  @@index([shareToken])
+  @@index([expiresAt])
+}
+
+model FileVersion {
+  id           String    @id @default(cuid())
+  fileId       String
+  versionNum   Int
+  storagePath  String    // Path to version on external disk
+  size         BigInt
+  uploadedAt   DateTime  @default(now())
+  uploadedBy   String?
+  file         CloudFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+  @@index([versionNum])
+  @@unique([fileId, versionNum])
+}
+
+model FileActivity {
+  id           String    @id @default(cuid())
+  fileId       String
+  userId       String
+  action       String    // created, uploaded, renamed, moved, shared, deleted, restored
+  details      String?   // JSON string with action details
+  createdAt    DateTime  @default(now())
+  file         CloudFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model StorageQuota {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  usedBytes             BigInt   @default(0)
+  quotaBytes            BigInt   @default(10737418240) // 10GB default
+  roleDefaultQuotaBytes BigInt?  // Track what the role default was
+  cloudEnabled          Boolean  @default(false) // Whether user has access to cloud features
+  lastUpdated           DateTime @default(now()) @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quotaHistory          QuotaChangeHistory[]
+
+  @@index([userId])
+}
+
+model QuotaChangeHistory {
+  id            String   @id @default(cuid())
+  userId        String
+  oldQuotaBytes BigInt
+  newQuotaBytes BigInt
+  changedBy     String   // Admin user ID who made the change
+  reason        String?  // Optional reason for the change
+  changedAt     DateTime @default(now())
+  
+  storageQuota  StorageQuota @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([changedAt])
+  @@index([changedBy])
+}
+
+model BackupJob {
+  id              String   @id @default(cuid())
+  jobType         String   // 'daily', 'weekly', 'monthly', 'manual'
+  status          String   // 'pending', 'running', 'completed', 'failed'
+  startedAt       DateTime?
+  completedAt     DateTime?
+  backupFile      String?  // Path to backup file
+  fileSize        BigInt?  // Size of backup in bytes
+  duration        Int?     // Duration in seconds
+  error           String?  // Error message if failed
+  createdAt       DateTime @default(now())
+  
+  @@index([jobType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Tag system for organizing files
+model TagDefinition {
+  id           String      @id @default(cuid())
+  name         String      // Tag name (e.g., "Project", "Important", "Draft")
+  ownerId      String      // User who created the tag
+  color        String?     @default("#3B82F6") // Color code for UI
+  description  String?     // Optional description
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  owner        User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  files        FileTag[]
+  folders      FolderTag[]
+
+  @@index([ownerId])
+  @@unique([ownerId, name])
+}
+
+model FileTag {
+  id           String      @id @default(cuid())
+  fileId       String
+  tagId        String
+  addedAt      DateTime    @default(now())
+
+  file         CloudFile   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  tag          TagDefinition @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, tagId])
+  @@index([fileId])
+  @@index([tagId])
+}
+
+model FolderTag {
+  id           String      @id @default(cuid())
+  folderId     String
+  tagId        String
+  addedAt      DateTime    @default(now())
+
+  folder       CloudFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  tag          TagDefinition @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, tagId])
+  @@index([folderId])
+  @@index([tagId])
+}
+
+// Batch operation history for tracking bulk actions
+model BatchOperation {
+  id           String      @id @default(cuid())
+  operationType String     // 'move', 'delete', 'share', 'tag'
+  status       String      // 'pending', 'processing', 'completed', 'failed'
+  fileCount    Int
+  folderCount  Int         @default(0)
+  
+  performedBy  String
+  initiatedAt  DateTime    @default(now())
+  completedAt  DateTime?
+  
+  details      String?     // JSON with operation details
+  error        String?     // Error message if failed
+
+  user         User        @relation(fields: [performedBy], references: [id], onDelete: Cascade)
+
+  @@index([performedBy])
+  @@index([status])
+  @@index([initiatedAt])
 }

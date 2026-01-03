@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Bell, AlertTriangle, Calendar, Wrench, Package, CheckCircle } from 'lucide-react';
+import { Bell, AlertTriangle, Calendar, Wrench, Package, CheckCircle, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,19 +9,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppContext } from '@/contexts/AppContext';
 import { useTranslate } from '@/contexts/TranslationContext';
 import { formatDistanceToNow } from 'date-fns';
-
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  priority: 'low' | 'medium' | 'high';
-  isRead: boolean;
-  entityType?: string;
-  entityId?: string;
-  actionUrl?: string;
-  createdAt: string;
-}
+import { motion, AnimatePresence } from 'framer-motion';
+import { NotificationItem } from '@/components/notifications/NotificationItem';
+import { Notification } from '@/types';
 
 export function NotificationsSection({ noCard = false }: { noCard?: boolean }) {
   const { currentUser } = useAppContext();
@@ -106,6 +96,12 @@ export function NotificationsSection({ noCard = false }: { noCard?: boolean }) {
     }
   };
 
+  const markAllAsRead = async () => {
+    const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    await markAsRead(unreadIds);
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'event_reminder':
@@ -139,12 +135,23 @@ export function NotificationsSection({ noCard = false }: { noCard?: boolean }) {
       <>
         <div className="flex items-center p-6 pb-2">
           <h3 className="text-sm font-medium flex items-center">
-            <Bell className="mr-2 h-4 w-4" />
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity }}>
+              <Bell className="mr-2 h-4 w-4" />
+            </motion.div>
             {notificationsText}
           </h3>
         </div>
         <div className="p-6 pt-0">
-          <p className="text-sm text-muted-foreground">{loadingText}</p>
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <motion.div
+                key={i}
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"
+              />
+            ))}
+          </div>
         </div>
       </>
     );
@@ -160,22 +167,37 @@ export function NotificationsSection({ noCard = false }: { noCard?: boolean }) {
 
   const content = (
     <>
-      <div className="flex items-center justify-between p-6 pb-2">
-        <h3 className="text-sm font-medium flex items-center">
-          <Bell className="mr-2 h-4 w-4" />
-          {notificationsText}
+      <div className="flex items-center justify-between p-6 pb-3 border-b border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-950/20">
+        <div>
+          <h3 className="text-base font-semibold flex items-center text-gray-900 dark:text-gray-100">
+            <motion.div animate={{ rotate: unreadCount > 0 ? [0, 15, -15, 0] : 0 }} transition={{ duration: 0.5, repeat: unreadCount > 0 ? Infinity : 0, repeatDelay: 3 }}>
+              <Bell className="mr-2 h-5 w-5" />
+            </motion.div>
+            {notificationsText}
+            {unreadCount > 0 && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 200 }}
+              >
+                <Badge variant="destructive" className="ml-3 text-xs font-bold animate-pulse-subtle">
+                  {unreadCount} unread
+                </Badge>
+              </motion.div>
+            )}
+          </h3>
           {unreadCount > 0 && (
-            <Badge variant="destructive" className="ml-2 text-xs">
-              {unreadCount}
-            </Badge>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              You have {unreadCount} notification{unreadCount !== 1 ? 's' : ''} waiting
+            </p>
           )}
-        </h3>
+        </div>
         <div className="flex items-center space-x-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setShowRead(!showRead)}
-            className="text-xs"
+            className="text-xs hover:bg-blue-100 dark:hover:bg-blue-900/20"
           >
             {showRead ? hideReadText : showAllText}
           </Button>
@@ -183,74 +205,61 @@ export function NotificationsSection({ noCard = false }: { noCard?: boolean }) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => markAsRead(notifications.filter(n => !n.isRead).map(n => n.id))}
-              className="text-xs"
+              onClick={markAllAsRead}
+              className="text-xs hover:bg-green-100 dark:hover:bg-green-900/20"
             >
-              {markAllReadText}
+              Mark all read
             </Button>
           )}
         </div>
       </div>
-      <div className="p-6 pt-0">
+      <div className="p-6">
         {displayedNotifications.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {showRead ? noNotificationsText : noUnreadNotificationsText}
-          </p>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-8"
+          >
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <Bell className="h-12 w-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+            </motion.div>
+            <p className="text-sm text-muted-foreground">
+              {showRead ? noNotificationsText : noUnreadNotificationsText}
+            </p>
+          </motion.div>
         ) : (
-          <ScrollArea className="h-48">
-            <div className="space-y-3">
-              {displayedNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-3 rounded-lg border transition-colors ${
-                    notification.isRead
-                      ? 'bg-muted/50 border-muted'
-                      : 'bg-background border-border hover:bg-muted/50'
-                  }`}
-                >
-                  <div className="flex items-start space-x-3">
-                    <div className={`p-1 rounded-full ${
-                      notification.priority === 'high'
-                        ? 'bg-destructive/10 text-destructive'
-                        : notification.priority === 'medium'
-                        ? 'bg-primary/10 text-primary'
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                      {getIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <p className="text-sm font-medium truncate">
-                          {notification.title}
-                        </p>
-                        <Badge variant={getPriorityColor(notification.priority)} className="text-xs">
-                          {notification.priority}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        {notification.message}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                        </p>
-                        {!notification.isRead && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => markAsRead([notification.id])}
-                            className="text-xs h-6 px-2"
-                          >
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            {markReadText}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <ScrollArea className="h-96">
+            <AnimatePresence mode="popLayout">
+              <div className="space-y-3 pr-4">
+                {displayedNotifications.map((notification) => (
+                  <motion.div
+                    key={notification.id}
+                    layout
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <NotificationItem
+                      notification={notification}
+                      onMarkAsRead={(id) => markAsRead([id])}
+                      onDelete={deleteNotification}
+                      onClick={() => {
+                        if (!notification.isRead) {
+                          markAsRead([notification.id]);
+                        }
+                        if (notification.actionUrl) {
+                          window.location.href = notification.actionUrl;
+                        }
+                      }}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            </AnimatePresence>
           </ScrollArea>
         )}
       </div>

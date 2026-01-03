@@ -1,4 +1,4 @@
-import { Home, CalendarDays, Users, FileText, Package, Wrench, Shield, Settings, Palette, Users2, FileType, Languages } from 'lucide-react';
+import { Home, CalendarDays, Users, FileText, Package, Wrench, Shield, Settings, Palette, Users2, FileType, Languages, Handshake, Cloud, HardDrive } from 'lucide-react';
 
 export type NavItem = {
   href?: string;
@@ -16,6 +16,7 @@ export const navItems: NavItem[] = [
   ] },
   { href: '/maintenance', label: 'Maintenance', icon: Wrench, requiredRole: ['Admin', 'Manager', 'Technician'] },
   { href: '/clients', label: 'Clients', icon: Users, requiredRole: ['Admin', 'Manager', 'Employee'] },
+  { href: '/partners', label: 'Partners', icon: Handshake, requiredRole: ['Admin', 'Manager'] },
   { href: '/team', label: 'Team', icon: Users2, requiredRole: ['Admin', 'Manager', 'Technician', 'Employee', 'Viewer'] },
   { label: 'Rentals', icon: CalendarDays, requiredRole: ['Admin', 'Manager', 'Employee'], subItems: [
     { href: '/rentals/calendar', label: 'Event Calendar' },
@@ -33,5 +34,6 @@ export const adminItems: NavItem[] = [
   { href: '/admin/translations', label: 'Translation Management', icon: Languages, requiredRole: ['Admin'] },
   { href: '/admin/customization', label: 'Customization', icon: Palette, requiredRole: ['Admin'] },
   { href: '/admin/pdf-branding', label: 'PDF Branding', icon: FileType, requiredRole: ['Admin'] },
+  { href: '/admin/storage-dashboard', label: 'Storage Dashboard', icon: HardDrive, requiredRole: ['Admin'] },
   { href: '/admin/settings', label: 'System Settings', icon: Settings, requiredRole: ['Admin'] },
 ];

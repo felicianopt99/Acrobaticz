@@ -1,0 +1,48 @@
+# Docker Compose Override for Development
+# Use: docker-compose -f docker-compose.dev.yml up
+
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: av-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: av_rentals
+      POSTGRES_USER: av_user
+      POSTGRES_PASSWORD: dev_password
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U av_user -d av_rentals"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: av-rentals-dev
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://av_user:dev_password@postgres:5432/av_rentals
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - JWT_SECRET=dev-secret-key-for-local-development-only
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      - /mnt/backup_drive/av-rentals/cloud-storage:/mnt/backup_drive/av-rentals/cloud-storage
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_dev_data:

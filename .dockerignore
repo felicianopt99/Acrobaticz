@@ -1,9 +1,11 @@
-# Dependencies
+# Dependencies (prevents massive node_modules copy)
 node_modules
 
 # Next.js build output
 .next
 out
+dist
+build
 
 # Logs
 logs
@@ -11,22 +13,63 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 
-# Git
+# Git & version control
 .git
 .gitignore
+.gitattributes
 
-# Env
+# Environment variables (secrets)
 .env
 .env.local
 .env.*.local
 
-# Misc
+# Development
+.vscode
+.idea
 .DS_Store
 .vercel
-.idea
-.vscode
 coverage
+*.swp
+*.swo
+*~
 
-# Ensure prisma directory is included
+# Documentation (not needed in Docker image)
+docs/
+*.md
+README.md
+CHANGELOG.md
+LICENSE
+
+# Test files
+__tests__
+tests
+*.test.js
+*.spec.js
+jest.config.js
+
+# Configuration files - KEEP FOR BUILD
+# .prettierrc.json
+# .editorconfig
+# .eslintrc.json
+# tsconfig.json
+# next.config.ts
+# tailwind.config.ts
+# postcss.config.mjs
+
+# IDE metadata
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# CI/CD (not needed in image)
+.github/
+.gitlab-ci.yml
+.circleci/
+
+# Ensure critical directories ARE included
 !prisma/
+!public/
+!scripts/

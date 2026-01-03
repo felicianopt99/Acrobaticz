@@ -15,7 +15,10 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const isTablet = useIsTablet();
   
   // Routes that should not have the main app layout
-  const noLayoutRoutes = ['/login'];
+  // - /login: auth page
+  // - /drive: cloud platform (has its own layout)
+  // - /app-select: platform selector
+  const noLayoutRoutes = ['/login', '/drive', '/app-select'];
   
   const shouldShowLayout = !noLayoutRoutes.some(route => 
     pathname.startsWith(route)

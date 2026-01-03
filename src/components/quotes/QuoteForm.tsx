@@ -23,8 +23,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { format, differenceInCalendarDays, addDays } from "date-fns";
-import { CalendarIcon, PlusCircle, Trash2, X, FileText, Download, Eye, Package, ConciergeBell, Receipt } from "lucide-react";
-import type { Quote, QuoteItem, Client, EquipmentItem, QuoteStatus } from "@/types";
+import { CalendarIcon, PlusCircle, Trash2, X, FileText, Download, Eye, Package, ConciergeBell, Receipt, Handshake, TrendingUp } from "lucide-react";
+import type { Quote, QuoteItem, Client, EquipmentItem, QuoteStatus, Partner } from "@/types";
 import { QuotePDFPreview } from './QuotePDFPreview';
 import { QuotePDFGenerator } from '@/lib/pdf-generator';
 import { useAppContext, useAppDispatch } from "@/contexts/AppContext";
@@ -72,7 +72,7 @@ const saveDraft = (data: any) => {
 
 const quoteItemSchema = z.object({
   id: z.string().optional(), // For existing items
-  type: z.enum(['equipment', 'service', 'fee']),
+  type: z.enum(['equipment', 'service', 'fee', 'subrental']),
   // Equipment fields
   equipmentId: z.string().optional(),
   equipmentName: z.string().optional(),
@@ -82,10 +82,14 @@ const quoteItemSchema = z.object({
   // Fee fields
   feeId: z.string().optional(),
   feeName: z.string().optional(),
+  // Subrental fields (from partner)
+  partnerId: z.string().optional(),
+  partnerName: z.string().optional(),
+  subrentalCost: z.coerce.number().min(0).optional(), // Cost from partner
   // Common fields
-  quantity: z.coerce.number().int().min(1).optional(), // For equipment/services
-  unitPrice: z.coerce.number().min(0).optional(), // For equipment/services
-  days: z.coerce.number().int().min(1).optional(), // For equipment/services
+  quantity: z.coerce.number().int().min(1).optional(), // For equipment/services/subrentals
+  unitPrice: z.coerce.number().min(0).optional(), // For equipment/services/subrentals (client price)
+  days: z.coerce.number().int().min(1).optional(), // For equipment/services/subrentals
   lineTotal: z.coerce.number().min(0),
   description: z.string().optional(), // Optional description for the item
   // For fees
@@ -252,6 +256,23 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
             type: 'service',
             serviceId: item.serviceId,
             serviceName: item.serviceName ?? svc?.name ?? 'Service Item',
+            quantity,
+            unitPrice,
+            days: currentDays,
+            lineTotal: isNaN(lineTotal) ? 0 : lineTotal,
+            description: item.description ?? undefined,
+          };
+        } else if (item.type === 'subrental') {
+          const quantity = item.quantity ?? 1;
+          const unitPrice = item.unitPrice ?? 0;
+          const lineTotal = quantity * unitPrice * currentDays;
+          return {
+            id: item.id || crypto.randomUUID(),
+            type: 'subrental',
+            partnerId: item.partnerId,
+            partnerName: item.partnerName ?? 'Partner',
+            equipmentName: item.equipmentName ?? 'Subrental Item',
+            subrentalCost: item.subrentalCost ?? 0,
             quantity,
             unitPrice,
             days: currentDays,
@@ -476,7 +497,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
   const { subTotal, discountedSubTotal, feeTotal, percentageFeeTotal, taxAmount, totalAmount, days } = calculateTotals();
 
   // Unified add item state
-  const [addItemType, setAddItemType] = React.useState<'equipment'|'service'|'fee'>('equipment');
+  const [addItemType, setAddItemType] = React.useState<'equipment'|'service'|'fee'|'subrental'>('equipment');
   const [selectedEquipmentId, setSelectedEquipmentId] = React.useState<string>(rentableEquipment[0]?.id || '');
   const [equipmentSearch, setEquipmentSearch] = React.useState('');
   const [selectedServiceId, setSelectedServiceId] = React.useState<string>(services[0]?.id || '');
@@ -492,6 +513,78 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
   const [useManualService, setUseManualService] = React.useState<boolean>(false);
   const [manualServiceName, setManualServiceName] = React.useState<string>('');
   const [manualServicePrice, setManualServicePrice] = React.useState<number>(0);
+  
+  // Partner/Subrental states
+  const [partners, setPartners] = React.useState<Partner[]>([]);
+  const [selectedPartnerId, setSelectedPartnerId] = React.useState<string>('');
+  const [subrentalEquipmentName, setSubrentalEquipmentName] = React.useState<string>('');
+  const [subrentalCost, setSubrentalCost] = React.useState<number>(0);
+  const [subrentalPrice, setSubrentalPrice] = React.useState<number>(0);
+  const [subrentalQuantity, setSubrentalQuantity] = React.useState<number>(1);
+  const [showNewPartnerForm, setShowNewPartnerForm] = React.useState<boolean>(false);
+  const [newPartnerName, setNewPartnerName] = React.useState<string>('');
+  const [newPartnerCompany, setNewPartnerCompany] = React.useState<string>('');
+  const [newPartnerPhone, setNewPartnerPhone] = React.useState<string>('');
+  const [newPartnerEmail, setNewPartnerEmail] = React.useState<string>('');
+  const [isCreatingPartner, setIsCreatingPartner] = React.useState<boolean>(false);
+
+  // Fetch partners on mount
+  React.useEffect(() => {
+    const fetchPartners = async () => {
+      try {
+        const response = await fetch('/api/partners?activeOnly=true');
+        if (response.ok) {
+          const data = await response.json();
+          setPartners(data);
+          if (data.length > 0 && !selectedPartnerId) {
+            setSelectedPartnerId(data[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching partners:', error);
+      }
+    };
+    fetchPartners();
+  }, []);
+
+  // Create new partner inline
+  const handleCreatePartner = async () => {
+    if (!newPartnerName.trim()) {
+      toast({ variant: 'destructive', title: 'Partner name is required' });
+      return;
+    }
+    setIsCreatingPartner(true);
+    try {
+      const response = await fetch('/api/partners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newPartnerName,
+          companyName: newPartnerCompany,
+          phone: newPartnerPhone,
+          email: newPartnerEmail,
+          isActive: true,
+        }),
+      });
+      if (response.ok) {
+        const newPartner = await response.json();
+        setPartners(prev => [...prev, newPartner]);
+        setSelectedPartnerId(newPartner.id);
+        setShowNewPartnerForm(false);
+        setNewPartnerName('');
+        setNewPartnerCompany('');
+        setNewPartnerPhone('');
+        setNewPartnerEmail('');
+        toast({ title: 'Partner Created', description: `${newPartner.name} has been added.` });
+      } else {
+        throw new Error('Failed to create partner');
+      }
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to create partner.' });
+    } finally {
+      setIsCreatingPartner(false);
+    }
+  };
 
   // Add item handler
   const handleAddItem = () => {
@@ -563,6 +656,30 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
         lineTotal: (addFeeType || fee.type) === 'percentage' ? 0 : (addFeeAmount || fee.amount),
         description: fee.description || '',
       });
+    } else if (addItemType === 'subrental') {
+      const partner = partners.find(p => p.id === selectedPartnerId);
+      if (!partner) return toast({ variant: 'destructive', title: 'Select a partner' });
+      if (!subrentalEquipmentName.trim()) return toast({ variant: 'destructive', title: 'Enter equipment name' });
+      if (subrentalPrice <= 0) return toast({ variant: 'destructive', title: 'Enter client price' });
+      
+      append({
+        type: 'subrental',
+        partnerId: partner.id,
+        partnerName: partner.name,
+        equipmentName: subrentalEquipmentName,
+        subrentalCost: subrentalCost,
+        quantity: subrentalQuantity,
+        unitPrice: subrentalPrice,
+        days,
+        lineTotal: subrentalQuantity * subrentalPrice * days,
+        description: `From ${partner.companyName || partner.name}`,
+      });
+      
+      // Reset subrental form
+      setSubrentalEquipmentName('');
+      setSubrentalCost(0);
+      setSubrentalPrice(0);
+      setSubrentalQuantity(1);
     }
   };
   
@@ -634,6 +751,23 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
           type: 'service',
           serviceId: item.serviceId,
           serviceName: item.serviceName ?? svc?.name ?? 'Service Item',
+          quantity,
+          unitPrice,
+          days: currentDays,
+          lineTotal: isNaN(lineTotal) ? 0 : lineTotal,
+          description: item.description ?? undefined,
+        };
+      } else if (item.type === 'subrental') {
+        const quantity = item.quantity ?? 1;
+        const unitPrice = item.unitPrice ?? 0;
+        const lineTotal = quantity * unitPrice * currentDays;
+        return {
+          id: item.id || crypto.randomUUID(),
+          type: 'subrental',
+          partnerId: item.partnerId,
+          partnerName: item.partnerName ?? 'Partner',
+          equipmentName: item.equipmentName ?? 'Subrental Item',
+          subrentalCost: item.subrentalCost ?? 0,
           quantity,
           unitPrice,
           days: currentDays,
@@ -733,6 +867,23 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
           days: currentDays,
           lineTotal: isNaN(lineTotal) ? 0 : lineTotal,
           description: item.description ?? svc?.description ?? undefined,
+        };
+      } else if (item.type === 'subrental') {
+        const quantity = item.quantity ?? 1;
+        const unitPrice = item.unitPrice ?? 0;
+        const lineTotal = quantity * unitPrice * currentDays;
+        return {
+          id: item.id || crypto.randomUUID(),
+          type: 'subrental',
+          partnerId: item.partnerId,
+          partnerName: item.partnerName ?? 'Partner',
+          equipmentName: item.equipmentName ?? 'Subrental Item',
+          subrentalCost: item.subrentalCost ?? 0,
+          quantity,
+          unitPrice,
+          days: currentDays,
+          lineTotal: isNaN(lineTotal) ? 0 : lineTotal,
+          description: item.description ?? undefined,
         };
       } else {
         const fee = fees.find((f: any) => f.id === item.feeId);
@@ -1176,37 +1327,47 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                     <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-sm backdrop-blur border
                       ${field.type === 'equipment' ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600' :
                         field.type === 'service' ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600' :
+                        field.type === 'subrental' ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-600' :
                         'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600'}`}
                     >
                       {field.type === 'equipment' && <FileText className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
                       {field.type === 'service' && <PlusCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
                       {field.type === 'fee' && <CalendarIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
+                      {field.type === 'subrental' && <Handshake className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider backdrop-blur border
                           ${field.type === 'equipment' ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600' :
                             field.type === 'service' ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600' :
+                            field.type === 'subrental' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600' :
                             'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'}`}
                         >
-                          {field.type}
+                          {field.type === 'subrental' ? 'Partner' : field.type}
                         </span>
+                        {field.type === 'subrental' && field.partnerName && (
+                          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                            via {field.partnerName}
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1">
                         <input
                           type="text"
                           className="w-full px-2 py-1 text-sm border rounded-md bg-background/50 text-card-foreground"
-                          placeholder={field.type === 'equipment' ? 'Equipment name' : field.type === 'service' ? 'Service name' : 'Fee name'}
+                          placeholder={field.type === 'equipment' ? 'Equipment name' : field.type === 'service' ? 'Service name' : field.type === 'subrental' ? 'Equipment name' : 'Fee name'}
                           value={
                             field.type === 'equipment'
                               ? (form.getValues(`items.${index}.equipmentName`) || '')
                               : field.type === 'service'
                                 ? (form.getValues(`items.${index}.serviceName`) || '')
-                                : (form.getValues(`items.${index}.feeName`) || '')
+                                : field.type === 'subrental'
+                                  ? (form.getValues(`items.${index}.equipmentName`) || '')
+                                  : (form.getValues(`items.${index}.feeName`) || '')
                           }
                           onChange={(e) => {
                             const v = e.target.value;
-                            if (field.type === 'equipment') {
+                            if (field.type === 'equipment' || field.type === 'subrental') {
                               form.setValue(`items.${index}.equipmentName`, v, { shouldDirty: true, shouldValidate: true });
                             } else if (field.type === 'service') {
                               form.setValue(`items.${index}.serviceName`, v, { shouldDirty: true, shouldValidate: true });
@@ -1263,6 +1424,71 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                             <span className="text-card-foreground font-semibold">{days}</span>
                           </div>
                         )}
+                      </>
+                    )}
+                    {field.type === 'subrental' && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <label className="font-medium" htmlFor={`items.${index}.quantity`}>Qty:</label>
+                          <input
+                            id={`items.${index}.quantity`}
+                            type="number"
+                            min={1}
+                            className="w-20 h-9 px-2 border rounded-md bg-background/50 text-card-foreground"
+                            value={form.getValues(`items.${index}.quantity`) || 1}
+                            onChange={(e) => {
+                              const q = Math.max(1, Number(e.target.value) || 1);
+                              const price = Number(form.getValues(`items.${index}.unitPrice`)) || 0;
+                              form.setValue(`items.${index}.quantity`, q, { shouldDirty: true, shouldValidate: true });
+                              form.setValue(`items.${index}.lineTotal`, q * price * days, { shouldDirty: true });
+                            }}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="font-medium text-orange-600 dark:text-orange-400" htmlFor={`items.${index}.subrentalCost`}>Cost:</label>
+                          <input
+                            id={`items.${index}.subrentalCost`}
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            className="w-24 h-9 px-2 border border-orange-300 dark:border-orange-600 rounded-md bg-background/50 text-card-foreground"
+                            value={form.getValues(`items.${index}.subrentalCost`) || 0}
+                            onChange={(e) => {
+                              const cost = Math.max(0, Number(e.target.value) || 0);
+                              form.setValue(`items.${index}.subrentalCost`, cost, { shouldDirty: true, shouldValidate: true });
+                            }}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="font-medium text-emerald-600 dark:text-emerald-400" htmlFor={`items.${index}.unitPrice`}>Price:</label>
+                          <input
+                            id={`items.${index}.unitPrice`}
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            className="w-24 h-9 px-2 border border-emerald-300 dark:border-emerald-600 rounded-md bg-background/50 text-card-foreground"
+                            value={form.getValues(`items.${index}.unitPrice`) || 0}
+                            onChange={(e) => {
+                              const price = Math.max(0, Number(e.target.value) || 0);
+                              const q = Number(form.getValues(`items.${index}.quantity`)) || 1;
+                              form.setValue(`items.${index}.unitPrice`, price, { shouldDirty: true, shouldValidate: true });
+                              form.setValue(`items.${index}.lineTotal`, q * price * days, { shouldDirty: true });
+                            }}
+                          />
+                          <span className="text-card-foreground font-semibold">/day</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">Days:</span>
+                          <span className="text-card-foreground font-semibold">{days}</span>
+                        </div>
+                        <div className={`px-2 py-1 rounded text-xs font-semibold ${
+                          (form.getValues(`items.${index}.unitPrice`) || 0) > (form.getValues(`items.${index}.subrentalCost`) || 0)
+                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                        }`}>
+                          <TrendingUp className="inline h-3 w-3 mr-1" />
+                          €{(((form.getValues(`items.${index}.unitPrice`) || 0) - (form.getValues(`items.${index}.subrentalCost`) || 0)) * (form.getValues(`items.${index}.quantity`) || 1) * days).toFixed(2)} profit
+                        </div>
                       </>
                     )}
                     {field.type === 'fee' && (
@@ -1392,6 +1618,19 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                     <div className="flex items-center justify-center gap-2">
                       <Receipt className="h-4 w-4" />
                       Fee
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddItemType('subrental')}
+                    className={`flex-1 min-w-fit px-4 py-3 rounded-md font-medium text-sm transition-all duration-200
+                      ${addItemType === 'subrental' 
+                        ? 'bg-emerald-600 text-white dark:bg-emerald-700 dark:text-white' 
+                        : 'text-muted-foreground hover:bg-muted/50'}`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <Handshake className="h-4 w-4" />
+                      Partner Subrental
                     </div>
                   </button>
                 </div>
@@ -1654,6 +1893,209 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                         >
                           <PlusCircle className="mr-2 h-4 w-4" /> 
                           Add Fee
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {addItemType === 'subrental' && (
+                    <div className="space-y-4">
+                      {/* Partner Selection Section */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">
+                            <Handshake className="inline h-4 w-4 mr-1" />
+                            Select Partner
+                          </label>
+                          <select 
+                            value={selectedPartnerId} 
+                            onChange={e => {
+                              if (e.target.value === '__new__') {
+                                setShowNewPartnerForm(true);
+                                setSelectedPartnerId('');
+                              } else {
+                                setSelectedPartnerId(e.target.value);
+                                setShowNewPartnerForm(false);
+                              }
+                            }} 
+                            className="w-full h-12 px-4 border border-border focus:border-emerald-500 rounded-lg bg-background/50"
+                          >
+                            <option value="">Select a partner...</option>
+                            {partners.filter(p => p.isActive).map((partner) => (
+                              <option key={partner.id} value={partner.id}>
+                                {partner.name} {partner.companyName ? `(${partner.companyName})` : ''}
+                              </option>
+                            ))}
+                            <option value="__new__">➕ Add New Partner...</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">
+                            Equipment Name
+                          </label>
+                          <input 
+                            type="text" 
+                            value={subrentalEquipmentName} 
+                            onChange={e => setSubrentalEquipmentName(e.target.value)} 
+                            placeholder="e.g., Sony FX6, Aputure 600d..."
+                            className="w-full h-12 px-4 border border-border focus:border-emerald-500 rounded-lg bg-background/50" 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Inline New Partner Form */}
+                      {showNewPartnerForm && (
+                        <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700">
+                          <h5 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200 mb-3 flex items-center gap-2">
+                            <PlusCircle className="h-4 w-4" />
+                            Quick Add New Partner
+                          </h5>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input
+                              type="text"
+                              placeholder="Partner name *"
+                              value={newPartnerName}
+                              onChange={e => setNewPartnerName(e.target.value)}
+                              className="h-10 px-3 border border-emerald-300 dark:border-emerald-600 rounded-lg bg-background/50 text-sm"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Company name"
+                              value={newPartnerCompany}
+                              onChange={e => setNewPartnerCompany(e.target.value)}
+                              className="h-10 px-3 border border-emerald-300 dark:border-emerald-600 rounded-lg bg-background/50 text-sm"
+                            />
+                            <input
+                              type="email"
+                              placeholder="Email"
+                              value={newPartnerEmail}
+                              onChange={e => setNewPartnerEmail(e.target.value)}
+                              className="h-10 px-3 border border-emerald-300 dark:border-emerald-600 rounded-lg bg-background/50 text-sm"
+                            />
+                          </div>
+                          <div className="flex gap-2 mt-3">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleCreatePartner}
+                              disabled={!newPartnerName.trim() || isCreatingPartner}
+                              className="bg-emerald-600 hover:bg-emerald-700"
+                            >
+                              {isCreatingPartner ? 'Creating...' : 'Create Partner'}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setShowNewPartnerForm(false);
+                                setNewPartnerName('');
+                                setNewPartnerCompany('');
+                                setNewPartnerEmail('');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pricing Section */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">
+                            Quantity
+                          </label>
+                          <input 
+                            type="number" 
+                            min={1} 
+                            value={subrentalQuantity} 
+                            onChange={e => setSubrentalQuantity(Number(e.target.value))} 
+                            className="w-full h-12 px-4 border border-border focus:border-emerald-500 rounded-lg bg-background/50" 
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-semibold mb-2 text-orange-600 dark:text-orange-400">
+                            Your Cost (€/day)
+                          </label>
+                          <input 
+                            type="number" 
+                            min={0} 
+                            step="0.01"
+                            value={subrentalCost} 
+                            onChange={e => setSubrentalCost(Number(e.target.value))} 
+                            placeholder="What you pay partner"
+                            className="w-full h-12 px-4 border border-orange-300 dark:border-orange-600 focus:border-orange-500 rounded-lg bg-background/50" 
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-semibold mb-2 text-emerald-600 dark:text-emerald-400">
+                            Client Price (€/day)
+                          </label>
+                          <input 
+                            type="number" 
+                            min={0} 
+                            step="0.01"
+                            value={subrentalPrice} 
+                            onChange={e => setSubrentalPrice(Number(e.target.value))} 
+                            placeholder="What client pays"
+                            className="w-full h-12 px-4 border border-emerald-300 dark:border-emerald-600 focus:border-emerald-500 rounded-lg bg-background/50" 
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">
+                            <TrendingUp className="inline h-4 w-4 mr-1" />
+                            Profit Margin
+                          </label>
+                          <div className={`h-12 px-4 flex items-center rounded-lg border ${
+                            subrentalPrice > subrentalCost 
+                              ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300' 
+                              : subrentalPrice < subrentalCost
+                                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300'
+                                : 'bg-muted/50 border-border text-muted-foreground'
+                          }`}>
+                            <span className="font-semibold">
+                              {subrentalCost > 0 
+                                ? `${(((subrentalPrice - subrentalCost) / subrentalCost) * 100).toFixed(0)}%` 
+                                : subrentalPrice > 0 
+                                  ? '∞%' 
+                                  : '0%'}
+                              {' '}
+                              (€{((subrentalPrice - subrentalCost) * subrentalQuantity * days).toFixed(2)})
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Summary Preview */}
+                      {selectedPartnerId && subrentalEquipmentName && subrentalPrice > 0 && (
+                        <div className="p-3 bg-muted/50 rounded-lg border border-border/50">
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">Preview: </span>
+                            <span className="font-medium">{subrentalQuantity}x {subrentalEquipmentName}</span>
+                            <span className="text-muted-foreground"> from </span>
+                            <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                              {partners.find(p => p.id === selectedPartnerId)?.name}
+                            </span>
+                            <span className="text-muted-foreground"> × {days} days = </span>
+                            <span className="font-semibold">€{(subrentalQuantity * subrentalPrice * days).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-end">
+                        <Button 
+                          type="button" 
+                          onClick={handleAddItem}
+                          disabled={!selectedPartnerId || !subrentalEquipmentName.trim() || subrentalPrice <= 0}
+                          className="bg-emerald-600 hover:bg-emerald-700"
+                        >
+                          <PlusCircle className="mr-2 h-4 w-4" /> 
+                          Add Subrental Item
                         </Button>
                       </div>
                     </div>

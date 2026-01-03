@@ -179,9 +179,10 @@ export async function GET() {
     response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     return response;
   } catch (error) {
-    console.error('Error fetching customization settings:', error);
+    console.error('Error fetching customization settings:', error instanceof Error ? error.message : error);
+    console.error('Full error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch customization settings' },
+      { error: 'Failed to fetch customization settings', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

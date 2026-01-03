@@ -52,9 +52,9 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // Clone response before caching
-          const responseClone = response.clone();
-          if (response.status === 200) {
+          // Only cache GET requests, not POST, PUT, DELETE, etc.
+          if (response.status === 200 && event.request.method === 'GET') {
+            const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, responseClone);
             });
@@ -62,8 +62,11 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Fallback to cache if network fails
-          return caches.match(event.request);
+          // Fallback to cache if network fails (only for GET requests)
+          if (event.request.method === 'GET') {
+            return caches.match(event.request);
+          }
+          throw new Error('Network request failed');
         })
     );
     return;

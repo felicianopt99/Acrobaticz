@@ -1,86 +1,96 @@
-# Multi-stage Dockerfile for Next.js 16 standalone build with Prisma - OPTIMIZED for Alpine
+# syntax=docker/dockerfile:1.6
+# Multi-stage Dockerfile for Next.js 16 standalone build with Prisma
+# OPTIMIZED: 3-stage build, parallel builds, minimal final image
 
-# 1) Base deps for installing node modules
+# ============================================
+# Stage 1: Dependencies - Cached separately
+# ============================================
 FROM node:22-alpine AS deps
 WORKDIR /app
 
-# Install minimal system deps for Alpine
-# Alpine uses apk instead of apt-get
-RUN apk add --no-cache \
-  openssl ca-certificates git \
-  cairo-dev pango-dev pixman-dev jpeg-dev giflib-dev libpng-dev \
-  python3 make g++
+# Install build dependencies
+RUN apk add --no-cache openssl
 
+# Copy only package files for dependency caching
 COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps --prefer-offline --no-audit --ignore-scripts
 
-# 2) Builder stage
+# Install dependencies (npm cache on volume if using compose)
+RUN npm ci --legacy-peer-deps --no-audit --no-fund --loglevel=error
+
+# ============================================
+# Stage 2: Builder - Compile application
+# ============================================
 FROM node:22-alpine AS builder
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apk add --no-cache \
-  openssl ca-certificates git build-base python3 pkgconf \
-  cairo-dev pango-dev pixman-dev jpeg-dev giflib-dev libpng-dev
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NODE_OPTIONS="--max_old_space_size=4096"
 
+# Install build tools
+RUN apk add --no-cache openssl
+
+# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-# Copy prisma directory for migrations and client generation (before COPY . .)
-COPY ./prisma ./prisma
+COPY package.json package-lock.json ./
+
+# Copy prisma first for better caching
+COPY prisma ./prisma
+
+# Generate Prisma client (cached if schema unchanged)
+RUN npx prisma generate
+
+# Copy source files
 COPY . .
 
-# Generate Prisma client (if used)
-RUN npx prisma generate
+# Build Next.js
+RUN npm run build && \
+    mkdir -p .next/server && \
+    if [ ! -f .next/server/middleware.js.nft.json ]; then \
+      echo '{"files":[],"version":1}' > .next/server/middleware.js.nft.json; \
+    fi
 
-# Build Next.js (requires next.config.ts output: 'standalone')
-# Force webpack builder for stability with middleware
-RUN npm run build -- --webpack
-
-# 3) Runner: minimal Alpine image serving the app
+# ============================================
+# Stage 3: Production Runtime - Minimal image
+# ============================================
 FROM node:22-alpine AS runner
 WORKDIR /app
+
 ENV NODE_ENV=production \
-  NEXT_TELEMETRY_DISABLED=1 \
-  PORT=3000 \
-  HOSTNAME=0.0.0.0
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
 
-# Install minimal runtime dependencies for Alpine
-# ca-certificates for HTTPS, openssl for security
-RUN apk add --no-cache \
-  ca-certificates openssl \
-  postgresql-client
+# Install minimal runtime dependencies
+RUN apk add --no-cache ca-certificates openssl postgresql-client tini && \
+    addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
-## Install tsx locally as dependency (not global)
-COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps --prefer-offline --no-audit --production --ignore-scripts
+# Copy standalone build (already includes minimal node_modules)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Copy prisma directory before generating Prisma Client
-COPY --from=builder /app/prisma ./prisma
-RUN npx prisma generate
+# Copy necessary runtime node_modules for custom server
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
-# Copy standalone server output and required files
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/.next/server ./.next/server
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/server.js ./server.js
-COPY --from=builder /app/backup-helper.sh ./backup-helper.sh
+# Copy custom server and scripts
+COPY --from=builder --chown=nextjs:nodejs /app/server.js ./server.js
+COPY --from=builder --chown=nextjs:nodejs /app/backup-helper.sh ./backup-helper.sh
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
-# Copy entrypoint and ensure it is executable
-COPY scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
-RUN sed -i 's/\r$//' ./scripts/docker-entrypoint.sh && chmod 0755 ./scripts/docker-entrypoint.sh
-RUN chmod 0755 ./backup-helper.sh
+# Fix permissions
+RUN chmod +x ./scripts/docker-entrypoint.sh ./backup-helper.sh
 
-# Ensure node user owns the working directory and dependencies
-RUN chown -R node:node /app
-
-# Run as non-root user for better security
-USER node
+USER nextjs
 
 EXPOSE 3000
 
-# Healthcheck (optional)
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:'+process.env.PORT, r=>{if(r.statusCode<500)process.exit(0);process.exit(1)}).on('error',()=>process.exit(1))"
+# Use tini for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
 
-ENTRYPOINT ["sh", "./scripts/docker-entrypoint.sh"]
-CMD ["node", "server.js"]
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD wget -qO- http://localhost:3000/api/health || exit 1
+
+CMD ["sh", "./scripts/docker-entrypoint.sh"]

@@ -10,6 +10,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canManageRentals: true,
     canViewReports: true,
     canManageMaintenance: true,
+    canManagePartners: true,
   },
   Manager: {
     canManageUsers: false,
@@ -20,6 +21,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canManageRentals: true,
     canViewReports: true,
     canManageMaintenance: true,
+    canManagePartners: true,
   },
   Technician: {
     canManageUsers: false,
@@ -30,6 +32,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canManageRentals: true,
     canViewReports: false,
     canManageMaintenance: true,
+    canManagePartners: false,
   },
   Employee: {
     canManageUsers: false,
@@ -40,6 +43,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canManageRentals: true,
     canViewReports: false,
     canManageMaintenance: false,
+    canManagePartners: false,
   },
   Viewer: {
     canManageUsers: false,
@@ -50,6 +54,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canManageRentals: false,
     canViewReports: false,
     canManageMaintenance: false,
+    canManagePartners: false,
   },
 };
 

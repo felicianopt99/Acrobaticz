@@ -1,7 +1,8 @@
 
 
-// src/components/quotes/QuoteListDisplay.tsx
 "use client";
+
+// src/components/quotes/QuoteListDisplay.tsx
 
 import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
@@ -43,8 +44,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { QuoteForm } from '@/components/quotes/QuoteForm';
 
 export function QuoteListDisplay() {
   // Translation hooks
@@ -63,7 +62,6 @@ export function QuoteListDisplay() {
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
   const [quoteToApprove, setQuoteToApprove] = useState<Quote | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
   // PDF state
   const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false);
@@ -152,7 +150,7 @@ export function QuoteListDisplay() {
 
   if (!isDataLoaded) {
     return (
-        <div className="flex flex-col"> {/* Adjust height as needed */}
+        <div className="flex flex-col">
             <div className="flex-grow flex items-center justify-center">
                 <p className="text-lg text-muted-foreground">Loading quote data...</p>
             </div>
@@ -164,11 +162,13 @@ export function QuoteListDisplay() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-xl md:text-2xl font-semibold">Quotes</h2>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto">
-          <PlusCircle className="mr-2 h-4 w-4" /> Create New Quote
-        </Button>
+        <Link href="/quotes/new" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto">
+            <PlusCircle className="mr-2 h-4 w-4" /> Create New Quote
+          </Button>
+        </Link>
       </div>
-      <Card className="shadow-lg overflow-hidden"> {/* Added overflow-hidden here */}
+      <Card className="shadow-lg overflow-hidden">
         <CardHeader>
           <CardTitle>Quote List</CardTitle>
           <CardDescription>View, search, and manage all your quotes.</CardDescription>
@@ -202,9 +202,9 @@ export function QuoteListDisplay() {
               )}
             </div>
           ) : (
-          <>
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-3">
+            <>
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
               {filteredQuotes.map((quote) => (
                 <Card key={quote.id} className="p-3 shadow-none border-0 bg-background/50 hover:bg-muted/30 transition-colors">
                   <div className="flex justify-between items-start">
@@ -363,27 +363,6 @@ export function QuoteListDisplay() {
           </AlertDialogContent>
         </AlertDialog>
       )}
-
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New Quote</DialogTitle>
-          </DialogHeader>
-          <QuoteForm onSubmitSuccess={() => setIsCreateDialogOpen(false)} />
-        </DialogContent>
-      </Dialog>
-
-      {/* PDF Preview Modal */}
-      <QuotePDFPreview
-        quote={previewQuote}
-        isOpen={isPDFPreviewOpen}
-        onClose={() => {
-          setIsPDFPreviewOpen(false);
-          setPreviewQuote(null);
-        }}
-      />
     </div>
   );
 }
-
-    
