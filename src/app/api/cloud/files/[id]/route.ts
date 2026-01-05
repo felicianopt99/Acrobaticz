@@ -40,7 +40,7 @@ export async function GET(
     const buffer = await readFile(file.storagePath);
 
     // Return file with appropriate headers
-    return new NextResponse(buffer, {
+    return new NextResponse(buffer as any, {
       headers: {
         'Content-Type': file.mimeType,
         'Content-Disposition': `attachment; filename="${file.name}"`,
@@ -69,7 +69,7 @@ export async function PATCH(
 
   try {
     const fileId = id;
-    const { name, folderId, isStarred } = await request.json();
+    const { name, folderId, isStarred, isPublic, isTrashed } = await request.json();
 
     // Verify file exists and belongs to user
     const file = await prisma.cloudFile.findUnique({
@@ -77,8 +77,13 @@ export async function PATCH(
       select: { ownerId: true, isTrashed: true },
     });
 
-    if (!file || file.ownerId !== auth.userId || file.isTrashed) {
+    if (!file || file.ownerId !== auth.userId) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    }
+
+    // Allow update if not trashed, or if we're setting isTrashed to true
+    if (file.isTrashed && !isTrashed) {
+      return NextResponse.json({ error: 'File is in trash' }, { status: 404 });
     }
 
     // Verify new folder if moving
@@ -102,6 +107,8 @@ export async function PATCH(
         ...(name && { name }),
         ...(folderId !== undefined && { folderId: folderId || null }),
         ...(isStarred !== undefined && { isStarred }),
+        ...(isPublic !== undefined && { isPublic }),
+        ...(isTrashed !== undefined && { isTrashed }),
       },
       select: {
         id: true,
@@ -109,12 +116,18 @@ export async function PATCH(
         mimeType: true,
         size: true,
         isStarred: true,
+        isPublic: true,
         createdAt: true,
         updatedAt: true,
       },
     });
 
-    return NextResponse.json({ file: updated });
+    return NextResponse.json({ 
+      file: {
+        ...updated,
+        size: updated.size.toString(),
+      }
+    });
   } catch (error) {
     console.error('Error updating file:', error);
     return NextResponse.json(

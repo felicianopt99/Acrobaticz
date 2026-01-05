@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
         name: true,
         mimeType: true,
         size: true,
+        isPublic: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -51,7 +52,13 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: 'desc' },
     });
 
-    return NextResponse.json({ files: trashedFiles, folders: trashedFolders });
+    // Convert BigInt to string for JSON serialization
+    const filesWithStringSize = trashedFiles.map(file => ({
+      ...file,
+      size: file.size.toString(),
+    }));
+
+    return NextResponse.json({ files: filesWithStringSize, folders: trashedFolders });
   } catch (error) {
     console.error('Error fetching trash:', error);
     return NextResponse.json({ error: 'Failed to fetch trash' }, { status: 500 });

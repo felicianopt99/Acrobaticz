@@ -40,9 +40,24 @@ function hexToHSL(hex: string, fallback: string) {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { data: settings } = useCustomizationSettings();
 
+  // Always set dark mode on initial load
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+  }, []);
+
   useEffect(() => {
     if (!settings) return;
     const root = document.documentElement;
+    
+    // Remove all theme preset classes
+    root.classList.remove('theme-dark', 'theme-cloud', 'theme-neon', 'theme-oceanic', 'theme-minimal');
+    
+    // Apply theme preset class if available (applied to html element for all pages)
+    if (settings.themePreset && settings.themePreset !== 'custom') {
+      root.classList.add(`theme-${settings.themePreset}`);
+    }
+    
+    // Apply custom colors (these override preset colors)
     if (settings.primaryColor) {
       root.style.setProperty('--primary', hexToHSL(settings.primaryColor, '220 100% 65%'));
     }
@@ -52,13 +67,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (settings.accentColor) {
       root.style.setProperty('--accent', hexToHSL(settings.accentColor, '0 0% 16%'));
     }
-    if (settings.darkMode !== undefined) {
-      if (settings.darkMode) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-    }
+    
+    // Always keep dark mode enabled
+    root.classList.add('dark');
   }, [settings]);
 
   return <>{children}</>;

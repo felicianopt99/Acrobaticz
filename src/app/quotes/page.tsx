@@ -12,7 +12,7 @@ export default async function QuotesPage() {
     redirect('/login');
   }
 
-  const allowedRoles = ['admin', 'manager', 'employee'];
+  const { hasRole, ROLES } = await import('@/lib/roles');
 
   try {
     const decoded = jwt.verify(token!, process.env.JWT_SECRET!) as any;
@@ -23,8 +23,7 @@ export default async function QuotesPage() {
     if (!user || !user.isActive) {
       redirect('/login');
     }
-    const userRole = String(user.role || '').toLowerCase();
-    if (!allowedRoles.includes(userRole)) {
+    if (!hasRole(user.role, [ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE])) {
       redirect('/unauthorized');
     }
   } catch {

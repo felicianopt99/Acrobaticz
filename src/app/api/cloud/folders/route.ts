@@ -21,12 +21,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const parentId = searchParams.get('parentId') || null;
+    const folderId = searchParams.get('folderId') || searchParams.get('parentId') || null;
 
     const folders = await prisma.cloudFolder.findMany({
       where: {
         ownerId: auth.userId,
-        parentId: parentId === 'null' ? null : parentId,
+        parentId: folderId === 'null' ? null : folderId,
         isTrashed: false,
       },
       select: {

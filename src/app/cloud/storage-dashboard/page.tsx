@@ -30,7 +30,8 @@ export default async function StorageDashboardPage() {
     }
 
     // Check if user is admin
-    if (!['Admin'].includes(user.role)) {
+    const { isAdmin } = await import('@/lib/roles');
+    if (!isAdmin(user.role)) {
       redirect('/cloud');
     }
 

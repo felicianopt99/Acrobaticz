@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
         // Check if disk has enough space
         const hasSpace = await hasEnoughSpace(fileSize);
         if (!hasSpace) {
+          console.error('[Upload] Disk full error for user:', auth.userId);
           return NextResponse.json(
             { error: 'Disk storage is full' },
             { status: 507 }
@@ -120,10 +121,12 @@ export async function POST(request: NextRequest) {
 
         // Get storage path
         const filePath = getStoragePath(auth.userId, folderId || undefined, uniqueFilename);
+        console.log('[Upload] Saving file to:', filePath);
 
         // Convert file to buffer and save
         const buffer = Buffer.from(await file.arrayBuffer());
         await saveFile(buffer, filePath);
+        console.log('[Upload] File saved successfully:', filePath);
 
         // Create file record in database
         const cloudFile = await prisma.cloudFile.create({
@@ -144,8 +147,15 @@ export async function POST(request: NextRequest) {
             mimeType: true,
             size: true,
             isStarred: true,
+            isPublic: true,
             createdAt: true,
           },
+        });
+
+        // Convert BigInt to string for JSON serialization
+        uploadedFiles.push({
+          ...cloudFile,
+          size: cloudFile.size.toString(),
         });
 
         // Update user's disk usage
@@ -162,8 +172,6 @@ export async function POST(request: NextRequest) {
         }).catch(() => {
           // Ignore errors in activity logging
         });
-
-        uploadedFiles.push(cloudFile);
       } catch (error) {
         console.error(`[Upload] Error uploading file ${file.name}:`, {
           errorMessage: error instanceof Error ? error.message : String(error),
@@ -196,10 +204,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         uploadedFiles,
-        errors: errors.length > 0 ? errors : undefined,
+        ...(errors.length > 0 && { 
+          error: `Failed to upload ${errors.length} file(s)`,
+          errors 
+        }),
         totalSize: userDiskUsage.toString(),
       },
-      { status: uploadedFiles.length > 0 ? 201 : 400 }
+      { status: uploadedFiles.length > 0 ? 201 : (errors.length > 0 ? 400 : 400) }
     );
   } catch (error) {
     console.error('[Upload] Critical error during file upload:', {

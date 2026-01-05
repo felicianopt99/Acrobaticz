@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { navItems as baseNavItems, adminItems as baseAdminItems } from '@/components/layout/navConfig';
 import { useTranslate } from '@/components/translation/TranslatedComponents';
 import { PreloadTranslations, NavigationTranslations } from '@/components/translation/TranslatedComponents';
+import { hasRole, normalizeRole } from '@/lib/roles';
 
 // Component to translate nav labels
 function NavLabel({ text }: { text: string }) {
@@ -105,8 +106,7 @@ export function AppSidebarNav() {
 
   // Use useMemo to prevent recalculation on every render
   const visibleNavItems = useMemo(() => {
-    const normalizedRole = String(currentUser?.role || 'viewer').toLowerCase();
-    const items = baseNavItems.filter(item => (item.requiredRole || []).map(r => String(r).toLowerCase()).includes(normalizedRole));
+    const items = baseNavItems.filter(item => hasRole(currentUser?.role, item.requiredRole));
     if (typeof window !== 'undefined') {
       // eslint-disable-next-line no-console
       console.log('[Sidebar Debug] visibleNavItems', items);
@@ -148,8 +148,16 @@ export function AppSidebarNav() {
         <SidebarMenu>
           {visibleNavItems.map((item, index) => {
             const hasSub = item.subItems && item.subItems.length > 0;
+            
+            // Check if direct href matches
             const isParentActive = item.href ? ((item.href === '/dashboard' && (pathname === '/' || pathname === '/dashboard')) || (item.href !== '/dashboard' && pathname.startsWith(item.href))) : false;
-            const isSubActive = hasSub && item.subItems!.some(sub => pathname.startsWith(sub.href));
+            
+            // Check if any sub-item matches exactly (not just prefix)
+            const isSubActive = hasSub && item.subItems!.some(sub => {
+              // Exact match or starts with for nested routes
+              return pathname === sub.href || pathname.startsWith(sub.href + '/');
+            });
+            
             const parentActive = isParentActive || isSubActive;
             const linkClass = cn(
               // Modern minimal base styles
@@ -274,7 +282,7 @@ export function AppSidebarNav() {
                     "space-y-1 mt-2"
                   )}>
                     {item.subItems.map((sub) => {
-                      const isSubActive = pathname.startsWith(sub.href);
+                      const isSubActive = pathname === sub.href || pathname.startsWith(sub.href + '/');
                       return (
                         <SidebarMenuSubItem key={sub.href}>
                           <Link
@@ -300,7 +308,7 @@ export function AppSidebarNav() {
           })}
         </SidebarMenu>
 
-  {String(currentUser?.role || '').toLowerCase() === 'admin' && (
+  {hasRole(currentUser?.role, ['admin']) && (
           <>
             <div className="px-4 py-4">
               <div className="h-px bg-gradient-to-r from-transparent via-sidebar-border to-transparent"></div>

@@ -37,6 +37,7 @@ interface CloudFile {
   mimeType: string;
   size: string | number;
   isStarred: boolean;
+  isPublic: boolean;
   createdAt: string;
 }
 

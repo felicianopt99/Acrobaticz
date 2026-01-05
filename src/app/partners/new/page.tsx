@@ -44,8 +44,8 @@ export default async function NewPartnerPage() {
     redirect('/login');
   }
 
-  const allowedRoles = ['Admin', 'Manager'];
-  if (!allowedRoles.includes(user.role as any)) {
+  const { hasRole, ROLE_GROUPS } = await import('@/lib/roles');
+  if (!hasRole(user.role, ROLE_GROUPS.MANAGEMENT)) {
     redirect('/unauthorized');
   }
 

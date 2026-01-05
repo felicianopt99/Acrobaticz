@@ -1,11 +1,19 @@
 #!/usr/bin/env tsx
 import 'dotenv/config'
-import { generateAllNotifications } from '../../src/lib/notifications'
+import {
+  eventTimelineAlertsJob,
+  overdueReturnsCheckJob,
+  criticalEventDayJob,
+} from '../../src/lib/jobs/notification-jobs'
 
 async function main() {
   try {
     console.log(`[notifications] Starting generation at ${new Date().toISOString()}`)
-    await generateAllNotifications()
+    await Promise.all([
+      eventTimelineAlertsJob(),
+      overdueReturnsCheckJob(),
+      criticalEventDayJob(),
+    ])
     console.log(`[notifications] Generation completed at ${new Date().toISOString()}`)
     process.exit(0)
   } catch (err) {

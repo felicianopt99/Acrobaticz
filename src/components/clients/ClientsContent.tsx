@@ -17,8 +17,8 @@ export function ClientsContent() {
   const { translated: noPermissionText } = useTranslate('You do not have permission to view this page.');
 
   // Allow Admin, Manager, and Employee to access clients (matches navigation)
-  const allowedRoles = ['Admin', 'Manager', 'Employee'];
-  if (!currentUser || !allowedRoles.includes(currentUser.role)) {
+  const { hasRole, ROLE_GROUPS } = require('@/lib/roles');
+  if (!currentUser || !hasRole(currentUser.role, ROLE_GROUPS.STAFF)) {
     return (
       <div className="flex flex-col min-h-screen">
 

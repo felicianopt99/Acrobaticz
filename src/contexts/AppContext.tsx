@@ -325,11 +325,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const updated = await clientsAPI.update(updatedClient);
       setClients(prev => prev.map(client => client.id === updated.id ? updated : client));
+      
+      // Refetch all data to ensure any partner syncs are reflected
+      // This guarantees bidirectional sync changes appear in the UI
+      await refreshData();
     } catch (err) {
       console.error('Error updating client:', err);
       throw err;
     }
-  }, []);
+  }, [refreshData]);
 
   const deleteClient = useCallback(async (clientId: string) => {
     try {

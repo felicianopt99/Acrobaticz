@@ -1,0 +1,42 @@
+[
+  {
+    "id": "cmk1e0n3f000mtb4g4wo3p1kw",
+    "name": "Battery",
+    "parentId": "cmk1e0n230003tb4gtbayc9jd"
+  },
+  {
+    "id": "cmk1e0n5m001etb4gstw7s39f",
+    "name": "Battery Speakers",
+    "parentId": "cmk1e0n260004tb4g37154d95"
+  },
+  {
+    "id": "cmk1e0n44000stb4gyw8a3jx9",
+    "name": "Decorative Lighting",
+    "parentId": "cmk1e0n230003tb4gtbayc9jd"
+  },
+  {
+    "id": "cmk1ra3xh000qtjeh69nb1iod",
+    "name": "Effects",
+    "parentId": "cmk1e0n230003tb4gtbayc9jd"
+  },
+  {
+    "id": "cmk1e0n2w000etb4gowy0l9bi",
+    "name": "LED Par",
+    "parentId": "cmk1e0n230003tb4gtbayc9jd"
+  },
+  {
+    "id": "cmk1e0n5v001itb4g5o2ie47u",
+    "name": "Microphones",
+    "parentId": "cmk1e0n260004tb4g37154d95"
+  },
+  {
+    "id": "cmk1e0n2a0006tb4gfvum37v3",
+    "name": "Moving Head",
+    "parentId": "cmk1e0n230003tb4gtbayc9jd"
+  },
+  {
+    "id": "cmk1e0n4j000ytb4gz5y21ntw",
+    "name": "Speakers",
+    "parentId": "cmk1e0n260004tb4g37154d95"
+  }
+]

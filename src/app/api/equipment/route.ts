@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db-enhanced'
 import { broadcastDataChange } from '@/lib/realtime-broadcast'
-import { generateNewEquipmentAlerts, generateEquipmentStatusAlerts } from '@/lib/notifications'
+import { createEquipmentAvailableNotification } from '@/lib/notifications'
+import { translateText } from '@/lib/translation'
 import { z } from 'zod'
 import fs from 'fs/promises'
 import path from 'path'
@@ -45,6 +46,17 @@ async function downloadImage(imageUrl: string): Promise<string> {
     console.error('Failed to download image:', error);
     // Return original URL as fallback
     return imageUrl;
+  }
+}
+
+// Utility function to translate equipment description to Portuguese
+async function translateEquipmentDescription(description: string): Promise<string | null> {
+  try {
+    const translated = await translateText(description, 'pt');
+    return translated;
+  } catch (error) {
+    console.error('Failed to translate equipment description:', error);
+    return null;
   }
 }
 
@@ -154,10 +166,21 @@ export async function POST(request: NextRequest) {
       validatedData.imageUrl = await downloadImage(validatedData.imageUrl);
     }
 
+    // Translate description to Portuguese in parallel
+    let descriptionPt: string | null = null;
+    if (validatedData.description) {
+      try {
+        descriptionPt = await translateEquipmentDescription(validatedData.description);
+      } catch (error) {
+        console.error('Translation skipped for new equipment:', error);
+      }
+    }
+
     const equipment = await prisma.$transaction(async (tx) => {
       const newEquipment = await tx.equipmentItem.create({
         data: {
           ...validatedData,
+          descriptionPt: descriptionPt || undefined,
           imageUrl: validatedData.imageUrl || 'https://placehold.co/600x400.png',
           createdBy: user.userId,
           updatedBy: user.userId,
@@ -174,12 +197,6 @@ export async function POST(request: NextRequest) {
 
     // Broadcast real-time update
     broadcastDataChange('EquipmentItem', 'CREATE', equipment, user.userId)
-    // Generate notifications for new equipment
-    try {
-      await generateNewEquipmentAlerts(equipment.id)
-    } catch (e) {
-      // non-critical
-    }
     
     return NextResponse.json(equipment, { status: 201 })
   } catch (error) {
@@ -219,6 +236,16 @@ export async function PUT(request: NextRequest) {
     if (validatedData.imageUrl && validatedData.imageUrl.startsWith('http')) {
       validatedData.imageUrl = await downloadImage(validatedData.imageUrl);
     }
+
+    // Translate description to Portuguese if it was updated
+    let descriptionPt: string | null | undefined = undefined;
+    if (validatedData.description) {
+      try {
+        descriptionPt = await translateEquipmentDescription(validatedData.description);
+      } catch (error) {
+        console.error('Translation skipped for equipment update:', error);
+      }
+    }
     
     try {
       // Get current version and status first
@@ -243,6 +270,7 @@ export async function PUT(request: NextRequest) {
         where: { id },
         data: {
           ...validatedData,
+          ...(descriptionPt !== undefined ? { descriptionPt } : {}),
           updatedBy: user.userId,
           version: currentItem.version + 1,
         },
@@ -258,12 +286,15 @@ export async function PUT(request: NextRequest) {
 
       // Broadcast real-time update
       broadcastDataChange('EquipmentItem', 'UPDATE', equipment, user.userId)
-      // Generate notification if status changed
+      
+      // Generate notification if equipment becomes available from maintenance
       if (validatedData.status && currentItem.status && validatedData.status !== currentItem.status) {
         try {
-          await generateEquipmentStatusAlerts(id, currentItem.status, validatedData.status)
+          if (currentItem.status === 'maintenance' && validatedData.status === 'good') {
+            await createEquipmentAvailableNotification(id, equipment.name)
+          }
         } catch (e) {
-          // non-critical
+          console.error('Error sending equipment available notification:', e)
         }
       }
       

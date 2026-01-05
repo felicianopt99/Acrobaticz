@@ -99,10 +99,10 @@ export default function SystemSettingsPage() {
       if (settings.dateFormat) setDateFormat(settings.dateFormat);
       if (settings.currency) setCurrency(settings.currency);
       if (settings.language) setLanguage(settings.language);
-      if (settings.sessionTimeout !== undefined) setSessionTimeout(settings.sessionTimeout.toString());
+      if (settings.sessionTimeout !== undefined && settings.sessionTimeout !== null) setSessionTimeout(settings.sessionTimeout.toString());
       if (settings.requireStrongPasswords !== undefined) setRequireStrongPasswords(settings.requireStrongPasswords);
       if (settings.enableTwoFactor !== undefined) setEnableTwoFactor(settings.enableTwoFactor);
-      if (settings.maxLoginAttempts !== undefined) setMaxLoginAttempts(settings.maxLoginAttempts.toString());
+      if (settings.maxLoginAttempts !== undefined && settings.maxLoginAttempts !== null) setMaxLoginAttempts(settings.maxLoginAttempts.toString());
       if (settings.emailEnabled !== undefined) setEmailEnabled(settings.emailEnabled);
       if (settings.smtpServer) setSmtpServer(settings.smtpServer);
       if (settings.smtpPort) setSmtpPort(settings.smtpPort);
@@ -111,7 +111,7 @@ export default function SystemSettingsPage() {
       if (settings.fromEmail) setFromEmail(settings.fromEmail);
       if (settings.autoBackup !== undefined) setAutoBackup(settings.autoBackup);
       if (settings.backupFrequency) setBackupFrequency(settings.backupFrequency);
-      if (settings.backupRetention !== undefined) setBackupRetention(settings.backupRetention.toString());
+      if (settings.backupRetention !== undefined && settings.backupRetention !== null) setBackupRetention(settings.backupRetention.toString());
 
     } catch (err) {
       console.error('Error loading settings:', err);

@@ -20,7 +20,8 @@ const BACKUP_DIR = '/mnt/server_data/backups/daily';
 // GET: List all backups
 export async function GET(request: NextRequest) {
   const auth = verifyAuth(request);
-  if (!auth || auth.role !== 'Admin') {
+  const { isAdmin } = await import('@/lib/roles');
+  if (!auth || !isAdmin(auth.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -102,7 +103,8 @@ export async function GET(request: NextRequest) {
 // POST: Create manual backup
 export async function POST(request: NextRequest) {
   const auth = verifyAuth(request);
-  if (!auth || auth.role !== 'Admin') {
+  const { isAdmin } = await import('@/lib/roles');
+  if (!auth || !isAdmin(auth.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

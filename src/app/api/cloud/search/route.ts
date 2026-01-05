@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
           createdAt: true,
           updatedAt: true,
           isStarred: true,
+          isPublic: true,
           owner: {
             select: {
               id: true,
@@ -162,7 +163,10 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      files,
+      files: files.map(f => ({
+        ...f,
+        size: f.size.toString(),
+      })),
       folders,
       total: fileCount + folderCount,
       fileCount,

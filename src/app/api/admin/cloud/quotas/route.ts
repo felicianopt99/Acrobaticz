@@ -15,12 +15,17 @@ function verifyAuth(request: NextRequest) {
 // GET: List all users with quota information
 export async function GET(request: NextRequest) {
   const auth = verifyAuth(request);
-  if (!auth || auth.role !== 'Admin') {
+  const { isAdmin } = await import('@/lib/roles');
+  if (!auth || !isAdmin(auth.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
+    console.log('Fetching active users...');
     const users = await prisma.user.findMany({
+      where: {
+        isActive: true,
+      },
       select: {
         id: true,
         name: true,
@@ -29,6 +34,7 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { name: 'asc' },
     });
+    console.log('Found users:', users.length);
 
     const quotas = await Promise.all(
       users.map(async (user) => {
@@ -59,7 +65,6 @@ export async function GET(request: NextRequest) {
           fileCount,
           folderCount,
           cloudEnabled: quota?.cloudEnabled || false,
-          roleDefaultQuotaBytes: quota?.roleDefaultQuotaBytes?.toString(),
           lastUpdated: quota?.lastUpdated,
         };
       })
@@ -68,8 +73,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ users: quotas });
   } catch (error) {
     console.error('Error fetching quotas:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     return NextResponse.json(
-      { error: 'Failed to fetch quotas' },
+      { error: 'Failed to fetch quotas', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
@@ -77,13 +86,17 @@ export async function GET(request: NextRequest) {
 
 // PUT: Update user quota and cloud access
 export async function PUT(request: NextRequest) {
+  console.log('PUT /api/admin/cloud/quotas called');
   const auth = verifyAuth(request);
-  if (!auth || auth.role !== 'Admin') {
+  const { isAdmin } = await import('@/lib/roles');
+  console.log('Auth:', auth);
+  if (!auth || !isAdmin(auth.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const body = await request.json();
+    console.log('Request body:', body);
     const { userId, newQuotaBytes, cloudEnabled, reason } = body;
 
     if (!userId) {

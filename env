@@ -1,16 +1,18 @@
+GEMINI_API_KEY=AIzaSyCT1u6CRPw3TVcOZmNfDzKD8D0WidGreis
 # Development Environment Configuration
 DOMAIN="acrobaticzrental.duckdns.org"
-DATABASE_URL="postgresql://avrentals_user:avrentals_pass@localhost:5432/avrentals_db"
+DATABASE_URL="postgresql://avrentals_user:avrentals_pass@postgres:5432/avrentals_db"
 JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
 
+
 # Google AI API Keys (Optional)
-GOOGLE_GENERATIVE_AI_API_KEY=""
-GOOGLE_GENERATIVE_AI_API_KEY_2=""
-GOOGLE_GENERATIVE_AI_API_KEY_3=""
+GOOGLE_GENERATIVE_AI_API_KEY="AIzaSyC6qWeqkyQLQLefQDkLffEt9OhQ24LEiuk"
+GOOGLE_GENERATIVE_AI_API_KEY_2="AIzaSyAN8yv7LMnZgUMTZekHDP5KKRsgBGqcXTw"
+GOOGLE_GENERATIVE_AI_API_KEY_3="AIzaSyARJVoJFW03kRE4FtOLvY1z1bmaljMduco"
 
 # DeepL and Gemini API Keys (Optional)
-DEEPL_API_KEY=3ca0c43d-7f6b-0a9d-eb49-45132322a270:fx
-GEMINI_API_KEY=AIzaSyAN8yv7LMnZgUMTZekHDP5KKRsgBGqcXTw
+DEEPL_API_KEY=b8212a4d-24b0-4bcf-9c46-f101c3ec5574:fx
+GEMINI_API_KEY=AIzaSyB43Ac2fZ6_u5BAO9NnigBK9bWl6u5wNl0
 
 # Cloud Storage Configuration
 EXTERNAL_STORAGE_PATH="/mnt/backup_drive/av-rentals/cloud-storage"

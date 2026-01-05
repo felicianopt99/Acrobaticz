@@ -136,6 +136,7 @@ export function SubrentalForm({ partnerId, events, initialData, onSuccess }: Sub
       
       const body = {
         ...data,
+        eventId: data.eventId === "none" ? undefined : data.eventId,
         partnerId,
         totalCost,
         ...(initialData && { id: initialData.id }),
@@ -313,14 +314,14 @@ export function SubrentalForm({ partnerId, events, initialData, onSuccess }: Sub
           render={({ field }) => (
             <FormItem>
               <FormLabel>{labelEvent}</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ""}>
+              <Select onValueChange={field.onChange} value={field.value || "none"}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder={phSelectEvent} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">{noEvent}</SelectItem>
+                  <SelectItem value="none">{noEvent}</SelectItem>
                   {events.map((event) => (
                     <SelectItem key={event.id} value={event.id}>
                       {event.name} ({format(new Date(event.startDate), 'dd/MM/yyyy')})

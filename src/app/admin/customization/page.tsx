@@ -6,13 +6,33 @@ import { useTranslate } from '@/contexts/TranslationContext';
 // Theme preset definitions
 const THEME_PRESETS = [
   {
+    key: 'dark',
+    label: 'Dark Mode',
+    className: 'theme-dark',
+    colors: {
+      primary: '#60a5fa',
+      secondary: '#0f172a',
+      accent: '#10b981',
+    },
+  },
+  {
+    key: 'cloud',
+    label: 'Cloud',
+    className: 'theme-cloud',
+    colors: {
+      primary: '#3b82f6',
+      secondary: '#f0f9ff',
+      accent: '#06b6d4',
+    },
+  },
+  {
     key: 'neon',
     label: 'Neon Night',
     className: 'theme-neon',
     colors: {
-      primary: '#3a8bfd',
-      secondary: '#181a20',
-      accent: '#ff3cac',
+      primary: '#ec4899',
+      secondary: '#0f172a',
+      accent: '#22d3ee',
     },
   },
   {
@@ -20,19 +40,9 @@ const THEME_PRESETS = [
     label: 'Oceanic',
     className: 'theme-oceanic',
     colors: {
-      primary: '#1de9b6',
-      secondary: '#1a2233',
-      accent: '#43e97b',
-    },
-  },
-  {
-    key: 'minimal',
-    label: 'Minimalist',
-    className: 'theme-minimal',
-    colors: {
-      primary: '#7c83fd',
-      secondary: '#181a20',
-      accent: '#bfc9d1',
+      primary: '#0ea5e9',
+      secondary: '#0c2340',
+      accent: '#10b981',
     },
   },
   {
@@ -69,6 +79,7 @@ const customizationSchema = z.object({
   faviconUrl: z.string().optional(),
 
   // Theme
+  themePreset: z.string().optional(),
   primaryColor: z.string().optional(),
   secondaryColor: z.string().optional(),
   accentColor: z.string().optional(),
@@ -109,6 +120,9 @@ const customizationSchema = z.object({
   loginLightRaysMouseInfluence: z.number().min(0).max(1),
   loginLightRaysNoiseAmount: z.number().min(0).max(1),
   loginLightRaysDistortion: z.number().min(0).max(0.5),
+
+  // Catalog Settings - Terms and Conditions
+  catalogTermsAndConditions: z.string().optional(),
 
   // Advanced
   customCSS: z.string().optional(),
@@ -314,6 +328,7 @@ export default function AdminCustomizationPage() {
   // Advanced Settings
   const [customCSS, setCustomCSS] = useState('');
   const [footerText, setFooterText] = useState('');
+  const [catalogTermsAndConditions, setCatalogTermsAndConditions] = useState('');
 
   // Load customization settings from database
   useEffect(() => {
@@ -338,6 +353,7 @@ export default function AdminCustomizationPage() {
       if (settings.contactEmail) setContactEmail(settings.contactEmail);
       if (settings.contactPhone) setContactPhone(settings.contactPhone);
       if (settings.useTextLogo !== undefined) setUseTextLogo(settings.useTextLogo);
+      if (settings.themePreset) setThemePreset(settings.themePreset);
       if (settings.primaryColor) setPrimaryColor(settings.primaryColor);
       if (settings.secondaryColor) setSecondaryColor(settings.secondaryColor);
       if (settings.accentColor) setAccentColor(settings.accentColor);
@@ -346,6 +362,7 @@ export default function AdminCustomizationPage() {
       if (settings.faviconUrl) setFaviconPreview(settings.faviconUrl);
       if (settings.customCSS) setCustomCSS(settings.customCSS);
       if (settings.footerText) setFooterText(settings.footerText);
+      if (settings.catalogTermsAndConditions) setCatalogTermsAndConditions(settings.catalogTermsAndConditions);
       if (settings.version) setVersion(settings.version);
       
       // Login page settings
@@ -408,6 +425,7 @@ export default function AdminCustomizationPage() {
         contactEmail,
         contactPhone,
         useTextLogo,
+        themePreset,
         primaryColor,
         secondaryColor,
         accentColor,
@@ -416,6 +434,7 @@ export default function AdminCustomizationPage() {
         faviconUrl: faviconPreview,
         customCSS,
         footerText,
+        catalogTermsAndConditions,
         version,
         // Login page settings
         loginBackgroundType,
@@ -451,6 +470,8 @@ export default function AdminCustomizationPage() {
         loginLightRaysNoiseAmount,
         loginLightRaysDistortion,
       };
+
+      console.log('Sending customization settings to API:', settings);
       
       const response = await fetch('/api/customization', {
         method: 'PUT',
@@ -459,10 +480,37 @@ export default function AdminCustomizationPage() {
         },
         body: JSON.stringify(settings),
       });
+
+      console.log('Response status:', response.status, 'OK:', response.ok);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save settings');
+        let errorMessage = 'Failed to save settings';
+        let errorDetails = '';
+        try {
+          const contentType = response.headers.get('content-type');
+          console.log('Response content-type:', contentType);
+          
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            console.error('API Error Response:', errorData);
+            errorMessage = errorData.error || errorData.message || 'Failed to save settings';
+            errorDetails = errorData.details ? ` - ${JSON.stringify(errorData.details)}` : '';
+          } else {
+            const responseText = await response.text();
+            console.error('Response text:', responseText);
+            errorMessage = responseText || `HTTP ${response.status}: ${response.statusText}`;
+          }
+        } catch (parseErr) {
+          console.error('Could not parse error response:', parseErr);
+          try {
+            const responseText = await response.text();
+            console.error('Response text:', responseText);
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          } catch (textErr) {
+            console.error('Could not read response text:', textErr);
+          }
+        }
+        throw new Error(errorMessage + errorDetails);
       }
       
       const updatedSettings = await response.json();
@@ -608,11 +656,12 @@ export default function AdminCustomizationPage() {
       </div>
 
       <Tabs defaultValue="branding" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="branding">{uiBrandingText}</TabsTrigger>
           <TabsTrigger value="theme">{uiThemeText}</TabsTrigger>
           <TabsTrigger value="login">{uiLoginPageText}</TabsTrigger>
           <TabsTrigger value="logos">Logos & Icons</TabsTrigger>
+          <TabsTrigger value="terms">Terms</TabsTrigger>
           <TabsTrigger value="advanced">{uiAdvancedText}</TabsTrigger>
         </TabsList>
 
@@ -803,15 +852,6 @@ export default function AdminCustomizationPage() {
                     />
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="dark-mode"
-                  checked={darkMode}
-                  onCheckedChange={setDarkMode}
-                />
-                <Label htmlFor="dark-mode">{uiEnableDarkModeText}</Label>
               </div>
               
               <div className="p-4 border rounded-lg bg-muted/20">
@@ -1698,6 +1738,40 @@ export default function AdminCustomizationPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="terms" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Terms and Conditions
+              </CardTitle>
+              <CardDescription>
+                Customize the terms and conditions that appear in the catalog PDF
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="catalogTerms" className="text-base font-semibold">
+                  Catalog Terms and Conditions
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Enter your terms and conditions. Each line will be treated as a separate point.
+                </p>
+                <Textarea
+                  id="catalogTerms"
+                  placeholder="1. Equipment rental terms apply...&#10;2. All rental equipment must be returned...&#10;3. Damage charges may apply..."
+                  value={catalogTermsAndConditions || ''}
+                  onChange={(e) => setCatalogTermsAndConditions(e.target.value)}
+                  className="min-h-64 font-mono text-sm resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tip: Use line breaks to separate different terms. The system will automatically format them.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="advanced" className="space-y-6">

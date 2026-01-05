@@ -57,6 +57,7 @@ import {
   Clock,
   XCircle,
   RotateCcw,
+  FileText,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -246,6 +247,12 @@ export function PartnerDetailContent({ partnerId }: PartnerDetailContentProps) {
               </Badge>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" asChild>
+                <Link href={`/partners/${partnerId}/catalog`}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate Catalog
+                </Link>
+              </Button>
               <Button variant="outline" asChild>
                 <Link href={`/partners/${partnerId}/edit`}>
                   <Edit className="mr-2 h-4 w-4" /> {editPartner}

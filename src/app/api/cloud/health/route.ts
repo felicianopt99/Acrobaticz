@@ -18,8 +18,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Only admins can check disk health
-  if (auth.role !== 'Admin' && auth.role !== 'Manager') {
+  // Only admins and managers can check disk health
+  const { isAdminOrManager } = await import('@/lib/roles');
+  if (!isAdminOrManager(auth.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

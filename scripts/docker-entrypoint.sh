@@ -54,6 +54,11 @@ if [ "${APP_MODE:-}" != "cron" ] && [ "${1:-}" != "cron" ]; then
     node scripts/seed.js 2>&1 || echo "⚠️ Seeding skipped"
   else
     echo "✅ Database already seeded"
+    # Check if comprehensive seed should be run (for testing all features)
+    if [ "${SEED_COMPREHENSIVE:-false}" = "true" ]; then
+      echo "🌱 Running comprehensive test data seed..."
+      npx tsx scripts/seed-comprehensive.ts --full 2>&1 || echo "⚠️ Comprehensive seeding skipped"
+    fi
   fi
 fi
 

@@ -92,7 +92,10 @@ export async function GET(
         color: tag.color,
         description: tag.description,
       },
-      files: files.map((f) => f.file),
+      files: files.map((f) => ({
+        ...f.file,
+        size: f.file.size.toString(),
+      })),
       folders: folders.map((f) => f.folder),
       count: {
         files: files.length,

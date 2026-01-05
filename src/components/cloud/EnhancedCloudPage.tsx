@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { StorageQuotaDisplay } from '@/components/cloud/StorageQuotaDisplay';
 import { ActivityLog } from '@/components/cloud/ActivityLog';
 import CloudPageContent from '@/components/cloud/CloudPageContent';
+import { useTranslate } from '@/contexts/TranslationContext';
 
 interface EnhancedCloudPageProps {
   userId: string;
@@ -18,6 +19,20 @@ interface EnhancedCloudPageProps {
 
 export default function EnhancedCloudPage({ userId }: EnhancedCloudPageProps) {
   const { toast } = useToast();
+  const { translated: uploadButtonText } = useTranslate('Upload');
+  const { translated: quickActionsText } = useTranslate('Quick Actions');
+  const { translated: uploadFilesText } = useTranslate('Upload Files');
+  const { translated: newFolderText } = useTranslate('New Folder');
+  const { translated: folderNamePlaceholder } = useTranslate('Folder name...');
+  const { translated: createText } = useTranslate('Create');
+  const { translated: cancelText } = useTranslate('Cancel');
+  const { translated: recentActivityText } = useTranslate('Recent Activity');
+  const { translated: successText } = useTranslate('Success');
+  const { translated: errorText } = useTranslate('Error');
+  const { translated: uploadedSuccessfullyText } = useTranslate('file(s) uploaded successfully');
+  const { translated: uploadFailedText } = useTranslate('Upload failed');
+  const { translated: folderCreatedText } = useTranslate('Folder created successfully');
+  const { translated: failedToCreateFolderText } = useTranslate('Failed to create folder');
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,16 +62,16 @@ export default function EnhancedCloudPage({ userId }: EnhancedCloudPageProps) {
         }
 
         toast({
-          title: 'Success',
-          description: `${files.length} file(s) uploaded successfully`,
+          title: successText,
+          description: `${files.length} ${uploadedSuccessfullyText}`,
         });
 
         // Reload content
         window.location.reload();
       } catch (error) {
         toast({
-          title: 'Error',
-          description: error instanceof Error ? error.message : 'Upload failed',
+          title: errorText,
+          description: error instanceof Error ? error.message : uploadFailedText,
           variant: 'destructive',
         });
       }
@@ -77,8 +92,8 @@ export default function EnhancedCloudPage({ userId }: EnhancedCloudPageProps) {
       if (!res.ok) throw new Error('Failed to create folder');
 
       toast({
-        title: 'Success',
-        description: 'Folder created successfully',
+        title: successText,
+        description: folderCreatedText,
       });
 
       setFolderName('');
@@ -86,8 +101,8 @@ export default function EnhancedCloudPage({ userId }: EnhancedCloudPageProps) {
       window.location.reload();
     } catch (error) {
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create folder',
+        title: errorText,
+        description: error instanceof Error ? error.message : failedToCreateFolderText,
         variant: 'destructive',
       });
     }
@@ -103,7 +118,7 @@ export default function EnhancedCloudPage({ userId }: EnhancedCloudPageProps) {
           className="flex items-center gap-2"
         >
           <Upload className="h-4 w-4" />
-          Upload
+          {uploadButtonText}
         </Button>
       </AppHeader>
 
@@ -119,7 +134,7 @@ export default function EnhancedCloudPage({ userId }: EnhancedCloudPageProps) {
             {/* Quick Actions */}
             <Card className="p-4 bg-white dark:bg-slate-800 border-0 shadow-sm">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
-                Quick Actions
+                {quickActionsText}
               </h3>
               <div className="space-y-2">
                 <Button
@@ -127,7 +142,7 @@ export default function EnhancedCloudPage({ userId }: EnhancedCloudPageProps) {
                   className="w-full justify-start flex gap-2"
                 >
                   <Upload className="h-4 w-4" />
-                  Upload Files
+                  {uploadFilesText}
                 </Button>
                 <Button
                   variant="outline"
@@ -135,7 +150,7 @@ export default function EnhancedCloudPage({ userId }: EnhancedCloudPageProps) {
                   className="w-full justify-start flex gap-2"
                 >
                   <FolderPlus className="h-4 w-4" />
-                  New Folder
+                  {newFolderText}
                 </Button>
               </div>
 
@@ -146,14 +161,14 @@ export default function EnhancedCloudPage({ userId }: EnhancedCloudPageProps) {
                   animate={{ opacity: 1, height: 'auto' }}
                 >
                   <Input
-                    placeholder="Folder name..."
+                    placeholder={folderNamePlaceholder}
                     value={folderName}
                     onChange={(e) => setFolderName(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
                   />
                   <div className="flex gap-2">
                     <Button onClick={handleCreateFolder} size="sm" className="flex-1">
-                      Create
+                      {createText}
                     </Button>
                     <Button
                       variant="outline"
@@ -164,7 +179,7 @@ export default function EnhancedCloudPage({ userId }: EnhancedCloudPageProps) {
                         setFolderName('');
                       }}
                     >
-                      Cancel
+                      {cancelText}
                     </Button>
                   </div>
                 </motion.div>
@@ -177,7 +192,7 @@ export default function EnhancedCloudPage({ userId }: EnhancedCloudPageProps) {
             {/* Recent Activity */}
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-white mb-3 px-1">
-                Recent Activity
+                {recentActivityText}
               </h3>
               <ActivityLog />
             </div>

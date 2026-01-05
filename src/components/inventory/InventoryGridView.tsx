@@ -145,6 +145,10 @@ export function InventoryGridView() {
     router.push(`/equipment/${item.id}/edit`);
   }, [router]);
 
+  const handleDuplicate = useCallback((item: EquipmentItem) => {
+    router.push(`/equipment/new?duplicate=${item.id}`);
+  }, [router]);
+
   const openDeleteConfirmDialog = useCallback((item: EquipmentItem) => {
     setItemToDelete(item);
   }, []);
@@ -238,6 +242,7 @@ export function InventoryGridView() {
                           subcategory={subcategories.find(s => s.id === item.subcategoryId)}
                           onEdit={() => handleEdit(item)}
                           onDelete={() => openDeleteConfirmDialog(item)}
+                          onDuplicate={handleDuplicate}
                       />
                       ))}
                   </div>
@@ -259,6 +264,7 @@ export function InventoryGridView() {
                                 subcategory={subcategories.find(s => s.id === item.subcategoryId)}
                                 onEdit={() => handleEdit(item)}
                                 onDelete={() => openDeleteConfirmDialog(item)}
+                                onDuplicate={handleDuplicate}
                             />
                         ))}
                     </div>

@@ -15,7 +15,8 @@ function verifyAuth(request: NextRequest) {
 // GET: Get quota history for a user
 export async function GET(request: NextRequest) {
   const auth = verifyAuth(request);
-  if (!auth || auth.role !== 'Admin') {
+  const { isAdmin } = await import('@/lib/roles');
+  if (!auth || !isAdmin(auth.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
-import { generateEventReminders, generateOverdueAlerts } from '@/lib/notifications'
 import { requireReadAccess, requirePermission } from '@/lib/api-auth'
 
 const EventSchema = z.object({
@@ -10,6 +9,7 @@ const EventSchema = z.object({
   location: z.string().min(1),
   startDate: z.string().transform(str => new Date(str)),
   endDate: z.string().transform(str => new Date(str)),
+  agencyId: z.string().optional(),
 })
 
 // GET /api/events - Get all events
@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     const events = await prisma.event.findMany({
       include: {
         client: true,
+        agency: true,
         rentals: {
           include: {
             equipment: true,
@@ -54,6 +55,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = EventSchema.parse(body)
     
+    // Validate agencyId if provided
+    if (validatedData.agencyId) {
+      const agencyExists = await prisma.partner.findUnique({
+        where: { id: validatedData.agencyId },
+      })
+      if (!agencyExists) {
+        return NextResponse.json({ error: 'Agency not found' }, { status: 400 })
+      }
+    }
+    
     const event = await prisma.event.create({
       data: validatedData,
       include: {
@@ -61,13 +72,6 @@ export async function POST(request: NextRequest) {
         rentals: true,
       },
     })
-    // Kick off generators relevant to events
-    try {
-      await generateEventReminders()
-      await generateOverdueAlerts()
-    } catch (e) {
-      // non-critical
-    }
     
     return NextResponse.json(event, { status: 201 })
   } catch (error) {
@@ -96,21 +100,30 @@ export async function PUT(request: NextRequest) {
     
     const validatedData = EventSchema.partial().parse(updateData)
     
+    // Validate agencyId if provided and not empty
+    if (validatedData.agencyId && validatedData.agencyId !== '') {
+      const agencyExists = await prisma.partner.findUnique({
+        where: { id: validatedData.agencyId },
+      })
+      if (!agencyExists) {
+        return NextResponse.json({ error: 'Agency not found' }, { status: 400 })
+      }
+    }
+    
+    // Handle null/undefined agencyId
+    const dataToUpdate: any = { ...validatedData }
+    if (validatedData.agencyId === '') {
+      dataToUpdate.agencyId = null
+    }
+    
     const event = await prisma.event.update({
       where: { id },
-      data: validatedData,
+      data: dataToUpdate,
       include: {
         client: true,
         rentals: true,
       },
     })
-    // Kick off generators relevant to date changes
-    try {
-      await generateEventReminders()
-      await generateOverdueAlerts()
-    } catch (e) {
-      // non-critical
-    }
     
     return NextResponse.json(event)
   } catch (error) {

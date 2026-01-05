@@ -31,6 +31,7 @@ import type { Partner } from "@/types";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
+import { Upload, X } from "lucide-react";
 
 const partnerFormSchema = z.object({
   name: z.string().min(2, "Partner name must be at least 2 characters.").max(100),
@@ -45,6 +46,7 @@ const partnerFormSchema = z.object({
   partnerType: z.enum(['provider', 'agency', 'both']).default('provider'),
   commission: z.number().positive().optional(),
   isActive: z.boolean(),
+  logoUrl: z.string().optional().or(z.literal('')),
 });
 
 type PartnerFormValues = z.infer<typeof partnerFormSchema>;
@@ -58,6 +60,8 @@ export function PartnerForm({ initialData, onSubmitSuccess }: PartnerFormProps) 
   const router = useRouter();
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
+  const [logoPreview, setLogoPreview] = useState<string | null>(initialData?.logoUrl || null);
+  const [uploading, setUploading] = useState(false);
 
   // Fetch clients on mount
   useEffect(() => {
@@ -108,6 +112,10 @@ export function PartnerForm({ initialData, onSubmitSuccess }: PartnerFormProps) 
   const { translated: commissionDescription } = useTranslate('For agency partners - commission percentage or flat fee per referral.');
   const { translated: labelLinkedClient } = useTranslate('Link to Client (Optional)');
   const { translated: linkedClientDescription } = useTranslate('For agency partners - link this partner to an existing client record if they are also your direct client.');
+  const { translated: labelLogo } = useTranslate('Company Logo (Optional)');
+  const { translated: logoDescription } = useTranslate('Upload a company logo to display in catalogs (max 2MB, PNG/JPG)');
+  const { translated: uploadLogoBtn } = useTranslate('Upload Logo');
+  const { translated: removeLogo } = useTranslate('Remove Logo');
 
   const form = useForm<PartnerFormValues>({
     resolver: zodResolver(partnerFormSchema),
@@ -124,6 +132,7 @@ export function PartnerForm({ initialData, onSubmitSuccess }: PartnerFormProps) 
       partnerType: initialData.partnerType || 'provider',
       commission: initialData.commission || undefined,
       isActive: initialData.isActive,
+      logoUrl: initialData.logoUrl || '',
     } : {
       name: "",
       companyName: "",
@@ -137,8 +146,72 @@ export function PartnerForm({ initialData, onSubmitSuccess }: PartnerFormProps) 
       partnerType: 'provider',
       commission: undefined,
       isActive: true,
+      logoUrl: "",
     },
   });
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        variant: 'destructive',
+        title: toastErrorTitle,
+        description: 'File size exceeds 2MB limit'
+      });
+      return;
+    }
+
+    // Validate file type
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast({
+        variant: 'destructive',
+        title: toastErrorTitle,
+        description: 'Only PNG, JPG, or WebP images are allowed'
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+
+      const data = await response.json();
+      const logoUrl = data.url;
+
+      // Update form and preview
+      form.setValue('logoUrl', logoUrl);
+      setLogoPreview(logoUrl);
+      
+      toast({
+        title: 'Success',
+        description: 'Logo uploaded successfully'
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: toastErrorTitle,
+        description: 'Failed to upload logo'
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    form.setValue('logoUrl', '');
+    setLogoPreview(null);
+  };
 
   async function onSubmit(data: PartnerFormValues) {
     try {
@@ -146,24 +219,50 @@ export function PartnerForm({ initialData, onSubmitSuccess }: PartnerFormProps) 
       const method = initialData ? 'PUT' : 'POST';
       const body = initialData ? { ...data, id: initialData.id } : data;
 
+      console.log(`[${method}] Sending partner data:`, body);
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
+      console.log(`Response status: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
-        throw new Error('Failed to save partner');
+        let errorMessage = 'Failed to save partner';
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            const text = await response.text();
+            errorMessage = text || `HTTP ${response.status}: ${response.statusText}`;
+          }
+        } catch (parseError) {
+          console.error('Error parsing response:', parseError);
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        console.error('API error:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       if (initialData) {
         toast({ title: toastPartnerUpdatedTitle, description: `Partner "${data.name}" has been successfully updated.` });
+        // Refetch clients to reflect any synced changes from partner to client
+        const clientsResponse = await fetch('/api/clients');
+        if (clientsResponse.ok) {
+          // Trigger a refresh event for parent components listening to client changes
+          window.dispatchEvent(new CustomEvent('clientsUpdated', { detail: await clientsResponse.json() }));
+        }
       } else {
         toast({ title: toastPartnerAddedTitle, description: `Partner "${data.name}" has been successfully added.` });
       }
       onSubmitSuccess ? onSubmitSuccess() : router.push("/partners");
     } catch (error) {
-      toast({ variant: "destructive", title: toastErrorTitle, description: toastFailedText });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast({ variant: "destructive", title: toastErrorTitle, description: errorMessage });
       console.error("Error saving partner:", error);
     }
   }
@@ -349,6 +448,41 @@ export function PartnerForm({ initialData, onSubmitSuccess }: PartnerFormProps) 
                 </FormItem>
               )}
             />
+            <FormItem>
+              <FormLabel>{labelLogo}</FormLabel>
+              <FormDescription>{logoDescription}</FormDescription>
+              <div className="space-y-4">
+                {logoPreview && (
+                  <div className="relative w-32 h-32 rounded-lg border border-border/50 overflow-hidden bg-muted">
+                    <img 
+                      src={logoPreview} 
+                      alt="Logo preview" 
+                      className="w-full h-full object-contain p-2"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      disabled={uploading}
+                      className="absolute top-1 right-1 bg-destructive/80 hover:bg-destructive rounded-full p-1 text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+                <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-border/50 rounded-lg hover:border-primary/50 cursor-pointer transition-colors">
+                  <Upload className="h-4 w-4" />
+                  <span className="text-sm">{uploading ? 'Uploading...' : uploadLogoBtn}</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleLogoUpload}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <FormMessage />
+            </FormItem>
             <FormField
               control={form.control}
               name="isActive"

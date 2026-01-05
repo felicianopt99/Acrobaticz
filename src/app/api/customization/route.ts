@@ -26,6 +26,7 @@ const customizationSchema = z.object({
   useTextLogo: z.boolean().optional(),
   
   // Theme
+  themePreset: z.string().optional(),
   primaryColor: z.string().optional(),
   secondaryColor: z.string().optional(),
   accentColor: z.string().optional(),
@@ -72,6 +73,9 @@ const customizationSchema = z.object({
   loginLightRaysMouseInfluence: z.number().min(0).max(1).nullable().optional(),
   loginLightRaysNoiseAmount: z.number().min(0).max(1).nullable().optional(),
   loginLightRaysDistortion: z.number().min(0).max(0.5).nullable().optional(),
+  
+  // Catalog Settings - Terms and Conditions
+  catalogTermsAndConditions: z.string().optional(),
   
   // Advanced
   customCSS: z.string().optional(),
@@ -191,13 +195,25 @@ export async function GET() {
 // PUT /api/customization - Update customization settings
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      console.error('Failed to parse request body:', jsonError);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body', details: jsonError instanceof Error ? jsonError.message : String(jsonError) },
+        { status: 400 }
+      );
+    }
+
     const validatedData = customizationSchema.parse(body);
     
     // Remove undefined values
     const cleanData = Object.fromEntries(
       Object.entries(validatedData).filter(([_, value]) => value !== undefined)
     );
+
+    console.log('Updating customization with data:', Object.keys(cleanData));
     
     // Try to find existing settings
     const existingSettings = await prisma.customizationSettings.findFirst();
@@ -219,18 +235,24 @@ export async function PUT(request: NextRequest) {
     // Invalidate cache
     customizationCache = null;
     cacheTimestamp = 0;
-    
-    return NextResponse.json(updatedSettings);
+
+    console.log('Successfully updated customization settings');
+    return NextResponse.json(updatedSettings, { status: 200 });
   } catch (error) {
-    console.error('Error updating customization settings:', error);
+    console.error('Error updating customization settings:', error instanceof Error ? error.message : error);
     if (error instanceof z.ZodError) {
+      console.error('Validation errors:', error.errors);
       return NextResponse.json(
         { error: 'Invalid data', details: error.errors },
         { status: 400 }
       );
     }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('Full error object:', error);
+    if (errorStack) console.error('Stack trace:', errorStack);
     return NextResponse.json(
-      { error: 'Failed to update customization settings' },
+      { error: 'Failed to update customization settings', details: errorMessage, stack: errorStack },
       { status: 500 }
     );
   }

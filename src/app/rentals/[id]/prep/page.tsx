@@ -267,6 +267,8 @@ export default function RentalPrepPage() {
             isOpen={isScanningCheckout}
             onOpenChange={setIsScanningCheckout}
             onScan={(result) => handleScan(result, 'checkout')}
+            totalItems={totalToCheckout}
+            scannedCount={checkedOutCount}
         />
       )}
 
@@ -275,6 +277,8 @@ export default function RentalPrepPage() {
             isOpen={isScanningCheckin}
             onOpenChange={setIsScanningCheckin}
             onScan={(result) => handleScan(result, 'checkin')}
+            totalItems={totalToCheckIn}
+            scannedCount={checkedInCount}
         />
       )}
     </div>

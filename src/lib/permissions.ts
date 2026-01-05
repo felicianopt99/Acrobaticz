@@ -1,7 +1,9 @@
 import type { UserRole, RolePermissions } from '@/types';
+import { normalizeRole, getRoleDisplayName as getDisplayName } from '@/lib/roles';
 
-export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
-  Admin: {
+// Internal permissions map using lowercase keys for consistency
+const ROLE_PERMISSIONS_MAP: Record<string, RolePermissions> = {
+  admin: {
     canManageUsers: true,
     canManageEquipment: true,
     canManageClients: true,
@@ -12,7 +14,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canManageMaintenance: true,
     canManagePartners: true,
   },
-  Manager: {
+  manager: {
     canManageUsers: false,
     canManageEquipment: true,
     canManageClients: true,
@@ -23,7 +25,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canManageMaintenance: true,
     canManagePartners: true,
   },
-  Technician: {
+  technician: {
     canManageUsers: false,
     canManageEquipment: true,
     canManageClients: false,
@@ -34,7 +36,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canManageMaintenance: true,
     canManagePartners: false,
   },
-  Employee: {
+  employee: {
     canManageUsers: false,
     canManageEquipment: false,
     canManageClients: true,
@@ -45,7 +47,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canManageMaintenance: false,
     canManagePartners: false,
   },
-  Viewer: {
+  viewer: {
     canManageUsers: false,
     canManageEquipment: false,
     canManageClients: false,
@@ -58,15 +60,36 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
   },
 };
 
-export function getRolePermissions(role: UserRole): RolePermissions {
-  return ROLE_PERMISSIONS[role];
+// Backwards compatibility export with capitalized keys
+export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
+  Admin: ROLE_PERMISSIONS_MAP.admin,
+  Manager: ROLE_PERMISSIONS_MAP.manager,
+  Technician: ROLE_PERMISSIONS_MAP.technician,
+  Employee: ROLE_PERMISSIONS_MAP.employee,
+  Viewer: ROLE_PERMISSIONS_MAP.viewer,
+};
+
+export function getRolePermissions(role: UserRole | string): RolePermissions {
+  const normalized = normalizeRole(role);
+  return ROLE_PERMISSIONS_MAP[normalized] || ROLE_PERMISSIONS_MAP.viewer;
 }
 
-export function hasPermission(role: UserRole, permission: keyof RolePermissions): boolean {
-  return ROLE_PERMISSIONS[role][permission];
+export function hasPermission(role: UserRole | string, permission: keyof RolePermissions): boolean {
+  const normalized = normalizeRole(role);
+  const permissions = ROLE_PERMISSIONS_MAP[normalized] || ROLE_PERMISSIONS_MAP.viewer;
+  return permissions[permission];
 }
 
-export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
+export const ROLE_DESCRIPTIONS: Record<string, string> = {
+  admin: 'Full system access including user management',
+  manager: 'Business operations management (no user management)',
+  technician: 'Equipment and maintenance focus',
+  employee: 'Basic operations and customer management',
+  viewer: 'Read-only access to view data',
+};
+
+// Backwards compatible version with capitalized keys
+export const ROLE_DESCRIPTIONS_DISPLAY: Record<UserRole, string> = {
   Admin: 'Full system access including user management',
   Manager: 'Business operations management (no user management)',
   Technician: 'Equipment and maintenance focus',

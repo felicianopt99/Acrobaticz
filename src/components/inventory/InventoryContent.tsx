@@ -10,8 +10,6 @@ import { InventoryAvailabilityView } from '@/components/inventory/InventoryAvail
 import { InventoryLabelGenerator } from '@/components/inventory/InventoryLabelGenerator';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, List, CalendarDays, QrCode, Plus } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { EquipmentForm } from '@/components/equipment/EquipmentForm';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import Link from 'next/link';
 
@@ -33,7 +31,6 @@ export function InventoryContent() {
   const { translated: uiInventoryHeading } = useTranslate('Equipment & Inventory');
 
   const [activeTab, setActiveTab] = useState("grid");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -56,9 +53,12 @@ export function InventoryContent() {
       <div className="flex-1 overflow-y-auto p-2 md:p-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 md:mb-6 gap-4">
           <h1 className="text-xl md:text-2xl font-bold">{uiInventoryHeading}</h1>
-          <Button onClick={() => setIsAddDialogOpen(true)} variant="outline" className="gap-2 w-full sm:w-auto">
-            <Plus className="h-4 w-4" />
-            {uiAddEquipmentText}</Button>
+          <Link href="/equipment/new">
+            <Button variant="outline" className="gap-2 w-full sm:w-auto">
+              <Plus className="h-4 w-4" />
+              {uiAddEquipmentText}
+            </Button>
+          </Link>
         </div>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-4 md:mb-6 h-auto">
@@ -96,15 +96,6 @@ export function InventoryContent() {
             <InventoryLabelGenerator />
           </TabsContent>
         </Tabs>
-
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{uiAddNewEquipmentText}</DialogTitle>
-            </DialogHeader>
-            <EquipmentForm onSubmitSuccess={() => setIsAddDialogOpen(false)} />
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );

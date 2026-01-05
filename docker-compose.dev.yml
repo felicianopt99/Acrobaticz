@@ -9,13 +9,13 @@ services:
     container_name: av-postgres-dev
     restart: unless-stopped
     environment:
-      POSTGRES_DB: av_rentals
-      POSTGRES_USER: av_user
-      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: avrentals_db
+      POSTGRES_USER: avrentals_user
+      POSTGRES_PASSWORD: avrentals_pass
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U av_user -d av_rentals"]
+      test: ["CMD-SHELL", "pg_isready -U avrentals_user -d avrentals_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,17 +29,27 @@ services:
     container_name: av-rentals-dev
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://av_user:dev_password@postgres:5432/av_rentals
+      - DATABASE_URL=postgresql://avrentals_user:avrentals_pass@postgres:5432/avrentals_db
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - JWT_SECRET=dev-secret-key-for-local-development-only
+      - NODE_OPTIONS=--max-old-space-size=2048
     volumes:
       - .:/app
       - /app/node_modules
       - /app/.next
+      - ./dev-storage:/app/dev-storage
       - /mnt/backup_drive/av-rentals/cloud-storage:/mnt/backup_drive/av-rentals/cloud-storage
     ports:
       - "3000:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2'
+        reservations:
+          memory: 2G
+          cpus: '1'
     depends_on:
       postgres:
         condition: service_healthy

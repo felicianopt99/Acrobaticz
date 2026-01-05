@@ -5,21 +5,26 @@ import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Camera, AlertTriangle } from 'lucide-react';
+import { Camera, AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react';
 import jsQR from 'jsqr';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 
 interface QRCodeScannerProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onScan: (result: string) => void;
+  totalItems?: number;
+  scannedCount?: number;
 }
 
-export function QRCodeScanner({ isOpen, onOpenChange, onScan }: QRCodeScannerProps) {
+export function QRCodeScanner({ isOpen, onOpenChange, onScan, totalItems = 0, scannedCount = 0 }: QRCodeScannerProps) {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [lastScannedItem, setLastScannedItem] = useState<string | null>(null);
+  const [scanIndicator, setScanIndicator] = useState(false);
   const warmupStartRef = useRef<number | null>(null);
   const lastDataRef = useRef<string | null>(null);
   const stableCountRef = useRef<number>(0);
@@ -99,7 +104,7 @@ export function QRCodeScanner({ isOpen, onOpenChange, onScan }: QRCodeScannerPro
 
                     // Require the same content in a few consecutive frames to confirm
                     if (stableCountRef.current >= 3) {
-                        const acceptCooldownMs = 1200;
+                        const acceptCooldownMs = 600; // Reduced from 1200 for faster continuous scanning
                         const elapsedSinceAccept = now - lastAcceptTsRef.current;
                         const isNewData = lastAcceptedDataRef.current !== code.data;
                         const cooldownPassed = elapsedSinceAccept > acceptCooldownMs;
@@ -107,6 +112,9 @@ export function QRCodeScanner({ isOpen, onOpenChange, onScan }: QRCodeScannerPro
                             onScan(code.data);
                             lastAcceptedDataRef.current = code.data;
                             lastAcceptTsRef.current = now;
+                            setLastScannedItem(code.data);
+                            setScanIndicator(true);
+                            setTimeout(() => setScanIndicator(false), 500);
                         }
                         // reset frame stability so we don't immediately trigger again
                         lastDataRef.current = null;
@@ -139,18 +147,53 @@ export function QRCodeScanner({ isOpen, onOpenChange, onScan }: QRCodeScannerPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Scan Equipment QR Code</DialogTitle>
           <DialogDescription>
-            Point your camera at the QR code on the equipment.
+            Keep your camera pointed at the equipment QR codes. Each scan will be counted automatically.
+            {totalItems > 0 && <span className="block mt-2 font-semibold">Progress: {scannedCount} / {totalItems} items</span>}
           </DialogDescription>
         </DialogHeader>
-        <div className="mt-4">
-          <div className="relative w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center">
+        <div className="mt-4 space-y-4">
+          {totalItems > 0 && (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="font-medium">Scanning Progress</span>
+                <span className="text-muted-foreground">{scannedCount}/{totalItems}</span>
+              </div>
+              <Progress value={(scannedCount / totalItems) * 100} className="h-2" />
+            </div>
+          )}
+          
+          <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center border-2 border-border">
             <video ref={videoRef} className="w-full h-full object-cover" muted autoPlay playsInline />
+            
+            {/* Scanning indicator overlay */}
+            {hasCameraPermission === true && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                {/* QR frame guide */}
+                <div className="relative w-48 h-48 border-2 border-green-500/50 rounded-lg shadow-lg">
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-green-500"></div>
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-green-500"></div>
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-green-500"></div>
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-green-500"></div>
+                </div>
+                
+                {/* Scan success indicator */}
+                {scanIndicator && (
+                  <div className="absolute flex flex-col items-center gap-2 animate-pulse">
+                    <CheckCircle2 className="h-12 w-12 text-green-500" />
+                    <span className="text-sm font-semibold text-green-600 bg-white/90 px-3 py-1 rounded-full">
+                      Item Scanned!
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+            
             {hasCameraPermission === false && (
-               <Alert variant="destructive">
+               <Alert variant="destructive" className="absolute inset-4">
                  <AlertTriangle className="h-4 w-4" />
                  <AlertTitle>Camera Access Required</AlertTitle>
                  <AlertDescription>
@@ -158,15 +201,40 @@ export function QRCodeScanner({ isOpen, onOpenChange, onScan }: QRCodeScannerPro
                  </AlertDescription>
                </Alert>
             )}
+            
              {hasCameraPermission === null && (
-                 <div className="text-center text-muted-foreground">
-                    <Camera className="h-10 w-10 mx-auto mb-2" />
+                 <div className="text-center text-muted-foreground space-y-2">
+                    <Camera className="h-10 w-10 mx-auto mb-2 animate-pulse" />
                     <p>Requesting camera permission...</p>
                  </div>
              )}
           </div>
-          <div className="mt-4 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => onOpenChange(false)}>Done</Button>
+
+          {lastScannedItem && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-3 text-sm">
+              <p className="text-green-800">
+                <strong>Last Scan:</strong> Equipment recognized ✓
+              </p>
+            </div>
+          )}
+          
+          <div className="flex justify-between gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setLastScannedItem(null);
+              }}
+              className="flex-1"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" /> Reset
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={() => onOpenChange(false)}
+              className="flex-1"
+            >
+              Done Scanning
+            </Button>
           </div>
         </div>
       </DialogContent>

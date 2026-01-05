@@ -9,6 +9,7 @@ import { FolderPlus, Upload, File, Folder, Clock, Star, Trash2, Search, Cloud, M
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
+import { useTranslate } from '@/contexts/TranslationContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,7 @@ interface CloudFile {
   mimeType: string;
   size: string | number; // Use string for BigInt compatibility
   isStarred: boolean;
+  isPublic: boolean;
   createdAt: string;
 }
 
@@ -44,6 +46,23 @@ interface CloudPageContentProps {
 export default function CloudPageContent({ userId }: CloudPageContentProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { translated: searchFilesText } = useTranslate('Search files...');
+  const { translated: nameText } = useTranslate('Name');
+  const { translated: typeText } = useTranslate('Type');
+  const { translated: sizeText } = useTranslate('Size');
+  const { translated: dateText } = useTranslate('Date Modified');
+  const { translated: noFilesText } = useTranslate('No files found');
+  const { translated: noFoldersText } = useTranslate('No folders');
+  const { translated: downloadText } = useTranslate('Download');
+  const { translated: shareText } = useTranslate('Share');
+  const { translated: deleteText } = useTranslate('Delete');
+  const { translated: errorText } = useTranslate('Error');
+  const { translated: failedToLoadText } = useTranslate('Error loading files');
+  const { translated: loadingText } = useTranslate('Loading...');
+  const { translated: newFolderText } = useTranslate('New Folder');
+  const { translated: folderNamePlaceholder } = useTranslate('Folder name...');
+  const { translated: createText } = useTranslate('Create');
+  const { translated: cancelText } = useTranslate('Cancel');
   const [folders, setFolders] = useState<CloudFolder[]>([]);
   const [files, setFiles] = useState<CloudFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -200,7 +219,7 @@ export default function CloudPageContent({ userId }: CloudPageContentProps) {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               <Input
-                placeholder="Search files and folders..."
+                placeholder={searchFilesText}
                 className="pl-10"
               />
             </div>
@@ -211,7 +230,7 @@ export default function CloudPageContent({ userId }: CloudPageContentProps) {
               className="flex items-center gap-2"
             >
               <FolderPlus className="h-4 w-4" />
-              New Folder
+              {newFolderText}
             </Button>
           </motion.div>
 
@@ -224,13 +243,13 @@ export default function CloudPageContent({ userId }: CloudPageContentProps) {
               exit={{ opacity: 0, height: 0 }}
             >
               <Input
-                placeholder="Folder name..."
+                placeholder={folderNamePlaceholder}
                 value={folderName}
                 onChange={(e) => setFolderName(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
               />
               <Button onClick={handleCreateFolder} size="sm">
-                Create
+                {createText}
               </Button>
               <Button
                 variant="outline"
@@ -240,16 +259,17 @@ export default function CloudPageContent({ userId }: CloudPageContentProps) {
                   setFolderName('');
                 }}
               >
-                Cancel
+                {cancelText}
               </Button>
             </motion.div>
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin">
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin mb-4">
                 <div className="h-12 w-12 border-4 border-gray-300 border-t-blue-500 rounded-full" />
               </div>
+              <p className="text-gray-600 dark:text-gray-400">{loadingText}</p>
             </div>
           ) : (
             <div className="space-y-8">

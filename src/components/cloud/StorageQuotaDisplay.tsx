@@ -4,12 +4,16 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { HardDrive, AlertCircle } from 'lucide-react';
 import { formatBytes } from '@/lib/utils';
+import { useTranslate } from '@/contexts/TranslationContext';
 
 interface StorageQuotaDisplayProps {
   userId: string;
 }
 
 export function StorageQuotaDisplay({ userId }: StorageQuotaDisplayProps) {
+  const { translated: storageText } = useTranslate('Storage');
+  const { translated: storageFull } = useTranslate('Storage Full');
+  const { translated: storageAlmostFull } = useTranslate('Storage almost full');
   const [quota, setQuota] = useState<{ usedBytes: number; quotaBytes: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,7 +46,7 @@ export function StorageQuotaDisplay({ userId }: StorageQuotaDisplayProps) {
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <HardDrive className="h-5 w-5 text-blue-500" />
-          <h3 className="font-semibold text-gray-900 dark:text-white">Storage</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{storageText}</h3>
         </div>
         {isNearFull && (
           <AlertCircle className={`h-5 w-5 ${isFull ? 'text-red-500' : 'text-orange-500'}`} />

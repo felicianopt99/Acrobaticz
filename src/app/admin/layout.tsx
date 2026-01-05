@@ -20,8 +20,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     if (!user || !user.isActive) {
       redirect('/login')
     }
-    const role = String(user.role || '').toLowerCase()
-    if (role !== 'admin') {
+    const { isAdmin } = await import('@/lib/roles')
+    if (!isAdmin(user.role)) {
       redirect('/unauthorized')
     }
   } catch {

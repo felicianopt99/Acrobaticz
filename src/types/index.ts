@@ -114,6 +114,7 @@ export interface Client {
   phone?: string;
   address?: string;
   notes?: string;
+  partnerId?: string; // Link to a Partner/Agency that this client is associated with
 }
 
 export type RentalPrepStatus = 'pending' | 'checked-out' | 'checked-in';
@@ -123,11 +124,20 @@ export interface Event {
   id: string;
   name: string;
   clientId: string;
+  agencyId?: string;  // Partner/Agency that created/owns this event
   location: string;
   startDate: Date;
   endDate: Date;
   assignedTo?: string;
   date: Date; // Added date property for event filtering
+  subClients?: EventSubClient[]; // Multiple sub-clients for this event
+}
+
+export interface EventSubClient {
+  id: string;
+  eventId: string;
+  clientId: string;
+  createdAt: Date;
 }
 
 export interface Rental {
@@ -256,6 +266,7 @@ export interface Partner {
   partnerType: PartnerType;
   commission?: number;
   isActive: boolean;
+  logoUrl?: string; // Company logo URL for catalogs
   version?: number;
   createdBy?: string;
   updatedBy?: string;

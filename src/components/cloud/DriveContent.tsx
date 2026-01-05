@@ -4,10 +4,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useTranslate } from '@/contexts/TranslationContext';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
@@ -50,7 +52,9 @@ import {
   Copy,
   Eye,
   Link,
-  Move
+  Move,
+  Globe,
+  Lock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatBytes } from '@/lib/utils';
@@ -63,6 +67,7 @@ interface CloudFile {
   mimeType: string;
   size: string | number;
   isStarred: boolean;
+  isPublic: boolean;
   createdAt: string;
 }
 
@@ -111,6 +116,13 @@ function getFileIconColor(mimeType: string) {
 export function DriveContent({ userId, folderId, folderName }: DriveContentProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { translated: welcomeToDrive } = useTranslate('Welcome to your Drive');
+  const { translated: folderEmpty } = useTranslate('This folder is empty');
+  const { translated: dropFilesHere } = useTranslate('Drop files here or use the + New button to upload files and create folders');
+  const { translated: uploadFilesOrCreate } = useTranslate('Upload files or create folders to get started');
+  const { translated: newFolderText } = useTranslate('New Folder');
+  const { translated: uploadFilesText } = useTranslate('Upload files');
+  const { translated: newFolderLower } = useTranslate('New folder');
   const [folders, setFolders] = useState<CloudFolder[]>([]);
   const [files, setFiles] = useState<CloudFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,20 +145,24 @@ export function DriveContent({ userId, folderId, folderName }: DriveContentProps
   const loadContent = useCallback(async () => {
     try {
       setLoading(true);
-      const parentParam = folderId ? `parentId=${folderId}` : 'parentId=null';
+      const folderParam = folderId ? `folderId=${folderId}` : '';
+      
+      console.log('[LoadContent] Fetching with param:', folderParam);
       
       const [folderRes, fileRes] = await Promise.all([
-        fetch(`/api/cloud/folders?${parentParam}`),
-        fetch(`/api/cloud/files?${parentParam}`)
+        fetch(`/api/cloud/folders?${folderParam}`),
+        fetch(`/api/cloud/files?${folderParam}`)
       ]);
 
       if (folderRes.ok) {
         const data = await folderRes.json();
+        console.log('[LoadContent] Folders:', data.folders);
         setFolders(data.folders || []);
       }
 
       if (fileRes.ok) {
         const data = await fileRes.json();
+        console.log('[LoadContent] Files:', data.files);
         setFiles(data.files || []);
       }
     } catch (error) {
@@ -339,11 +355,36 @@ export function DriveContent({ userId, folderId, folderName }: DriveContentProps
     }
   };
 
+  const handleTogglePublic = async (id: string, currentPublic: boolean) => {
+    try {
+      const res = await fetch(`/api/cloud/files/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPublic: !currentPublic }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update');
+      toast({
+        title: 'Success',
+        description: currentPublic ? 'File made private' : 'File made public',
+      });
+      loadContent();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update file visibility',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleMoveToTrash = async (id: string, type: 'file' | 'folder') => {
     try {
       const endpoint = type === 'folder' 
         ? `/api/cloud/folders/${id}`
         : `/api/cloud/files/${id}`;
+
+      console.log('[MoveToTrash] Sending PATCH to:', endpoint);
 
       const res = await fetch(endpoint, {
         method: 'PATCH',
@@ -351,14 +392,20 @@ export function DriveContent({ userId, folderId, folderName }: DriveContentProps
         body: JSON.stringify({ isTrashed: true }),
       });
 
-      if (!res.ok) throw new Error('Failed to move to trash');
+      const data = await res.json();
+      console.log('[MoveToTrash] Response status:', res.status, 'data:', data);
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to move to trash');
+      }
 
       toast({ title: 'Moved to trash' });
-      loadContent();
+      await loadContent();
     } catch (error) {
+      console.error('[MoveToTrash] Error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to move to trash',
+        description: error instanceof Error ? error.message : 'Failed to move to trash',
         variant: 'destructive',
       });
     }
@@ -488,6 +535,62 @@ export function DriveContent({ userId, folderId, folderName }: DriveContentProps
     setIsDragging(false);
   };
 
+  const handleUploadClick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.onchange = async (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const selectedFiles = Array.from(target.files || []);
+      if (selectedFiles.length === 0) return;
+
+      const formData = new FormData();
+      selectedFiles.forEach((file: File) => {
+        formData.append('files', file);
+      });
+      if (folderId) {
+        formData.append('folderId', folderId);
+      }
+
+      try {
+        const res = await fetch('/api/cloud/files/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        let responseData = {};
+        try {
+          responseData = await res.json();
+        } catch (parseErr) {
+          console.error('Failed to parse response as JSON:', parseErr);
+          responseData = { error: `HTTP ${res.status}` };
+        }
+        
+        if (!res.ok) {
+          console.error('Upload API error (Status ' + res.status + '):', responseData);
+          const errorMsg = responseData.error || responseData.errors?.[0]?.error || `HTTP ${res.status}: Upload failed`;
+          throw new Error(errorMsg);
+        }
+
+        toast({
+          title: 'Upload successful',
+          description: `${selectedFiles.length} file(s) uploaded`,
+        });
+        console.log('[Upload] Calling loadContent() to refresh files');
+        await loadContent();
+        console.log('[Upload] Files refreshed after upload');
+      } catch (error) {
+        console.error('Upload error full:', error);
+        toast({
+          title: 'Upload failed',
+          description: error instanceof Error ? error.message : 'Please try again',
+          variant: 'destructive',
+        });
+      }
+    };
+    input.click();
+  };
+
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -588,87 +691,117 @@ export function DriveContent({ userId, folderId, folderName }: DriveContentProps
           ))}
         </div>
       ) : isEmpty ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="p-6 rounded-full bg-white/5 mb-6">
-            <Folder className="h-16 w-16 text-gray-500" />
-          </div>
-          <h2 className="text-xl font-medium text-white mb-2">
-            {folderId ? 'This folder is empty' : 'Welcome to your Drive'}
-          </h2>
-          <p className="text-gray-400 mb-6 max-w-md">
-            {folderId 
-              ? 'Upload files or create folders to get started'
-              : 'Drop files here or use the + New button to upload files and create folders'
-            }
-          </p>
-          <div className="flex gap-3">
-            <Button 
-              onClick={() => setShowNewFolderDialog(true)}
-              variant="outline"
-              className="border-white/20 text-white hover:bg-white/10"
-            >
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div className="flex flex-col items-center justify-center py-20 text-center w-full cursor-context-menu">
+              <div className="p-6 rounded-full bg-white/5 mb-6">
+                <Folder className="h-16 w-16 text-gray-500" />
+              </div>
+              <h2 className="text-xl font-medium text-white mb-2">
+                {folderId ? folderEmpty : welcomeToDrive}
+              </h2>
+              <p className="text-gray-400 mb-6 max-w-md">
+                {folderId 
+                  ? uploadFilesOrCreate
+                  : dropFilesHere
+                }
+              </p>
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => setShowNewFolderDialog(true)}
+                  variant="outline"
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  <FolderPlus className="h-4 w-4 mr-2" />
+                  {newFolderText}
+                </Button>
+              </div>
+            </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent className="bg-[#1a1a1a] border-white/10 text-white">
+            <ContextMenuItem onClick={() => handleUploadClick()}>
+              <Upload className="h-4 w-4 mr-2" />
+              {uploadFilesText}
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => setShowNewFolderDialog(true)}>
               <FolderPlus className="h-4 w-4 mr-2" />
-              New Folder
-            </Button>
-          </div>
-        </div>
+              {newFolderLower}
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
       ) : (
-        <div className={cn(
-          viewMode === 'grid' 
-            ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
-            : "flex flex-col gap-1"
-        )}>
-          {/* Folders */}
-          {folders.map((folder) => (
-            <FolderItem
-              key={folder.id}
-              folder={folder}
-              viewMode={viewMode}
-              isSelected={selectedItems.has(folder.id)}
-              onSelect={(e) => handleItemSelect(folder.id, e)}
-              onOpen={() => openFolder(folder.id)}
-              onRename={() => {
-                setRenameItem({ id: folder.id, name: folder.name, type: 'folder' });
-                setShowRenameDialog(true);
-              }}
-              onToggleStar={() => handleToggleStar(folder.id, 'folder', folder.isStarred)}
-              onMoveToTrash={() => handleMoveToTrash(folder.id, 'folder')}
-              onCopy={() => handleCopy(folder.id, 'folder')}
-              onMove={() => {
-                setMoveItem({ id: folder.id, type: 'folder', name: folder.name });
-                setShowMoveDialog(true);
-              }}
-              onDeletePermanently={() => handleDeletePermanently(folder.id, 'folder')}
-            />
-          ))}
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div className={cn(
+              viewMode === 'grid' 
+                ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+                : "flex flex-col gap-1",
+              "cursor-context-menu"
+            )}>
+              {/* Folders */}
+              {folders.map((folder) => (
+                <FolderItem
+                  key={folder.id}
+                  folder={folder}
+                  viewMode={viewMode}
+                  isSelected={selectedItems.has(folder.id)}
+                  onSelect={(e) => handleItemSelect(folder.id, e)}
+                  onOpen={() => openFolder(folder.id)}
+                  onRename={() => {
+                    setRenameItem({ id: folder.id, name: folder.name, type: 'folder' });
+                    setShowRenameDialog(true);
+                  }}
+                  onToggleStar={() => handleToggleStar(folder.id, 'folder', folder.isStarred)}
+                  onMoveToTrash={() => handleMoveToTrash(folder.id, 'folder')}
+                  onCopy={() => handleCopy(folder.id, 'folder')}
+                  onMove={() => {
+                    setMoveItem({ id: folder.id, type: 'folder', name: folder.name });
+                    setShowMoveDialog(true);
+                  }}
+                  onDeletePermanently={() => handleDeletePermanently(folder.id, 'folder')}
+                />
+              ))}
 
-          {/* Files */}
-          {files.map((file) => (
-            <FileItem
-              key={file.id}
-              file={file}
-              viewMode={viewMode}
-              isSelected={selectedItems.has(file.id)}
-              onSelect={(e) => handleItemSelect(file.id, e)}
-              onRename={() => {
-                setRenameItem({ id: file.id, name: file.name, type: 'file' });
-                setShowRenameDialog(true);
-              }}
-              onToggleStar={() => handleToggleStar(file.id, 'file', file.isStarred)}
-              onMoveToTrash={() => handleMoveToTrash(file.id, 'file')}
-              onDownload={() => handleDownload(file.id, file.name)}
-              onCopy={() => handleCopy(file.id, 'file')}
-              onMove={() => {
-                setMoveItem({ id: file.id, type: 'file', name: file.name });
-                setShowMoveDialog(true);
-              }}
-              onPreview={() => {
-                const cloudFile: CloudFile = file;
-                handlePreview(cloudFile);
-              }}
-            />
-          ))}
-        </div>
+              {/* Files */}
+              {files.map((file) => (
+                <FileItem
+                  key={file.id}
+                  file={file}
+                  viewMode={viewMode}
+                  isSelected={selectedItems.has(file.id)}
+                  onSelect={(e) => handleItemSelect(file.id, e)}
+                  onRename={() => {
+                    setRenameItem({ id: file.id, name: file.name, type: 'file' });
+                    setShowRenameDialog(true);
+                  }}
+                  onToggleStar={() => handleToggleStar(file.id, 'file', file.isStarred)}
+                  onTogglePublic={() => handleTogglePublic(file.id, file.isPublic)}
+                  onMoveToTrash={() => handleMoveToTrash(file.id, 'file')}
+                  onDownload={() => handleDownload(file.id, file.name)}
+                  onCopy={() => handleCopy(file.id, 'file')}
+                  onMove={() => {
+                    setMoveItem({ id: file.id, type: 'file', name: file.name });
+                    setShowMoveDialog(true);
+                  }}
+                  onPreview={() => {
+                    const cloudFile: CloudFile = file;
+                    handlePreview(cloudFile);
+                  }}
+                />
+              ))}
+            </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent className="bg-[#1a1a1a] border-white/10 text-white">
+            <ContextMenuItem onClick={() => handleUploadClick()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload files
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => setShowNewFolderDialog(true)}>
+              <FolderPlus className="h-4 w-4 mr-2" />
+              New folder
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
       )}
 
       {/* New Folder Dialog */}
@@ -993,6 +1126,7 @@ function FileItem({
   onSelect,
   onRename, 
   onToggleStar, 
+  onTogglePublic,
   onMoveToTrash,
   onDownload,
   onCopy,
@@ -1005,6 +1139,7 @@ function FileItem({
   onSelect: (e: React.MouseEvent) => void;
   onRename: () => void;
   onToggleStar: () => void;
+  onTogglePublic: () => void;
   onMoveToTrash: () => void;
   onDownload: () => void;
   onCopy: () => void;
@@ -1057,6 +1192,10 @@ function FileItem({
                   {file.isStarred ? <StarOff className="h-4 w-4 mr-2" /> : <Star className="h-4 w-4 mr-2" />}
                   {file.isStarred ? 'Remove star' : 'Add star'}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onTogglePublic(); }}>
+                  {file.isPublic ? <Globe className="h-4 w-4 mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
+                  {file.isPublic ? 'Make private' : 'Make public'}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/10" />
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMoveToTrash(); }} className="text-red-400">
                   <Trash2 className="h-4 w-4 mr-2" /> Move to trash
@@ -1074,6 +1213,9 @@ function FileItem({
           <ContextMenuSeparator className="bg-white/10" />
           <ContextMenuItem onClick={onToggleStar}>
             {file.isStarred ? 'Remove star' : 'Add star'}
+          </ContextMenuItem>
+          <ContextMenuItem onClick={onTogglePublic}>
+            {file.isPublic ? 'Make private' : 'Make public'}
           </ContextMenuItem>
           <ContextMenuSeparator className="bg-white/10" />
           <ContextMenuItem onClick={onMoveToTrash} className="text-red-400">
@@ -1152,6 +1294,10 @@ function FileItem({
                   {file.isStarred ? <StarOff className="h-4 w-4 mr-2" /> : <Star className="h-4 w-4 mr-2" />}
                   {file.isStarred ? 'Remove star' : 'Add star'}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onTogglePublic(); }}>
+                  {file.isPublic ? <Globe className="h-4 w-4 mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
+                  {file.isPublic ? 'Make private' : 'Make public'}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/10" />
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMoveToTrash(); }} className="text-red-400">
                   <Trash2 className="h-4 w-4 mr-2" /> Move to trash
@@ -1170,6 +1316,9 @@ function FileItem({
         <ContextMenuSeparator className="bg-white/10" />
         <ContextMenuItem onClick={onToggleStar}>
           {file.isStarred ? 'Remove star' : 'Add star'}
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onTogglePublic}>
+          {file.isPublic ? 'Make private' : 'Make public'}
         </ContextMenuItem>
         <ContextMenuSeparator className="bg-white/10" />
         <ContextMenuItem onClick={onMoveToTrash} className="text-red-400">

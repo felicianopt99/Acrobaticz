@@ -37,9 +37,8 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const allowedRoles = ['admin', 'manager', 'technician', 'employee', 'viewer'];
-  const userRole = String(user.role || '').toLowerCase();
-  if (!allowedRoles.includes(userRole)) {
+  const { hasRole, ROLE_GROUPS } = await import('@/lib/roles');
+  if (!hasRole(user.role, ROLE_GROUPS.ALL)) {
     redirect('/unauthorized');
   }
 

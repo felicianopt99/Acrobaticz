@@ -12,7 +12,7 @@ export default async function CategoriesPage() {
     redirect('/login');
   }
 
-  const allowedRoles = ['admin', 'manager', 'technician'];
+  const { hasRole, ROLE_GROUPS } = await import('@/lib/roles');
 
   try {
     const decoded = jwt.verify(token!, process.env.JWT_SECRET!) as any;
@@ -23,8 +23,7 @@ export default async function CategoriesPage() {
     if (!user || !user.isActive) {
       redirect('/login');
     }
-    const userRole = String(user.role || '').toLowerCase();
-    if (!allowedRoles.includes(userRole)) {
+    if (!hasRole(user.role, ROLE_GROUPS.OPERATIONS)) {
       redirect('/unauthorized');
     }
   } catch {

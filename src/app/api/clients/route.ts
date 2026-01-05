@@ -10,6 +10,7 @@ const ClientSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   notes: z.string().optional(),
+  partnerId: z.string().optional().or(z.literal('none')),
 })
 
 // GET /api/clients - Get all clients
@@ -53,10 +54,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = ClientSchema.parse(body)
     
+    // Handle partnerId
+    let partnerId: string | undefined = undefined
+    if (validatedData.partnerId && validatedData.partnerId !== 'none') {
+      // Verify the partner exists
+      const partnerExists = await prisma.partner.findUnique({
+        where: { id: validatedData.partnerId },
+      })
+      if (!partnerExists) {
+        return NextResponse.json({ error: 'The specified partner does not exist' }, { status: 400 })
+      }
+      partnerId = validatedData.partnerId
+    }
+    
     const client = await prisma.client.create({
       data: {
-        ...validatedData,
+        name: validatedData.name,
+        contactPerson: validatedData.contactPerson,
         email: validatedData.email || undefined,
+        phone: validatedData.phone,
+        address: validatedData.address,
+        notes: validatedData.notes,
+        partnerId,
       },
     })
     
@@ -87,13 +106,82 @@ export async function PUT(request: NextRequest) {
     
     const validatedData = ClientSchema.partial().parse(updateData)
     
+    // Handle partnerId separately
+    let partnerId: string | undefined | null = undefined
+    let hasPartnerIdUpdate = false
+    
+    if (validatedData.partnerId !== undefined) {
+      hasPartnerIdUpdate = true
+      if (validatedData.partnerId && validatedData.partnerId !== 'none') {
+        // Verify the partner exists
+        const partnerExists = await prisma.partner.findUnique({
+          where: { id: validatedData.partnerId },
+        })
+        if (!partnerExists) {
+          return NextResponse.json({ error: 'The specified partner does not exist' }, { status: 400 })
+        }
+        partnerId = validatedData.partnerId
+      } else {
+        // Clear the partnership
+        partnerId = null
+      }
+    }
+    
+    const updatePayload: any = {
+      name: validatedData.name,
+      contactPerson: validatedData.contactPerson,
+      email: validatedData.email || undefined,
+      phone: validatedData.phone,
+      address: validatedData.address,
+      notes: validatedData.notes,
+    }
+    
+    if (hasPartnerIdUpdate) {
+      updatePayload.partnerId = partnerId
+    }
+    
+    // Remove undefined values
+    Object.keys(updatePayload).forEach(key => {
+      if (updatePayload[key] === undefined && key !== 'partnerId') {
+        delete updatePayload[key]
+      }
+    })
+    
     const client = await prisma.client.update({
       where: { id },
-      data: {
-        ...validatedData,
-        email: validatedData.email || undefined,
-      },
+      data: updatePayload,
+      include: {
+        _count: {
+          select: { events: true, quotes: true }
+        }
+      }
     })
+    
+    // Sync client details to linked partners (where this client is a direct client of the partner)
+    const partnersLinkedToClient = await prisma.partner.findMany({
+      where: { clientId: id },
+    })
+    
+    if (partnersLinkedToClient.length > 0) {
+      const syncData: any = {}
+      
+      // Map shared fields from client to partner
+      if (validatedData.name !== undefined) syncData.name = validatedData.name
+      if (validatedData.contactPerson !== undefined) syncData.contactPerson = validatedData.contactPerson
+      if (validatedData.email !== undefined) syncData.email = validatedData.email || undefined
+      if (validatedData.phone !== undefined) syncData.phone = validatedData.phone || undefined
+      if (validatedData.address !== undefined) syncData.address = validatedData.address || undefined
+      if (validatedData.notes !== undefined) syncData.notes = validatedData.notes || undefined
+      
+      // Update all linked partners with new details
+      if (Object.keys(syncData).length > 0) {
+        await prisma.partner.updateMany({
+          where: { clientId: id },
+          data: syncData,
+        })
+      }
+    }
+
     
     return NextResponse.json(client)
   } catch (error) {

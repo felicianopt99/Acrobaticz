@@ -1,0 +1,68 @@
+{
+  "undefined": {
+    "src/app/api/rentals/calendar.ics/route.ts": [
+      {
+        "date": "2026-01-03T23:05:39.307Z",
+        "user": {
+          "name": "Feli Zart",
+          "email": "felizartpt@gmail.com"
+        },
+        "timeSpent": 1
+      }
+    ]
+  },
+  "AV-RENTALS": {
+    "src/components/ui/progress.tsx": [
+      {
+        "date": "2026-01-03T23:06:27.683Z",
+        "user": {
+          "name": "Feli Zart",
+          "email": "felizartpt@gmail.com"
+        },
+        "timeSpent": 23
+      },
+      {
+        "date": "2026-01-03T23:06:34.888Z",
+        "user": {
+          "name": "Feli Zart",
+          "email": "felizartpt@gmail.com"
+        },
+        "timeSpent": 7
+      },
+      {
+        "date": "2026-01-03T23:06:36.805Z",
+        "user": {
+          "name": "Feli Zart",
+          "email": "felizartpt@gmail.com"
+        },
+        "timeSpent": 2
+      },
+      {
+        "date": "2026-01-03T23:07:02.264Z",
+        "user": {
+          "name": "Feli Zart",
+          "email": "felizartpt@gmail.com"
+        },
+        "timeSpent": 25
+      }
+    ],
+    "src/app/api/cloud/files/[id]/route.ts": [
+      {
+        "date": "2026-01-03T23:08:06.591Z",
+        "user": {
+          "name": "Feli Zart",
+          "email": "felizartpt@gmail.com"
+        },
+        "timeSpent": 59
+      },
+      {
+        "date": "2026-01-03T23:08:06.970Z",
+        "user": {
+          "name": "Feli Zart",
+          "email": "felizartpt@gmail.com"
+        },
+        "timeSpent": 0
+      }
+    ]
+  }
+}

@@ -91,10 +91,14 @@ export async function translateTextWithDeepL(text: string, targetLang: Language)
     throw new Error('DEEPL_API_KEY is not set in environment variables.');
   }
 
+  // Map 'pt' to 'PT' for Portuguese (European - DeepL will use PT-PT by default)
+  // Note: DeepL uses 'PT' for European Portuguese, not 'PT-PT'
+  const deeplTargetLang = targetLang === 'pt' ? 'PT' : targetLang.toUpperCase();
+
   try {
     const response = await deepLFetchWithRetry({
       text: [text],
-      target_lang: targetLang.toUpperCase(),
+      target_lang: deeplTargetLang,
     });
 
     if (!response.ok) {
@@ -131,10 +135,14 @@ export async function batchTranslateWithDeepL(
     return results;
   }
 
+  // Map 'pt' to 'PT' for Portuguese (European - DeepL will use PT-PT by default)
+  // Note: DeepL uses 'PT' for European Portuguese, not 'PT-PT'
+  const deeplTargetLang = targetLang === 'pt' ? 'PT' : targetLang.toUpperCase();
+
   try {
     const response = await deepLFetchWithRetry({
       text: texts,
-      target_lang: targetLang.toUpperCase(),
+      target_lang: deeplTargetLang,
     });
 
     if (!response.ok) {

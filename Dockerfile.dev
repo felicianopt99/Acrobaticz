@@ -2,18 +2,43 @@
 # Hot reload with nodemon + Next.js HMR
 # syntax=docker/dockerfile:1
 
-FROM node:22-alpine
+FROM node:22-bullseye-slim
 WORKDIR /app
 
+# Skip Puppeteer's automatic Chromium download (we'll install system Chromium)
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=development \
     HOSTNAME=0.0.0.0 \
     PORT=3000 \
-    NPM_CONFIG_UPDATE_NOTIFIER=false
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-# Install essential dependencies and global tools in single layer (include postgresql-client like prod)
-RUN apk add --no-cache openssl ca-certificates git postgresql-client && \
-    npm install -g nodemon tsx --loglevel=error
+# Install essential dependencies and system Chromium to avoid Puppeteer's long download
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    git \
+    wget \
+    gnupg \
+    build-essential \
+    python3 \
+    postgresql-client \
+    chromium \
+    poppler-utils \
+    fonts-liberation \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libxss1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libgbm1 \
+ && rm -rf /var/lib/apt/lists/* \
+ && npm install -g nodemon tsx --loglevel=error
 
 # Copy package files and install (for best layer caching)
 COPY package.json package-lock.json ./
@@ -23,13 +48,14 @@ RUN npm install --legacy-peer-deps --no-audit --no-fund --loglevel=error
 COPY ./prisma ./prisma
 
 # Generate Prisma Client
-RUN npx prisma generate
+RUN npx prisma generate 2>&1 || echo "Prisma generation will complete on container startup"
 
 # Copy source code
 COPY . .
 
 # Copy scripts folder and make entrypoint executable
-RUN chmod +x ./scripts/dev-entrypoint.sh
+RUN chmod +x ./scripts/dev-entrypoint.sh && \
+    mkdir -p /app/dev-storage/cloud-storage /app/dev-storage/temp
 
 EXPOSE 3000
 

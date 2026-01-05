@@ -174,79 +174,67 @@ export function CloudHeader({ userName, onMenuClick, showMenuButton, breadcrumbs
         </form>
 
         {/* Right Section: Actions + User Menu */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {/* View Mode Toggle - Desktop Only */}
-          <div className="hidden lg:flex items-center bg-white/5 rounded-lg p-1 border border-white/10 hover:border-white/20 transition-colors">
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setViewMode('grid');
-                  window.dispatchEvent(new CustomEvent('cloud-view-mode', { detail: 'grid' }));
-                }}
-                className={cn(
-                  "h-8 w-8 rounded-md transition-all",
-                  viewMode === 'grid' 
-                    ? "bg-gradient-to-r from-amber-500/40 to-orange-500/40 text-white shadow-md shadow-amber-500/20" 
-                    : "text-gray-400 hover:text-white hover:bg-white/10"
-                )}
-                title="Grid view - Shows files and folders as cards"
-                aria-label="Grid view"
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setViewMode('list');
-                  window.dispatchEvent(new CustomEvent('cloud-view-mode', { detail: 'list' }));
-                }}
-                className={cn(
-                  "h-8 w-8 rounded-md transition-all",
-                  viewMode === 'list' 
-                    ? "bg-gradient-to-r from-amber-500/40 to-orange-500/40 text-white shadow-md shadow-amber-500/20" 
-                    : "text-gray-400 hover:text-white hover:bg-white/10"
-                )}
-                title="List view - Shows files and folders in a detailed list"
-                aria-label="List view"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </motion.div>
+          <div className="hidden lg:inline-flex items-center gap-0 bg-white/5 rounded-full p-0.5 border border-white/10">
+            <Button
+              variant="ghost"
+              className={cn(
+                "h-7 w-7 rounded-full p-0 flex items-center justify-center",
+                viewMode === 'grid' 
+                  ? "bg-amber-500 text-white hover:bg-amber-600" 
+                  : "text-gray-400 hover:text-white hover:bg-white/10"
+              )}
+              onClick={() => {
+                setViewMode('grid');
+                window.dispatchEvent(new CustomEvent('cloud-view-mode', { detail: 'grid' }));
+              }}
+              title="Grid view"
+              aria-label="Grid view"
+            >
+              <Grid3X3 className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              className={cn(
+                "h-7 w-7 rounded-full p-0 flex items-center justify-center",
+                viewMode === 'list' 
+                  ? "bg-amber-500 text-white hover:bg-amber-600" 
+                  : "text-gray-400 hover:text-white hover:bg-white/10"
+              )}
+              onClick={() => {
+                setViewMode('list');
+                window.dispatchEvent(new CustomEvent('cloud-view-mode', { detail: 'list' }));
+              }}
+              title="List view"
+              aria-label="List view"
+            >
+              <List className="h-3.5 w-3.5" />
+            </Button>
           </div>
 
           {/* Refresh Button */}
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              title="Refresh - Reload files and folders from server"
-              aria-label="Refresh files"
-            >
-              <RefreshCw className={cn("h-5 w-5", isRefreshing && "animate-spin")} />
-            </Button>
-          </motion.div>
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            title="Refresh - Reload files and folders from server"
+            aria-label="Refresh files"
+          >
+            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+          </Button>
 
           {/* Dashboard Button - Hidden on Mobile */}
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="hidden sm:block">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={switchToDashboard}
-              className="text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              title="Go to Dashboard - Switch to main dashboard"
-              aria-label="Dashboard"
-            >
-              <LayoutDashboard className="h-5 w-5" />
-            </Button>
-          </motion.div>
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0 hidden sm:flex text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"
+            onClick={switchToDashboard}
+            title="Go to Dashboard - Switch to main dashboard"
+            aria-label="Dashboard"
+          >
+            <LayoutDashboard className="h-4 w-4" />
+          </Button>
 
           {/* Language Toggle */}
           <LanguageToggle />
@@ -254,14 +242,14 @@ export function CloudHeader({ userName, onMenuClick, showMenuButton, breadcrumbs
           {/* User Menu Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <motion.div whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}>
                 <Button 
                   variant="ghost" 
-                  className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 p-0 transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40"
+                  className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 p-0 transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40"
                   title={`User profile - ${userName}`}
                   aria-label="User menu"
                 >
-                  <span className="text-sm font-semibold text-white">
+                  <span className="text-xs font-semibold text-white">
                     {userName?.charAt(0).toUpperCase() || 'U'}
                   </span>
                 </Button>

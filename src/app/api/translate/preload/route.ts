@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
     const limitParam = searchParams.get('limit');
     const limit = Math.min(Math.max(parseInt(limitParam || '1000', 10) || 1000, 1), 5000);
 
+    console.log(`📝 Preload API: Fetching translations for lang=${targetLang}, limit=${limit}`);
+
     const where: any = {};
     if (targetLang === 'en' || targetLang === 'pt') {
       where.targetLang = targetLang;
@@ -40,10 +42,14 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Preload API Error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : '';
+    console.error('❌ Preload API Error:', errorMessage);
+    console.error('Stack:', errorStack);
+    
     return NextResponse.json({
       success: false,
-      error: 'Failed to fetch translations',
+      error: `Failed to fetch translations: ${errorMessage}`,
       count: 0,
       translations: [],
     }, { status: 500 });

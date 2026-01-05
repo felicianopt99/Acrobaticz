@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -12,16 +12,17 @@ import {
   Users,
   Save,
   Eye,
-  Toggle2,
-  Database
+  ToggleLeft,
+  Database,
+  History
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatBytes } from '@/lib/utils';
 
 interface DiskHealth {
   isAccessible: boolean;
-  available: number;
-  total: number;
+  available: string | number;
+  total: string | number;
   usedPercent: number;
   lastCheck: string;
 }
@@ -66,18 +67,27 @@ export default function StorageDashboardContent({ userId }: { userId: string }) 
 
       if (healthRes.ok) {
         const data = await healthRes.json();
-        setHealth(data);
+        // Convert string values to numbers
+        setHealth({
+          ...data,
+          available: typeof data.available === 'string' ? BigInt(data.available) : data.available,
+          total: typeof data.total === 'string' ? BigInt(data.total) : data.total,
+        });
       } else {
+        console.error('Health API failed:', healthRes.status);
         throw new Error('Failed to fetch health');
       }
 
       if (quotasRes.ok) {
         const data = await quotasRes.json();
-        setQuotas(data.users);
+        console.log('Quotas data:', data);
+        setQuotas(data.users || []);
       } else {
+        console.error('Quotas API failed:', quotasRes.status, await quotasRes.text());
         throw new Error('Failed to fetch quotas');
       }
     } catch (error) {
+      console.error('Error loading storage data:', error);
       toast({
         title: 'Error',
         description: 'Failed to load storage data',
@@ -176,21 +186,37 @@ export default function StorageDashboardContent({ userId }: { userId: string }) 
     return { status: 'ok', color: 'bg-green-500' };
   };
 
-  if (loading || !health) {
+  const formatBytesValue = (value: string | number | bigint): string => {
+    const numValue = typeof value === 'bigint' ? Number(value) : typeof value === 'string' ? parseInt(value, 10) : value;
+    return formatBytes(numValue);
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center h-96">
-            <div className="animate-spin">
-              <div className="h-12 w-12 border-4 border-gray-300 border-t-blue-500 rounded-full" />
-            </div>
-          </div>
+      <div className="flex items-center justify-center min-h-96">
+        <div className="animate-spin">
+          <div className="h-12 w-12 border-4 border-gray-300 border-t-blue-500 rounded-full" />
         </div>
+        <span className="ml-2">Loading storage data...</span>
       </div>
     );
   }
 
-  const usedBytes = health.total - health.available;
+  if (!health) {
+    return (
+      <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <p className="text-sm text-red-800 dark:text-red-200">
+          Failed to load storage information. Please refresh and try again.
+        </p>
+      </div>
+    );
+  }
+
+  const usedBytes = health && typeof health.total === 'bigint' && typeof health.available === 'bigint'
+    ? Number(health.total - health.available)
+    : (typeof health?.total === 'number' && typeof health?.available === 'number' 
+        ? health.total - health.available 
+        : 0);
   const status = health.isAccessible ? 'healthy' : 'error';
   const isCritical = health.usedPercent > 90;
   const isWarning = health.usedPercent > 70;
@@ -199,149 +225,137 @@ export default function StorageDashboardContent({ userId }: { userId: string }) 
   const criticalUsers = quotas.filter((q) => q.percentUsed >= 95).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* System Status Header */}
-        <Card className="p-6 bg-white dark:bg-slate-800 border-0 shadow-lg">
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className={`p-3 rounded-lg ${
-                status === 'healthy' ? 'bg-green-100' : 'bg-red-100'
-              }`}>
-                {status === 'healthy' ? (
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                ) : (
-                  <AlertCircle className="h-6 w-6 text-red-600" />
-                )}
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Storage Dashboard
-                </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
-                  System is {status === 'healthy' ? 'operational' : 'experiencing issues'}
-                </p>
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={loadData}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold">Storage Dashboard</h1>
+        <p className="text-muted-foreground">
+          {health.isAccessible 
+            ? 'Monitor your cloud storage usage and manage user quotas'
+            : 'System is experiencing storage access issues'
+          }
+        </p>
+      </div>
 
-          {!health.isAccessible && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-800 dark:text-red-200 font-semibold">
-                ⚠️ Storage device is not accessible!
-              </p>
-            </div>
-          )}
+      {/* Status Alerts */}
+      {!health.isAccessible && (
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-sm text-red-800 dark:text-red-200 font-semibold flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            Storage device is not accessible!
+          </p>
+        </div>
+      )}
 
-          {isCritical && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-800 dark:text-red-200 font-semibold">
-                🚨 Storage critically full! Disk usage exceeds 90%
-              </p>
-            </div>
-          )}
+      {isCritical && (
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-sm text-red-800 dark:text-red-200 font-semibold flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            Storage critically full! Disk usage exceeds 90%
+          </p>
+        </div>
+      )}
 
-          {isWarning && !isCritical && (
-            <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-              <p className="text-sm text-orange-800 dark:text-orange-200 font-semibold">
-                ⚠️ Storage usage is high. Consider archiving old files.
-              </p>
-            </div>
-          )}
-        </Card>
+      {isWarning && !isCritical && (
+        <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+          <p className="text-sm text-orange-800 dark:text-orange-200 font-semibold flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            Storage usage is high. Consider archiving old files.
+          </p>
+        </div>
+      )}
 
-        {/* Statistics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4 bg-white dark:bg-slate-800 border-0 shadow">
-            <div className="flex items-center gap-3">
+      {/* Statistics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                <Database className="h-6 w-6 text-blue-600" />
+                <Database className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                  Disk Usage
-                </p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-muted-foreground">Disk Usage</p>
+                <p className="text-2xl font-bold">
                   {Math.round(health.usedPercent)}%
                 </p>
               </div>
             </div>
-          </Card>
+          </CardContent>
+        </Card>
 
-          <Card className="p-4 bg-white dark:bg-slate-800 border-0 shadow">
-            <div className="flex items-center gap-3">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
               <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                <HardDrive className="h-6 w-6 text-green-600" />
+                <HardDrive className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                  Available
-                </p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">
-                  {formatBytes(health.available)}
+                <p className="text-sm text-muted-foreground">Available</p>
+                <p className="text-2xl font-bold">
+                  {formatBytesValue(health.available)}
                 </p>
               </div>
             </div>
-          </Card>
+          </CardContent>
+        </Card>
 
-          <Card className="p-4 bg-white dark:bg-slate-800 border-0 shadow">
-            <div className="flex items-center gap-3">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
               <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                <Users className="h-6 w-6 text-purple-600" />
+                <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                  Cloud Users
-                </p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-muted-foreground">Cloud Users</p>
+                <p className="text-2xl font-bold">
                   {cloudEnabledUsers}/{activeUsers}
                 </p>
               </div>
             </div>
-          </Card>
+          </CardContent>
+        </Card>
 
-          <Card className="p-4 bg-white dark:bg-slate-800 border-0 shadow">
-            <div className="flex items-center gap-3">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
               <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-lg">
-                <AlertCircle className="h-6 w-6 text-red-600" />
+                <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                  Critical Users
-                </p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-muted-foreground">Critical Users</p>
+                <p className="text-2xl font-bold">
                   {criticalUsers}
                 </p>
               </div>
             </div>
-          </Card>
-        </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Disk Health Breakdown */}
-        <Card className="p-6 bg-white dark:bg-slate-800 border-0 shadow-lg">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+      {/* System Storage Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+              <HardDrive className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
             System Storage
-          </h3>
-
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          </CardTitle>
+          <CardDescription>
+            Disk capacity and usage information
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">
                 Total Disk Usage
               </span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">
+              <span className="text-lg font-bold">
                 {Math.round(health.usedPercent)}%
               </span>
             </div>
-            <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-3 bg-secondary rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all ${
                   isCritical ? 'bg-red-500' : isWarning ? 'bg-orange-500' : 'bg-blue-500'
@@ -351,64 +365,74 @@ export default function StorageDashboardContent({ userId }: { userId: string }) 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
-              <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+            <div className="p-4 rounded-lg border border-secondary">
+              <p className="text-sm text-muted-foreground mb-2">
                 Total Capacity
               </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                {formatBytes(health.total)}
+              <p className="text-2xl font-bold">
+                {formatBytesValue(health.total)}
               </p>
             </div>
 
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+            <div className="p-4 rounded-lg border border-secondary">
+              <p className="text-sm text-muted-foreground mb-2">
                 Used
               </p>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {formatBytes(usedBytes)}
               </p>
             </div>
 
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+            <div className="p-4 rounded-lg border border-secondary">
+              <p className="text-sm text-muted-foreground mb-2">
                 Available
               </p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-                {formatBytes(health.available)}
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {formatBytesValue(health.available)}
               </p>
             </div>
           </div>
 
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-4">
+          <p className="text-xs text-muted-foreground pt-2">
             Last checked: {new Date(health.lastCheck).toLocaleString()}
           </p>
-        </Card>
+        </CardContent>
+      </Card>
 
-        {/* User Storage Quotas */}
-        <Card className="p-6 bg-white dark:bg-slate-800 border-0 shadow-lg">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">User Storage Management</h2>
-            <Button size="sm" variant="outline" onClick={loadData}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
+      {/* User Storage Management */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-3">
+              <div className="p-2.5 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              User Storage Management
+            </CardTitle>
+            <CardDescription>
+              Manage storage quotas and cloud access for users
+            </CardDescription>
           </div>
-
-          <div className="space-y-4">
-            {quotas.filter((q) => q.isActive).map((quota) => {
-              const { color } = getQuotaStatus(quota.percentUsed);
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {quotas.filter((q) => q.isActive).length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No active users found</p>
+            </div>
+          ) : (
+            quotas.filter((q) => q.isActive).map((quota) => {
               const isEditing = editingUser?.userId === quota.userId;
 
               return (
                 <div
                   key={quota.userId}
-                  className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition"
+                  className="p-4 border border-secondary rounded-lg hover:bg-secondary/50 transition"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">
+                        <h3 className="font-semibold">
                           {quota.name}
                         </h3>
                         <span className={`px-2 py-1 text-xs rounded-full font-medium ${
@@ -419,7 +443,7 @@ export default function StorageDashboardContent({ userId }: { userId: string }) 
                           {quota.cloudEnabled ? '✓ Cloud Enabled' : 'Cloud Disabled'}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-muted-foreground">
                         {quota.role} • {quota.fileCount} files • {quota.folderCount} folders
                       </p>
                     </div>
@@ -431,7 +455,7 @@ export default function StorageDashboardContent({ userId }: { userId: string }) 
                         onClick={() => handleToggleCloudAccess(quota)}
                         className="h-8 px-3 flex items-center gap-2"
                       >
-                        <Toggle2 className="h-4 w-4" />
+                        <ToggleLeft className="h-4 w-4" />
                         {quota.cloudEnabled ? 'Enabled' : 'Disabled'}
                       </Button>
                       <Button
@@ -462,16 +486,16 @@ export default function StorageDashboardContent({ userId }: { userId: string }) 
                   {!isEditing ? (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">
+                        <span className="text-muted-foreground">
                           {formatBytes(parseInt(quota.usedBytes))} / {formatBytes(parseInt(quota.quotaBytes))}
                         </span>
                         <span className={`font-semibold ${quota.percentUsed >= 95 ? 'text-red-600' : quota.percentUsed >= 80 ? 'text-orange-600' : 'text-green-600'}`}>
                           {quota.percentUsed}%
                         </span>
                       </div>
-                      <div className="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
                         <div
-                          className={`h-full transition-all ${color}`}
+                          className={`h-full transition-all ${getQuotaStatus(quota.percentUsed).color}`}
                           style={{ width: `${Math.min(quota.percentUsed, 100)}%` }}
                         />
                       </div>
@@ -534,17 +558,24 @@ export default function StorageDashboardContent({ userId }: { userId: string }) 
                   )}
                 </div>
               );
-            })}
-          </div>
-        </Card>
+            })
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Quota History Modal */}
-        {showHistory && (
-          <Card className="p-6 bg-white dark:bg-slate-800 border-0 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                Quota Change History
-              </h2>
+      {/* Quota History Modal */}
+      {showHistory && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="p-2.5 bg-amber-100 dark:bg-amber-900/20 rounded-lg">
+                    <History className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  Quota Change History
+                </CardTitle>
+              </div>
               <Button
                 size="sm"
                 variant="ghost"
@@ -553,30 +584,31 @@ export default function StorageDashboardContent({ userId }: { userId: string }) 
                 ✕
               </Button>
             </div>
-
+          </CardHeader>
+          <CardContent>
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {historyData.length === 0 ? (
-                <p className="text-sm text-gray-600 dark:text-gray-400">No changes recorded</p>
+                <p className="text-sm text-muted-foreground">No changes recorded</p>
               ) : (
                 historyData.map((change) => (
                   <div
                     key={change.id}
-                    className="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg text-sm"
+                    className="p-3 bg-secondary rounded-lg text-sm"
                   >
                     <div className="flex justify-between items-start mb-1">
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <span className="font-medium">
                         {new Date(change.changedAt).toLocaleDateString()}
                       </span>
-                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                      <span className="text-xs text-muted-foreground">
                         by Admin
                       </span>
                     </div>
-                    <p className="text-gray-700 dark:text-gray-300">
+                    <p className="text-foreground">
                       {formatBytes(parseInt(change.oldQuotaBytes))} →{' '}
                       {formatBytes(parseInt(change.newQuotaBytes))}
                     </p>
                     {change.reason && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Reason: {change.reason}
                       </p>
                     )}
@@ -584,9 +616,9 @@ export default function StorageDashboardContent({ userId }: { userId: string }) 
                 ))
               )}
             </div>
-          </Card>
-        )}
-      </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

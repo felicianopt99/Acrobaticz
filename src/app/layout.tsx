@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { ConditionalLayout } from '@/components/layout/ConditionalLayout';
 import { AppProvider } from '@/contexts/AppContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import { TranslationProvider } from '@/contexts/TranslationContext';
 import BackgroundTranslationProvider from '@/components/translation/BackgroundTranslation';
@@ -60,7 +61,7 @@ export default async function RootLayout({
   const cookieLang = cookieStore.get('app-language')?.value;
   const lang = cookieLang === 'pt' ? 'pt' : 'en';
   return (
-    <html lang={lang} suppressHydrationWarning={true}>
+    <html lang={lang} className="dark" suppressHydrationWarning={true}>
       <head>
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -75,12 +76,14 @@ export default async function RootLayout({
             <TranslationProvider>
               <BackgroundTranslationProvider>
                 <AppProvider>
-                  <ConditionalLayout>
-                    {children}
-                  </ConditionalLayout>
-                  <PWAInstallPrompt />
-                  <TranslationPreloader />
-                  <RouteTranslationPreloader />
+                  <NotificationProvider>
+                    <ConditionalLayout>
+                      {children}
+                    </ConditionalLayout>
+                    <PWAInstallPrompt />
+                    <TranslationPreloader />
+                    <RouteTranslationPreloader />
+                  </NotificationProvider>
                 </AppProvider>
               </BackgroundTranslationProvider>
             </TranslationProvider>

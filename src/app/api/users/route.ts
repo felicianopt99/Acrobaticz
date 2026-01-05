@@ -5,11 +5,14 @@ import bcrypt from 'bcryptjs'
 import { requireReadAccess, requirePermission, getUserFromRequest } from '@/lib/api-auth'
 import type { UserRole } from '@/types'
 
+// Use lowercase roles for storage consistency
+const roleValues = ['admin', 'manager', 'technician', 'employee', 'viewer'] as const;
+
 const createUserSchema = z.object({
   name: z.string().min(1),
   username: z.string().min(1),
   password: z.string().min(6),
-  role: z.enum(['Admin', 'Manager', 'Technician', 'Employee', 'Viewer']),
+  role: z.enum(roleValues).or(z.enum(['Admin', 'Manager', 'Technician', 'Employee', 'Viewer']).transform(r => r.toLowerCase() as typeof roleValues[number])),
   // Profile fields optional
   photoUrl: z.string().optional(),
   nif: z.string().optional(),
@@ -23,7 +26,7 @@ const updateUserSchema = z.object({
   name: z.string().min(1).optional(),
   username: z.string().min(1).optional(),
   password: z.string().min(6).optional(),
-  role: z.enum(['Admin', 'Manager', 'Technician', 'Employee', 'Viewer']).optional(),
+  role: z.enum(roleValues).or(z.enum(['Admin', 'Manager', 'Technician', 'Employee', 'Viewer']).transform(r => r.toLowerCase() as typeof roleValues[number])).optional(),
   isActive: z.boolean().optional(),
   // Profile fields optional
   photoUrl: z.string().optional(),

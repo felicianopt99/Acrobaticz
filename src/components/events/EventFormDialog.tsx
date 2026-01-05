@@ -21,10 +21,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import type { Event } from "@/types";
+import type { Event, Partner } from "@/types";
 import { useAppContext, useAppDispatch } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useTranslate } from '@/contexts/TranslationContext';
 
 const eventFormSchema = z.object({
   name: z.string().min(3, "Event name must be at least 3 characters."),
@@ -33,6 +34,7 @@ const eventFormSchema = z.object({
   startDate: z.date({ required_error: "Start date is required." }),
   endDate: z.date({ required_error: "End date is required." }),
   assignedTo: z.string().optional(),
+  agencyId: z.string().optional(),
 }).refine(data => data.endDate >= data.startDate, {
   message: "End date cannot be before start date.",
   path: ["endDate"],
@@ -51,6 +53,29 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
   const { clients, users } = useAppContext();
   const { addEvent, updateEvent } = useAppDispatch();
   const { toast } = useToast();
+  const [agencies, setAgencies] = useState<Partner[]>([]);
+
+  // Translation hooks
+  const { translated: selectAgency } = useTranslate('Select an agency (optional)');
+  const { translated: noAgency } = useTranslate('None');
+
+  // Fetch agencies on mount
+  useEffect(() => {
+    const fetchAgencies = async () => {
+      try {
+        const response = await fetch('/api/partners?activeOnly=true');
+        if (response.ok) {
+          const data = await response.json();
+          // Filter to only agency-type or both-type partners
+          const agencyPartners = data.filter((p: Partner) => p.partnerType === 'agency' || p.partnerType === 'both');
+          setAgencies(agencyPartners);
+        }
+      } catch (error) {
+        console.error('Error fetching agencies:', error);
+      }
+    };
+    fetchAgencies();
+  }, []);
 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
@@ -61,6 +86,7 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
       startDate: undefined,
       endDate: undefined,
       assignedTo: "",
+      agencyId: "",
     },
   });
 
@@ -70,6 +96,7 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
         ...initialData,
         startDate: new Date(initialData.startDate),
         endDate: new Date(initialData.endDate),
+        agencyId: initialData.agencyId || "",
       });
     } else {
         form.reset({
@@ -78,21 +105,30 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
             location: "",
             startDate: undefined,
             endDate: undefined,
+            agencyId: "",
         });
     }
   }, [initialData, form, isOpen]); // Rerun when dialog opens as well
 
   async function onSubmit(data: EventFormValues) {
     try {
+      // Prepare event data, excluding agencyId if it's "none"
+      const eventData: any = { 
+        ...data, 
+        date: data.startDate // Use startDate as the date property
+      };
+      
+      // Only include agencyId if it's selected and not "none"
+      if (data.agencyId && data.agencyId !== 'none') {
+        eventData.agencyId = data.agencyId;
+      }
+
       if (initialData) {
-        await updateEvent({ ...initialData, ...data });
+        await updateEvent({ ...initialData, ...eventData });
         toast({ title: "Event Updated", description: `Event "${data.name}" has been updated.` });
         if (onSubmitSuccess) onSubmitSuccess();
       } else {
-        const newEventId = await addEvent({ 
-          ...data, 
-          date: data.startDate // Use startDate as the date property
-        });
+        const newEventId = await addEvent(eventData);
         toast({ title: "Event Created", description: `Event "${data.name}" has been created.` });
         if (onSubmitSuccess) onSubmitSuccess(newEventId);
       }
@@ -152,6 +188,32 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
                 <FormItem>
                   <FormLabel>Location</FormLabel>
                   <FormControl><Input placeholder="e.g., Grand Hyatt Ballroom" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="agencyId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Agency</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || "none"}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={selectAgency} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">{noAgency}</SelectItem>
+                      {agencies.map(agency => (
+                        <SelectItem key={agency.id} value={agency.id}>
+                          {agency.name} {agency.companyName ? `(${agency.companyName})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

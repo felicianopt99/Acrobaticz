@@ -7,6 +7,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import type { Client, Event, Quote } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
+import { hasPermission } from '@/lib/permissions';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -86,7 +87,7 @@ export default function ClientDetailsPage() {
     );
   }
   
-  if (currentUser?.role !== 'Admin') {
+  if (!currentUser || !hasPermission(currentUser.role, 'canManageClients')) {
     return (
       <div className="flex flex-col h-full">
         

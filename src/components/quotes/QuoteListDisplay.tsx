@@ -53,6 +53,48 @@ export function QuoteListDisplay() {
   const { translated: toastApprovalFailedTitleText } = useTranslate('Approval Failed');
   const { translated: toastQuoteApprovedTitleText } = useTranslate('Quote Approved');
   const { translated: toastQuoteDeletedTitleText } = useTranslate('Quote Deleted');
+  
+  // UI Text
+  const { translated: uiQuotesHeading } = useTranslate('Quotes');
+  const { translated: uiCreateNewQuoteButton } = useTranslate('Create New Quote');
+  const { translated: uiQuoteListTitle } = useTranslate('Quote List');
+  const { translated: uiQuoteListDescription } = useTranslate('View, search, and manage all your quotes.');
+  const { translated: uiSearchPlaceholder } = useTranslate('Search quotes (name, number, client, status)...');
+  const { translated: uiNoQuotesMatchSearch } = useTranslate('No quotes match your search.');
+  const { translated: uiTryDifferentSearch } = useTranslate('Try a different search term or clear the search.');
+  const { translated: uiNoQuotesCreated } = useTranslate('No quotes created yet.');
+  const { translated: uiClickCreateQuote } = useTranslate('Click "Create New Quote" to get started.');
+  
+  // Table Headers
+  const { translated: uiTableHeaderNumber } = useTranslate('Number');
+  const { translated: uiTableHeaderName } = useTranslate('Name');
+  const { translated: uiTableHeaderClient } = useTranslate('Client');
+  const { translated: uiTableHeaderStartDate } = useTranslate('Start Date');
+  const { translated: uiTableHeaderEndDate } = useTranslate('End Date');
+  const { translated: uiTableHeaderTotal } = useTranslate('Total');
+  const { translated: uiTableHeaderStatus } = useTranslate('Status');
+  const { translated: uiTableHeaderActions } = useTranslate('Actions');
+  
+  // Action Menu Items
+  const { translated: uiActionViewEdit } = useTranslate('View / Edit');
+  const { translated: uiActionApprove } = useTranslate('Approve & Create Event');
+  const { translated: uiActionPreviewPDF } = useTranslate('Preview PDF');
+  const { translated: uiActionDownloadPDF } = useTranslate('Download PDF');
+  const { translated: uiActionDelete } = useTranslate('Delete');
+  
+  // Dialog Titles
+  const { translated: uiConfirmDeletion } = useTranslate('Confirm Deletion');
+  const { translated: uiConfirmApproval } = useTranslate('Confirm Quote Approval');
+  
+  // Dialog Messages
+  const { translated: uiDeleteConfirmMessage } = useTranslate('Are you sure you want to delete the quote "{name}"? This action cannot be undone.');
+  const { translated: uiApproveConfirmMessage } = useTranslate('Are you sure you want to approve the quote "{name}"? This will change the quote status to "Accepted" and create a corresponding event and rental entries.');
+  const { translated: uiApproveImportantNote } = useTranslate('Important: Ensure the quote is linked to an existing client in the system. If not, please edit the quote first. This action may create rentals even if items are overbooked, which will be highlighted in the calendar.');
+  
+  // Dialog Buttons
+  const { translated: uiButtonCancel } = useTranslate('Cancel');
+  const { translated: uiButtonDeleteQuote } = useTranslate('Delete Quote');
+  const { translated: uiButtonApproveEvent } = useTranslate('Approve & Create Event');
 
   const { quotes, isDataLoaded } = useAppContext();
   const { deleteQuote, approveQuote } = useAppDispatch();
@@ -161,22 +203,22 @@ export function QuoteListDisplay() {
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <h2 className="text-xl md:text-2xl font-semibold">Quotes</h2>
+        <h2 className="text-xl md:text-2xl font-semibold">{uiQuotesHeading}</h2>
         <Link href="/quotes/new" className="w-full sm:w-auto">
           <Button className="w-full sm:w-auto">
-            <PlusCircle className="mr-2 h-4 w-4" /> Create New Quote
+            <PlusCircle className="mr-2 h-4 w-4" /> {uiCreateNewQuoteButton}
           </Button>
         </Link>
       </div>
       <Card className="shadow-lg overflow-hidden">
         <CardHeader>
-          <CardTitle>Quote List</CardTitle>
-          <CardDescription>View, search, and manage all your quotes.</CardDescription>
+          <CardTitle>{uiQuoteListTitle}</CardTitle>
+          <CardDescription>{uiQuoteListDescription}</CardDescription>
           <div className="mt-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Search quotes (name, number, client, status)..."
+                placeholder={uiSearchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full sm:max-w-sm md:max-w-md pl-10"
@@ -190,14 +232,14 @@ export function QuoteListDisplay() {
               {searchTerm ? (
                 <>
                   <SearchSlash className="w-16 h-16 mb-4 text-primary/50" />
-                  <p className="text-xl mb-1">No quotes match your search.</p>
-                  <p className="text-sm">Try a different search term or clear the search.</p>
+                  <p className="text-xl mb-1">{uiNoQuotesMatchSearch}</p>
+                  <p className="text-sm">{uiTryDifferentSearch}</p>
                 </>
               ) : (
                 <>
                   <FileText className="w-16 h-16 mb-4 text-primary/50" />
-                  <p className="text-xl mb-1">No quotes created yet.</p>
-                  <p className="text-sm">Click "Create New Quote" to get started.</p>
+                  <p className="text-xl mb-1">{uiNoQuotesCreated}</p>
+                  <p className="text-sm">{uiClickCreateQuote}</p>
                 </>
               )}
             </div>
@@ -230,23 +272,23 @@ export function QuoteListDisplay() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => router.push(`/quotes/${quote.id}`)}>
-                          <Edit className="mr-2 h-4 w-4" /> View / Edit
+                          <Edit className="mr-2 h-4 w-4" /> {uiActionViewEdit}
                         </DropdownMenuItem>
                         {quote.status !== "Accepted" && quote.status !== "Declined" && quote.status !== "Archived" && (
                           <DropdownMenuItem onClick={() => openApproveDialog(quote)}>
-                            <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" /> Approve & Create Event
+                            <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" /> {uiActionApprove}
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handlePreviewPDF(quote)}>
-                          <Eye className="mr-2 h-4 w-4" /> Preview PDF
+                          <Eye className="mr-2 h-4 w-4" /> {uiActionPreviewPDF}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDownloadPDF(quote)} disabled={isGeneratingPDF}>
-                          <Download className="mr-2 h-4 w-4" /> Download PDF
+                          <Download className="mr-2 h-4 w-4" /> {uiActionDownloadPDF}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => openDeleteDialog(quote)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete
+                          <Trash2 className="mr-2 h-4 w-4" /> {uiActionDelete}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -259,14 +301,14 @@ export function QuoteListDisplay() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Number</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>End Date</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{uiTableHeaderNumber}</TableHead>
+                    <TableHead>{uiTableHeaderName}</TableHead>
+                    <TableHead>{uiTableHeaderClient}</TableHead>
+                    <TableHead>{uiTableHeaderStartDate}</TableHead>
+                    <TableHead>{uiTableHeaderEndDate}</TableHead>
+                    <TableHead>{uiTableHeaderTotal}</TableHead>
+                    <TableHead>{uiTableHeaderStatus}</TableHead>
+                    <TableHead className="text-right">{uiTableHeaderActions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -293,23 +335,23 @@ export function QuoteListDisplay() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => router.push(`/quotes/${quote.id}`)}>
-                              <Edit className="mr-2 h-4 w-4" /> View / Edit
+                              <Edit className="mr-2 h-4 w-4" /> {uiActionViewEdit}
                             </DropdownMenuItem>
                             {quote.status !== "Accepted" && quote.status !== "Declined" && quote.status !== "Archived" && (
                               <DropdownMenuItem onClick={() => openApproveDialog(quote)}>
-                                <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" /> Approve & Create Event
+                                <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" /> {uiActionApprove}
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handlePreviewPDF(quote)}>
-                              <Eye className="mr-2 h-4 w-4" /> Preview PDF
+                              <Eye className="mr-2 h-4 w-4" /> {uiActionPreviewPDF}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDownloadPDF(quote)} disabled={isGeneratingPDF}>
-                              <Download className="mr-2 h-4 w-4" /> Download PDF
+                              <Download className="mr-2 h-4 w-4" /> {uiActionDownloadPDF}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => openDeleteDialog(quote)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              <Trash2 className="mr-2 h-4 w-4" /> {uiActionDelete}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -327,16 +369,15 @@ export function QuoteListDisplay() {
         <AlertDialog open={!!quoteToDelete} onOpenChange={(isOpen) => !isOpen && setQuoteToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+              <AlertDialogTitle>{uiConfirmDeletion}</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete the quote "{quoteToDelete.name || quoteToDelete.quoteNumber}"? 
-                This action cannot be undone.
+                {uiDeleteConfirmMessage.replace('{name}', quoteToDelete.name || quoteToDelete.quoteNumber)}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setQuoteToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => setQuoteToDelete(null)}>{uiButtonCancel}</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
-                Delete Quote
+                {uiButtonDeleteQuote}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -346,18 +387,17 @@ export function QuoteListDisplay() {
         <AlertDialog open={!!quoteToApprove} onOpenChange={(isOpen) => !isOpen && setQuoteToApprove(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirm Quote Approval</AlertDialogTitle>
+              <AlertDialogTitle>{uiConfirmApproval}</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to approve the quote "{quoteToApprove.name || quoteToApprove.quoteNumber}"?
-                This will change the quote status to "Accepted" and create a corresponding event and rental entries. <br/><br/>
-                <strong className="text-destructive-foreground">Important:</strong> Ensure the quote is linked to an existing client in the system. If not, please edit the quote first.
-                This action may create rentals even if items are overbooked, which will be highlighted in the calendar.
+                {uiApproveConfirmMessage.replace('{name}', quoteToApprove.name || quoteToApprove.quoteNumber)}
+                <br/><br/>
+                <strong className="text-destructive-foreground">{uiApproveImportantNote}</strong>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setQuoteToApprove(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => setQuoteToApprove(null)}>{uiButtonCancel}</AlertDialogCancel>
               <AlertDialogAction onClick={confirmApprove} className="bg-green-600 hover:bg-green-600/90">
-                Approve & Create Event
+                {uiButtonApproveEvent}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

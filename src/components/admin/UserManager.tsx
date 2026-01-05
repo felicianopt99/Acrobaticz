@@ -16,19 +16,23 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Shield, Eye, EyeOff, Users, Upload } from 'lucide-react';
 import type { User, UserRole, CreateUserData, UserFormValues } from '@/types';
 import { ROLE_DESCRIPTIONS } from '@/lib/permissions';
+import { ROLES, getRoleDisplayName, getAllRoles } from '@/lib/roles';
+
+// Use lowercase roles for storage, transform for display
+const roleValues = ['admin', 'manager', 'technician', 'employee', 'viewer'] as const;
 
 const createUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   username: z.string().min(1, 'Username is required'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['Admin', 'Manager', 'Technician', 'Employee', 'Viewer']),
+  role: z.enum(roleValues),
 })
 
 const updateUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   username: z.string().min(1, 'Username is required'),
   password: z.string().min(6).optional().or(z.literal('')),
-  role: z.enum(['Admin', 'Manager', 'Technician', 'Employee', 'Viewer']),
+  role: z.enum(roleValues),
   isActive: z.boolean(),
   isTeamMember: z.boolean(),
   teamTitle: z.string().optional(),
@@ -424,11 +428,11 @@ export function UserManager({ currentUser }: UserManagerProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.entries(ROLE_DESCRIPTIONS).map(([role, description]) => (
+                          {roleValues.map((role) => (
                             <SelectItem key={role} value={role}>
                               <div>
-                                <div className="font-medium">{role}</div>
-                                <div className="text-sm text-gray-500">{description}</div>
+                                <div className="font-medium">{getRoleDisplayName(role)}</div>
+                                <div className="text-sm text-gray-500">{ROLE_DESCRIPTIONS[role]}</div>
                               </div>
                             </SelectItem>
                           ))}
@@ -603,11 +607,11 @@ export function UserManager({ currentUser }: UserManagerProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.entries(ROLE_DESCRIPTIONS).map(([role, description]) => (
+                          {roleValues.map((role) => (
                             <SelectItem key={role} value={role}>
                               <div>
-                                <div className="font-medium">{role}</div>
-                                <div className="text-sm text-gray-500">{description}</div>
+                                <div className="font-medium">{getRoleDisplayName(role)}</div>
+                                <div className="text-sm text-gray-500">{ROLE_DESCRIPTIONS[role]}</div>
                               </div>
                             </SelectItem>
                           ))}

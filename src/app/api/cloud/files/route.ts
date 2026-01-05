@@ -21,27 +21,49 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const folderId = searchParams.get('folderId') || null;
+    const folderId = searchParams.get('folderId') || searchParams.get('parentId') || null;
+    const starred = searchParams.get('starred') === 'true';
+    const recent = searchParams.get('recent') === 'true';
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+
+    let where: any = {
+      ownerId: auth.userId,
+      isTrashed: false,
+    };
+
+    // Handle different query types
+    if (!starred && !recent) {
+      // Default: files in a specific folder
+      where.folderId = folderId === 'null' ? null : folderId;
+    }
+
+    if (starred) {
+      where.isStarred = true;
+    }
 
     const files = await prisma.cloudFile.findMany({
-      where: {
-        ownerId: auth.userId,
-        folderId: folderId === 'null' ? null : folderId,
-        isTrashed: false,
-      },
+      where,
       select: {
         id: true,
         name: true,
         mimeType: true,
         size: true,
         isStarred: true,
+        isPublic: true,
         createdAt: true,
         updatedAt: true,
       },
       orderBy: { createdAt: 'desc' },
+      take: recent ? limit : undefined,
     });
 
-    return NextResponse.json({ files });
+    // Convert BigInt to string for JSON serialization
+    const filesWithStringSize = files.map(file => ({
+      ...file,
+      size: file.size.toString(),
+    }));
+
+    return NextResponse.json({ files: filesWithStringSize });
   } catch (error) {
     console.error('Error fetching files:', error);
     return NextResponse.json(

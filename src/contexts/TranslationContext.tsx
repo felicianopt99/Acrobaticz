@@ -59,7 +59,17 @@ async function processTranslationQueue(targetLang: Language) {
     });
 
     if (!response.ok) {
-      throw new Error('Batch translation failed');
+      let errorDetails = '';
+      try {
+        const errorData = await response.json();
+        errorDetails = errorData.error || errorData.message || JSON.stringify(errorData);
+        console.error('Translation API error response:', errorData);
+      } catch (parseErr) {
+        const responseText = await response.text();
+        errorDetails = responseText || `HTTP ${response.status}: ${response.statusText}`;
+        console.error('Translation API response (not JSON):', responseText);
+      }
+      throw new Error(`Batch translation failed: ${errorDetails}`);
     }
 
     const data = await response.json();
@@ -83,7 +93,10 @@ async function processTranslationQueue(targetLang: Language) {
     });
     
   } catch (error) {
-    console.error('Batch translation error:', error);
+    console.error('Batch translation error:', error instanceof Error ? error.message : error);
+    if (error instanceof Error) {
+      console.error('Error details:', error.stack);
+    }
     
     // Reject all queued promises with fallback to original text
     const currentQueue = [...translationQueue];
@@ -120,15 +133,21 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
 
   // Preload all existing translations from database
   const preloadExistingTranslations = useCallback(async () => {
+    // Only run on client side
+    if (typeof window === 'undefined') {
+      setIsPreloading(false);
+      return;
+    }
+
     try {
       console.log('🔄 Preloading existing translations from database...');
       // Determine a reasonable targetLang to warm up
       let desiredLang: Language | undefined = undefined;
-      const savedLang = (typeof window !== 'undefined' ? localStorage.getItem('app-language') : null) as Language | null;
+      const savedLang = localStorage.getItem('app-language') as Language | null;
       if (savedLang && (savedLang === 'en' || savedLang === 'pt')) {
         desiredLang = savedLang;
       } else {
-        const browserLang = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : 'en';
+        const browserLang = navigator.language.toLowerCase();
         if (browserLang.startsWith('pt')) desiredLang = 'pt';
       }
 
@@ -136,6 +155,8 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
       if (desiredLang) params.set('targetLang', desiredLang);
       params.set('limit', '1000');
       const url = `/api/translate/preload${params.toString() ? `?${params.toString()}` : ''}`;
+
+      console.log(`📡 TranslationContext: Fetching preload translations from ${url}`);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -153,9 +174,18 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
         });
         
         console.log(`✅ Preloaded ${translations.length} existing translations into cache`);
+      } else {
+        console.warn(`⚠️ Preload API returned status ${response.status}: ${response.statusText}`);
+        try {
+          const errorText = await response.text();
+          console.warn(`Response body: ${errorText}`);
+        } catch (e) {
+          // Ignore error reading response text
+        }
       }
     } catch (error) {
-      console.error('Failed to preload translations:', error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.warn(`⚠️ Translation preload encountered an issue: ${errorMsg}`);
     } finally {
       setIsPreloading(false);
     }
@@ -163,19 +193,30 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
 
   // Load language preference and preload translations
   useEffect(() => {
-    const saved = localStorage.getItem('app-language') as Language;
-    if (saved && (saved === 'en' || saved === 'pt')) {
-      setLanguageState(saved);
-    } else {
-      // Auto-detect browser language
-      const browserLang = navigator.language.toLowerCase();
-      if (browserLang.startsWith('pt')) {
-        setLanguageState('pt');
-      }
-    }
+    if (typeof window === 'undefined') return; // Skip on server
 
-    // Preload existing translations
-    preloadExistingTranslations();
+    const loadLanguageAndTranslations = async () => {
+      try {
+        const saved = localStorage.getItem('app-language') as Language;
+        if (saved && (saved === 'en' || saved === 'pt')) {
+          setLanguageState(saved);
+        } else {
+          // Auto-detect browser language
+          const browserLang = navigator.language.toLowerCase();
+          if (browserLang.startsWith('pt')) {
+            setLanguageState('pt');
+          }
+        }
+
+        // Preload existing translations
+        await preloadExistingTranslations();
+      } catch (e) {
+        // Silently fail - preloading is not critical
+        console.warn('Language setup encountered an issue');
+      }
+    };
+
+    loadLanguageAndTranslations();
   }, [preloadExistingTranslations]);
 
   // Cross-tab/client cache invalidation when admin updates translations or rules

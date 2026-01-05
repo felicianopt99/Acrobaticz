@@ -1,7 +1,6 @@
 "use client";
 
-import React from 'react';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,22 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Search, Edit, Trash2, Plus, Save, X, RefreshCw, Database, Languages, FileText, 
-  Download, Upload, Filter, Star, Clock, CheckCircle, AlertTriangle, 
-  BarChart3, Settings, History, Tag, Users, Calendar, TrendingUp,
-  Eye, ThumbsUp, ThumbsDown, MessageSquare, Copy, ExternalLink, Package
+  Search, Trash2, Plus, Save, RefreshCw, Languages, 
+  Download, CheckCircle, AlertTriangle, BarChart3, Settings, Globe,
+  Pencil, X, Check
 } from 'lucide-react';
-import { TranslationAnalytics } from '@/components/admin/TranslationAnalytics';
-import PdfTranslationManager from './pdf-translation';
 
 interface Translation {
   id: string;
@@ -33,16 +26,8 @@ interface Translation {
   targetLang: string;
   status: string;
   qualityScore: number;
-  reviewedBy?: string;
-  reviewedAt?: string;
-  context?: string;
-  tags: string[];
   category: string;
   usageCount: number;
-  lastUsed?: string;
-  isAutoTranslated: boolean;
-  needsReview: boolean;
-  version: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,580 +42,475 @@ interface TranslationStats {
   totalUsage: number;
 }
 
-const TRANSLATION_CATEGORIES = [
+const CATEGORIES = [
+  { value: 'all', label: 'All Categories' },
   { value: 'general', label: 'General' },
-  { value: 'navigation', label: 'Navigation & Menu' },
+  { value: 'navigation', label: 'Navigation' },
   { value: 'dashboard', label: 'Dashboard' },
-  { value: 'inventory', label: 'Inventory & Equipment' },
-  { value: 'categories', label: 'Categories & Subcategories' },
-  { value: 'clients', label: 'Client Management' },
-  { value: 'events', label: 'Events & Calendar' },
-  { value: 'rentals', label: 'Rentals & Bookings' },
-  { value: 'quotes', label: 'Quotes & Services' },
-  { value: 'maintenance', label: 'Maintenance & Repairs' },
-  { value: 'users', label: 'User Management' },
-  { value: 'admin', label: 'Admin & Settings' },
-  { value: 'forms', label: 'Forms & Input' },
-  { value: 'buttons', label: 'Buttons & Actions' },
-  { value: 'messages', label: 'Messages & Notifications' },
-  { value: 'errors', label: 'Error Messages' },
-  { value: 'email', label: 'Email Templates' },
-  { value: 'reports', label: 'Reports & Analytics' },
+  { value: 'inventory', label: 'Inventory' },
+  { value: 'clients', label: 'Clients' },
+  { value: 'events', label: 'Events' },
+  { value: 'rentals', label: 'Rentals' },
+  { value: 'quotes', label: 'Quotes' },
+  { value: 'forms', label: 'Forms' },
+  { value: 'messages', label: 'Messages' },
+  { value: 'errors', label: 'Errors' },
 ];
-
-const TRANSLATION_STATUSES = [
-  { value: 'draft', label: 'Draft', color: 'bg-gray-100 text-gray-800' },
-  { value: 'pending_review', label: 'Pending Review', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'approved', label: 'Approved', color: 'bg-green-100 text-green-800' },
-  { value: 'rejected', label: 'Rejected', color: 'bg-red-100 text-red-800' },
-];
-
-// Helper functions
-const getStatusBadge = (status: string) => {
-  const statusConfig = TRANSLATION_STATUSES.find(s => s.value === status) || TRANSLATION_STATUSES[2];
-  return <Badge className={statusConfig.color}>{statusConfig.label}</Badge>;
-};
-
-const getQualityBadge = (score: number) => {
-  const getColor = (s: number) => {
-    if (s >= 90) return 'bg-green-100 text-green-800';
-    if (s >= 70) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-red-100 text-red-800';
-  };
-  return <Badge className={getColor(score)}>{score}%</Badge>;
-};
 
 export default function AdminTranslationsPage() {
-  // Core data state
-
-  // Core data state
+  const { toast } = useToast();
+  
+  // Core state
   const [translations, setTranslations] = useState<Translation[]>([]);
   const [stats, setStats] = useState<TranslationStats>({
-    total: 0,
-    byStatus: {},
-    byCategory: {},
-    averageQuality: 0,
-    needsReview: 0,
-    autoTranslated: 0,
-    totalUsage: 0,
+    total: 0, byStatus: {}, byCategory: {}, averageQuality: 100, 
+    needsReview: 0, autoTranslated: 0, totalUsage: 0
   });
-
-  // UI state
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [selectedTab, setSelectedTab] = useState('list');
-  const [listTargetLang, setListTargetLang] = useState('pt');
-  // Column filters
-  const [sourceFilter, setSourceFilter] = useState('');
-  const [translationFilter, setTranslationFilter] = useState('');
-  const [statusColFilter, setStatusColFilter] = useState<string>('');
-  const [categoryColFilter, setCategoryColFilter] = useState<string>('');
-  // Column sizing
-  const [sourceColWidth, setSourceColWidth] = useState<number>(() => {
-    if (typeof window === 'undefined') return 260;
-    const v = Number(localStorage.getItem('adminTranslations.sourceColWidth') || '260');
-    return Number.isFinite(v) && v > 120 ? v : 260;
-  });
-  const [transColWidth, setTransColWidth] = useState<number>(() => {
-    if (typeof window === 'undefined') return 260;
-    const v = Number(localStorage.getItem('adminTranslations.transColWidth') || '260');
-    return Number.isFinite(v) && v > 120 ? v : 260;
-  });
-  const resizingRef = useRef<null | { col: 'source' | 'trans'; startX: number; startW: number }>(null);
-  const scrollParentRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      const r = resizingRef.current; if (!r) return;
-      const delta = e.clientX - r.startX;
-      const w = Math.max(160, Math.min(800, r.startW + delta));
-      if (r.col === 'source') setSourceColWidth(w); else setTransColWidth(w);
-    };
-    const onUp = () => { resizingRef.current = null; };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, []);
-
-  // Dialog states (declared early to satisfy hooks order for effects below)
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
-  const [selectedTranslationId, setSelectedTranslationId] = useState<string | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-
-
-  // Translation Rules state
-  const [rules, setRules] = useState<string>('');
+  
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [targetLang, setTargetLang] = useState('pt');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [saving, setSaving] = useState(false);
+  
+  // Add dialog
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [newSource, setNewSource] = useState('');
+  const [newTranslation, setNewTranslation] = useState('');
+  
+  // Rules state
+  const [rules, setRules] = useState<Record<string, string>>({});
   const [rulesLoading, setRulesLoading] = useState(false);
-  const [rulesError, setRulesError] = useState<string | null>(null);
-  const [rulesEdit, setRulesEdit] = useState('');
-  const [rulesEditOpen, setRulesEditOpen] = useState(false);
-  const [rulesMode, setRulesMode] = useState<'simple' | 'advanced'>('simple');
-  const [ruleRows, setRuleRows] = useState<Array<{ source: string; translation: string }>>([]);
-  const [rulesValidationError, setRulesValidationError] = useState<string | null>(null);
+  const [newRuleSource, setNewRuleSource] = useState('');
+  const [newRuleTranslation, setNewRuleTranslation] = useState('');
 
-  const { toast } = useToast();
-
-
-  // ...existing code...
-
-  // Notify all tabs/clients that translations were updated (clears client caches)
-  const signalTranslationsUpdated = () => {
+  // Signal cache clear
+  const signalUpdate = () => {
     try {
       localStorage.setItem('translations-updated', String(Date.now()));
-      // Fire a synthetic storage event so same-tab listeners clear immediately
-      try {
-        // Some environments may not allow direct StorageEvent construction
-        const evt = new StorageEvent('storage', { key: 'translations-updated' } as any);
-        window.dispatchEvent(evt);
-      } catch {}
     } catch {}
   };
 
-  // Search and filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [sortBy, setSortBy] = useState('updatedAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  // Coverage state
-  const [coverage, setCoverage] = useState<{ missingCount: number; extractedCount: number; sampleMissing: string[]; total?: number; pages?: number; groups?: Record<string, number> }>({
-    missingCount: 0,
-    extractedCount: 0,
-    sampleMissing: [],
-  });
-  const [coverageLoading, setCoverageLoading] = useState(false);
-  const [selectedMissing, setSelectedMissing] = useState<Set<string>>(new Set());
-  const [groupFilter, setGroupFilter] = useState<string>('all');
-  const [coveragePage, setCoveragePage] = useState<number>(1);
-  const [coveragePages, setCoveragePages] = useState<number>(1);
-  const [coverageSearch, setCoverageSearch] = useState<string>('');
-  const [coverageTargetLang, setCoverageTargetLang] = useState('pt');
-
-  const fetchCoverage = async () => {
-    try {
-      setCoverageLoading(true);
-      const params = new URLSearchParams({
-        targetLang: coverageTargetLang,
-      });
-      const res = await fetch(`/api/i18n/coverage?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch coverage');
-      const data = await res.json();
-      setCoverage({
-        missingCount: data.missingCount || 0,
-        extractedCount: data.totalExtracted || 0,
-        sampleMissing: (data.samples && data.samples.missing) || [],
-        total: data.totalExtracted || 0,
-        pages: 1,
-        groups: (data.summaries && (data.summaries.byFile || data.summaries.byCategory)) || {},
-      });
-      setCoveragePages(1);
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message || 'Failed to load coverage', variant: 'destructive' });
-    } finally {
-      setCoverageLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedTab === 'coverage') {
-      fetchCoverage();
-    }
-  }, [selectedTab, coverageTargetLang]);
-
-  const handleSelectMissing = (text: string, checked: boolean) => {
-    const next = new Set(selectedMissing);
-    if (checked) next.add(text); else next.delete(text);
-    setSelectedMissing(next);
-  };
-
-  const handleSelectAllMissing = (checked: boolean) => {
-    if (checked) setSelectedMissing(new Set(coverage.sampleMissing)); else setSelectedMissing(new Set());
-  };
-
-  const handleSeedSelected = async () => {
-    const texts = Array.from(selectedMissing);
-    if (texts.length === 0) {
-      toast({ title: 'Nothing selected', description: 'Select at least one string to seed.' });
-      return;
-    }
-    try {
-      const res = await fetch('/api/admin/translations/seed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texts, targetLang: listTargetLang }),
-      });
-      if (!res.ok) throw new Error('Failed to seed translations');
-      const data = await res.json();
-      toast({ title: 'Seeded', description: `Created ${data.created} translation(s).` });
-      setSelectedMissing(new Set());
-      signalTranslationsUpdated();
-      // Refresh lists
-      fetchTranslations(currentPage);
-      fetchCoverage();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message || 'Failed to seed translations', variant: 'destructive' });
-    }
-  };
-
-  const handleSeedTopCritical = async () => {
-    try {
-      setCoverageLoading(true);
-      const params = new URLSearchParams({
-        page: '1',
-        limit: '50',
-        group: groupFilter,
-        search: coverageSearch,
-        onlyCritical: 'true',
-      });
-      const res = await fetch(`/api/admin/translation-coverage?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to load critical texts');
-      const data = await res.json();
-      const texts: string[] = data.topCritical || data.items || [];
-      if (!texts.length) {
-        toast({ title: 'No critical items', description: 'No critical strings available to seed.' });
-        return;
-      }
-      const seedRes = await fetch('/api/admin/translations/seed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texts, targetLang: listTargetLang }),
-      });
-      if (!seedRes.ok) throw new Error('Failed to seed translations');
-      const out = await seedRes.json();
-      toast({ title: 'Seeded', description: `Created ${out.created} translation(s).` });
-      signalTranslationsUpdated();
-      fetchTranslations(currentPage);
-      fetchCoverage();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message || 'Failed to seed critical translations', variant: 'destructive' });
-    } finally {
-      setCoverageLoading(false);
-    }
-  };
-
-  // Fetch translations from API
+  // Fetch translations
   const fetchTranslations = async (page: number) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
         page: String(page),
-        limit: '50',
-        search: searchTerm || '',
-        targetLang: listTargetLang,
-        status: selectedStatus,
-        category: selectedCategory,
-        sortBy,
-        sortOrder,
+        limit: '30',
+        search: searchTerm,
+        targetLang,
+        category: categoryFilter,
+        sortBy: 'updatedAt',
+        sortOrder: 'desc',
       });
 
-      const res = await fetch(`/api/admin/translations?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch translations');
+      const res = await fetch(`/api/admin/translations?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
 
       setTranslations(data.translations || []);
       setStats(data.stats || stats);
       setTotalPages(data.pagination?.pages || 1);
     } catch (e: any) {
-      toast({ title: 'Error', description: e.message || 'Failed to load translations', variant: 'destructive' });
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchTranslations(currentPage);
-  }, [currentPage, listTargetLang]);
-
-  useEffect(() => {
-    const run = async () => {
-      if (!isHistoryDialogOpen || !selectedTranslationId) return;
-      try {
-        setHistoryLoading(true);
-        const res = await fetch(`/api/admin/translations/${selectedTranslationId}/history`);
-        if (!res.ok) throw new Error('Failed to load history');
-        const data = await res.json();
-        setHistory(data.history || []);
-      } catch (e) {
-        setHistory([]);
-      } finally {
-        setHistoryLoading(false);
-      }
-    };
-    run();
-  }, [isHistoryDialogOpen, selectedTranslationId]);
-
-  // Auto-refresh search with debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (currentPage === 1) {
-        fetchTranslations(1);
-      } else {
-        setCurrentPage(1);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm, selectedStatus, selectedCategory, sortBy, sortOrder]);
-
-  // Fetch translation rules from API
+  // Fetch rules
   const fetchRules = async () => {
-    setRulesLoading(true);
-    setRulesError(null);
     try {
+      setRulesLoading(true);
       const res = await fetch('/api/admin/translation-rules');
-      if (!res.ok) throw new Error('Failed to fetch rules');
-      const data = await res.text();
-      setRules(data);
-      setRulesEdit(data);
-    } catch (e: any) {
-      setRulesError(e.message);
+      if (res.ok) {
+        const text = await res.text();
+        setRules(JSON.parse(text || '{}'));
+      }
+    } catch {
+      setRules({});
     } finally {
       setRulesLoading(false);
     }
   };
 
-  // Save translation rules to API
-  const saveRules = async () => {
-    setRulesLoading(true);
-    setRulesError(null);
-    try {
-      // Ensure rulesEdit reflects the current mode
-      let bodyToSend = rulesEdit;
-      if (rulesMode === 'simple') {
-        const obj: Record<string, string> = {};
-        for (const r of ruleRows) {
-          if (!r.source) continue;
-          obj[r.source] = r.translation ?? '';
-        }
-        bodyToSend = JSON.stringify(obj, null, 2);
-        setRulesEdit(bodyToSend);
-      }
+  useEffect(() => {
+    fetchTranslations(currentPage);
+  }, [currentPage, targetLang]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+      fetchTranslations(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm, categoryFilter]);
+
+  useEffect(() => {
+    fetchRules();
+  }, []);
+
+  // Save translation edit
+  const handleSaveEdit = async (id: string) => {
+    try {
+      setSaving(true);
+      const res = await fetch('/api/admin/translations', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [id], updates: { translatedText: editText } }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      
+      setTranslations(prev => prev.map(t => 
+        t.id === id ? { ...t, translatedText: editText } : t
+      ));
+      setEditingId(null);
+      signalUpdate();
+      toast({ title: 'Saved', description: 'Translation updated successfully' });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete translation
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this translation?')) return;
+    try {
+      const res = await fetch(`/api/admin/translations?ids=${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete');
+      
+      setTranslations(prev => prev.filter(t => t.id !== id));
+      signalUpdate();
+      toast({ title: 'Deleted', description: 'Translation removed' });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  // Add new translation
+  const handleAddTranslation = async () => {
+    if (!newSource.trim() || !newTranslation.trim()) {
+      toast({ title: 'Error', description: 'Both fields are required', variant: 'destructive' });
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/translations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceText: newSource,
+          translatedText: newTranslation,
+          targetLang,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to add');
+      }
+      
+      setShowAddDialog(false);
+      setNewSource('');
+      setNewTranslation('');
+      signalUpdate();
+      fetchTranslations(1);
+      toast({ title: 'Added', description: 'Translation created successfully' });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  // Save rules
+  const handleSaveRules = async () => {
+    try {
+      setRulesLoading(true);
       const res = await fetch('/api/admin/translation-rules', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: bodyToSend,
+        body: JSON.stringify(rules),
       });
       if (!res.ok) throw new Error('Failed to save rules');
-      setRules(bodyToSend);
-      setRulesEditOpen(false);
-      toast({ title: 'Success', description: 'Translation rules updated.' });
-      signalTranslationsUpdated();
+      signalUpdate();
+      toast({ title: 'Saved', description: 'Translation rules updated' });
     } catch (e: any) {
-      setRulesError(e.message);
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally {
       setRulesLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchRules();
-  }, []);
-
-  // Keep ruleRows in sync with rulesEdit when switching modes or when rules are fetched
-  useEffect(() => {
-    try {
-      const obj = JSON.parse(rulesEdit || rules || '{}') as Record<string, string>;
-      const rows = Object.entries(obj).map(([source, translation]) => ({ source, translation }));
-      setRuleRows(rows);
-      setRulesValidationError(null);
-    } catch (err: any) {
-      // If JSON invalid, surface error in advanced mode; simple mode will show empty rows
-      setRulesValidationError('Invalid JSON detected. Fix in Advanced mode or switch to Simple and Save to normalize.');
-    }
-  }, [rulesEdit, rules]);
-  
-  
-  
-  // Bulk operations
-  const [selectedTranslations, setSelectedTranslations] = useState<Set<string>>(new Set());
-  const [showBulkActions, setShowBulkActions] = useState(false);
-  
-  // Edit state
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Partial<Translation>>({});
-  const [editingField, setEditingField] = useState<'translatedText' | null>(null);
-  const undoTimerRef = useRef<any>(null);
-  const [undoState, setUndoState] = useState<null | { id: string; field: 'translatedText'; prev: any }>(null);
-  
-  // Dialog states moved above
-  
-  // Create form state
-  const [newTranslation, setNewTranslation] = useState({
-    sourceText: '',
-    translatedText: '',
-    category: 'general',
-    context: '',
-    tags: [] as string[],
-  });
-
-  // Computed values
-  const filteredTranslations = useMemo(() => {
-    let filtered = [...translations];
-    // Apply filters
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter((t) =>
-        t.sourceText.toLowerCase().includes(search) ||
-        t.translatedText.toLowerCase().includes(search) ||
-        (t.tags && t.tags.some((tag) => tag.toLowerCase().includes(search)))
-      );
-    }
-    if (sourceFilter) {
-      const s = sourceFilter.toLowerCase();
-      filtered = filtered.filter((t) => t.sourceText.toLowerCase().includes(s));
-    }
-    if (translationFilter) {
-      const s = translationFilter.toLowerCase();
-      filtered = filtered.filter((t) => t.translatedText.toLowerCase().includes(s));
-    }
-    if (statusColFilter) {
-      filtered = filtered.filter((t) => (t.status || 'approved') === statusColFilter);
-    }
-    if (categoryColFilter) {
-      filtered = filtered.filter((t) => (t.category || 'general') === categoryColFilter);
-    }
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter((t) => (t.status || 'approved') === selectedStatus);
-    }
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter((t) => (t.category || 'general') === selectedCategory);
-    }
-    // Apply sorting
-    filtered.sort((a, b) => {
-      const aVal = a[sortBy as keyof Translation];
-      const bVal = b[sortBy as keyof Translation];
-      const direction = sortOrder === 'asc' ? 1 : -1;
-      const va = aVal as any;
-      const vb = bVal as any;
-      if (va < vb) return -1 * direction;
-      if (va > vb) return 1 * direction;
-      return 0;
-    });
-    return filtered;
-  }, [
-    translations,
-    searchTerm,
-    sourceFilter,
-    translationFilter,
-    statusColFilter,
-    categoryColFilter,
-    selectedStatus,
-    selectedCategory,
-    sortBy,
-    sortOrder,
-  ]);
-
-  // Simple export helper for current filtered translations
-  const handleExport = () => {
-    try {
-      const data = JSON.stringify(filteredTranslations, null, 2);
-      const blob = new Blob([data], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `translations-${listTargetLang}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {}
+  // Add rule
+  const handleAddRule = () => {
+    if (!newRuleSource.trim()) return;
+    setRules(prev => ({ ...prev, [newRuleSource]: newRuleTranslation }));
+    setNewRuleSource('');
+    setNewRuleTranslation('');
   };
 
-  // Render expanded UI
+  // Delete rule
+  const handleDeleteRule = (key: string) => {
+    setRules(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  // Clear all PT translations (refresh to PT-PT)
+  const handleClearPTTranslations = async () => {
+    if (!confirm('This will delete all Portuguese translations so they can be re-translated using European Portuguese (PT-PT). Continue?')) return;
+    try {
+      setLoading(true);
+      // Get all PT translation IDs
+      const res = await fetch(`/api/admin/translations?targetLang=pt&limit=10000`);
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data = await res.json();
+      const ids = (data.translations || []).map((t: Translation) => t.id);
+      
+      if (ids.length === 0) {
+        toast({ title: 'Info', description: 'No PT translations to clear' });
+        return;
+      }
+      
+      // Delete all
+      const delRes = await fetch(`/api/admin/translations?ids=${ids.join(',')}`, { method: 'DELETE' });
+      if (!delRes.ok) throw new Error('Failed to delete');
+      
+      signalUpdate();
+      fetchTranslations(1);
+      toast({ title: 'Cleared', description: `Removed ${ids.length} PT translations. They will be re-translated as PT-PT.` });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Export
+  const handleExport = () => {
+    const data = JSON.stringify(translations, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `translations-${targetLang}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="p-4 space-y-4">
-      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid grid-cols-7 w-full">
-          <TabsTrigger value="list">List</TabsTrigger>
-          <TabsTrigger value="rules">Rules</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="coverage">Coverage</TabsTrigger>
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Languages className="h-6 w-6" />
+            Translation Manager
+          </h1>
+          <p className="text-muted-foreground">Manage translations for English ↔ Portuguese (PT-PT)</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />Export
+          </Button>
+          <Button onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />Add Translation
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-sm text-muted-foreground">Total Translations</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.averageQuality}%</p>
+                <p className="text-sm text-muted-foreground">Avg Quality</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.needsReview}</p>
+                <p className="text-sm text-muted-foreground">Needs Review</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.totalUsage.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Total Usage</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <Tabs defaultValue="translations" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="translations">Translations</TabsTrigger>
+          <TabsTrigger value="rules">Override Rules</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="pdf">PDF</TabsTrigger>
-          <TabsTrigger value="observability">Observability</TabsTrigger>
         </TabsList>
 
-        {/* List Tab */}
-        <TabsContent value="list" className="space-y-3">
+        {/* Translations Tab */}
+        <TabsContent value="translations" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Translations</CardTitle>
-              <CardDescription>Browse and filter translations</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-2 items-end">
-                <div className="min-w-[220px]">
-                  <Label className="text-sm">Search</Label>
-                  <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search source/translated/tags" />
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-[200px]">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search translations..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm">Status</Label>
-                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {TRANSLATION_STATUSES.map(s => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Category</Label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {TRANSLATION_CATEGORIES.map(c => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Target</Label>
-                  <Select value={listTargetLang} onValueChange={setListTargetLang}>
-                    <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="pt">Português</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="ml-auto flex gap-2">
-                  <Button variant="outline" onClick={() => fetchTranslations(1)} disabled={loading}><RefreshCw className="h-4 w-4 mr-2" />Refresh</Button>
-                  <Button variant="outline" onClick={handleExport}><Download className="h-4 w-4 mr-2" />Export JSON</Button>
-                </div>
+                <Select value={targetLang} onValueChange={setTargetLang}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pt">🇵🇹 Português</SelectItem>
+                    <SelectItem value="en">🇬🇧 English</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map(c => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" onClick={() => fetchTranslations(currentPage)} disabled={loading}>
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
-
-              <div className="border rounded-md overflow-auto">
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[120px]" style={{ width: sourceColWidth }}>Source</TableHead>
-                      <TableHead className="min-w-[120px]" style={{ width: transColWidth }}>Translated</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Quality</TableHead>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-[40%]">Source (English)</TableHead>
+                      <TableHead className="w-[40%]">Translation ({targetLang === 'pt' ? 'Português' : 'English'})</TableHead>
+                      <TableHead className="w-[10%] text-center">Category</TableHead>
+                      <TableHead className="w-[10%] text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredTranslations.length === 0 ? (
+                    {loading && translations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-sm text-muted-foreground">No results</TableCell>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          Loading translations...
+                        </TableCell>
+                      </TableRow>
+                    ) : translations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          No translations found
+                        </TableCell>
                       </TableRow>
                     ) : (
-                      filteredTranslations.map(t => (
-                        <TableRow key={t.id}>
-                          <TableCell className="whitespace-pre-wrap">{t.sourceText}</TableCell>
-                          <TableCell className="whitespace-pre-wrap">{t.translatedText}</TableCell>
-                          <TableCell>{getStatusBadge(t.status || 'approved')}</TableCell>
-                          <TableCell className="capitalize">{t.category || 'general'}</TableCell>
-                          <TableCell>{getQualityBadge(t.qualityScore || 100)}</TableCell>
+                      translations.map(t => (
+                        <TableRow key={t.id} className="group">
+                          <TableCell className="font-mono text-sm">
+                            {t.sourceText.length > 80 ? t.sourceText.slice(0, 80) + '...' : t.sourceText}
+                          </TableCell>
+                          <TableCell>
+                            {editingId === t.id ? (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={editText}
+                                  onChange={(e) => setEditText(e.target.value)}
+                                  className="flex-1"
+                                  autoFocus
+                                />
+                                <Button size="sm" onClick={() => handleSaveEdit(t.id)} disabled={saving}>
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-sm">
+                                {t.translatedText.length > 80 ? t.translatedText.slice(0, 80) + '...' : t.translatedText}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="secondary" className="capitalize text-xs">
+                              {t.category || 'general'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingId(t.id);
+                                  setEditText(t.translatedText);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleDelete(t.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))
                     )}
@@ -638,11 +518,28 @@ export default function AdminTranslationsPage() {
                 </Table>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-muted-foreground">Page {currentPage} of {totalPages}</div>
+              {/* Pagination */}
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages} • {stats.total} total
+                </p>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" disabled={currentPage <= 1 || loading} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>Prev</Button>
-                  <Button variant="outline" size="sm" disabled={currentPage >= totalPages || loading} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>Next</Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1 || loading}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages || loading}
+                  >
+                    Next
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -650,652 +547,223 @@ export default function AdminTranslationsPage() {
         </TabsContent>
 
         {/* Rules Tab */}
-        <TabsContent value="rules">
+        <TabsContent value="rules" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Translation Rules</CardTitle>
-              <CardDescription>Define custom replacements and overrides</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Translation Override Rules
+              </CardTitle>
+              <CardDescription>
+                Define custom word/phrase replacements that apply after DeepL translation.
+                Useful for ensuring specific business terms use PT-PT instead of PT-BR.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">Mode</Label>
-                  <Select value={rulesMode} onValueChange={(v) => setRulesMode(v as any)}>
-                    <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="simple">Simple</SelectItem>
-                      <SelectItem value="advanced">Advanced (JSON)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={saveRules} disabled={rulesLoading}><Save className="h-4 w-4 mr-2" />Save</Button>
-                  <Button variant="outline" onClick={fetchRules} disabled={rulesLoading}><RefreshCw className="h-4 w-4 mr-2" />Reload</Button>
-                </div>
-              </div>
-
-              {rulesMode === 'advanced' ? (
-                <div>
-                  <Textarea rows={18} value={rulesEdit} onChange={(e) => setRulesEdit(e.target.value)} />
-                  {rulesValidationError && (<div className="text-sm text-red-600 mt-2">{rulesValidationError}</div>)}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {ruleRows.map((r, i) => (
-                    <div key={i} className="grid grid-cols-2 gap-2">
-                      <Input placeholder="Source" value={r.source} onChange={(e) => {
-                        const next = [...ruleRows]; next[i] = { ...next[i], source: e.target.value }; setRuleRows(next);
-                      }} />
-                      <Input placeholder="Translation" value={r.translation} onChange={(e) => {
-                        const next = [...ruleRows]; next[i] = { ...next[i], translation: e.target.value }; setRuleRows(next);
-                      }} />
-                    </div>
-                  ))}
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setRuleRows([...ruleRows, { source: '', translation: '' }])}><Plus className="h-4 w-4 mr-2" />Add Row</Button>
-                    <Button onClick={saveRules}><Save className="h-4 w-4 mr-2" />Save</Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Analytics Tab */}
-        <TabsContent value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Analytics</CardTitle>
-              <CardDescription>Overview of translation coverage and quality</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TranslationAnalytics stats={stats} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Coverage Tab */}
-        <TabsContent value="coverage">
-          <Card>
-            <CardHeader>
-              <CardTitle>Translation Coverage</CardTitle>
-              <CardDescription>Extracted vs missing UI strings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Button aria-label="Refresh coverage" variant="outline" onClick={fetchCoverage} disabled={coverageLoading}>
-                  <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+              {/* Add new rule */}
+              <div className="flex gap-3 p-4 bg-muted/50 rounded-lg">
+                <Input
+                  placeholder="Source word/phrase (e.g., 'contact')"
+                  value={newRuleSource}
+                  onChange={(e) => setNewRuleSource(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Replacement (e.g., 'contacto')"
+                  value={newRuleTranslation}
+                  onChange={(e) => setNewRuleTranslation(e.target.value)}
+                  className="flex-1"
+                />
+                <Button onClick={handleAddRule} disabled={!newRuleSource.trim()}>
+                  <Plus className="h-4 w-4 mr-2" />Add Rule
                 </Button>
               </div>
-              <div className="text-sm text-muted-foreground">
-                Missing: {coverage.missingCount} — Extracted: {coverage.extractedCount}
+
+              {/* Rules list */}
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Source Text</TableHead>
+                      <TableHead>Replacement</TableHead>
+                      <TableHead className="w-20 text-right">Remove</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.keys(rules).length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                          No override rules defined
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      Object.entries(rules).map(([source, replacement]) => (
+                        <TableRow key={source}>
+                          <TableCell className="font-mono">{source}</TableCell>
+                          <TableCell className="font-mono">{replacement}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteRule(source)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="flex justify-between items-center pt-4">
+                <Button variant="outline" onClick={fetchRules} disabled={rulesLoading}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${rulesLoading ? 'animate-spin' : ''}`} />
+                  Reload
+                </Button>
+                <Button onClick={handleSaveRules} disabled={rulesLoading}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Rules
+                </Button>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* PDF Tab */}
-        <TabsContent value="pdf">
-          <PdfTranslationManager />
         </TabsContent>
 
         {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-6">
+        <TabsContent value="settings" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Translation Settings</CardTitle>
-              <CardDescription>Configure translation workflows and quality controls</CardDescription>
+              <CardDescription>Configure translation behavior and maintenance</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Quality Controls</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="auto-approve">Auto-approve high quality translations</Label>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-muted-foreground">≥95%</span>
-                        <input type="checkbox" id="auto-approve" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="review-threshold">Flag for review below</Label>
-                      <div className="flex items-center space-x-2">
-                        <input aria-label="Review threshold" type="number" id="review-threshold" className="w-16 px-2 py-1 border rounded text-center" defaultValue="70" min="0" max="100" />
-                        <span className="text-sm text-muted-foreground">%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Automation</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="auto-translate">Enable auto-translation</Label>
-                      <input type="checkbox" id="auto-translate" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="batch-processing">Enable batch processing</Label>
-                      <input type="checkbox" id="batch-processing" defaultChecked />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Observability Tab */}
-        <TabsContent value="observability">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Translation Stats</CardTitle>
-                <CardDescription>Real-time stats from admin API</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div>Total: {stats.total}</div>
-                <div>Needs Review: {stats.needsReview}</div>
-                <div>Auto-translated: {stats.autoTranslated}</div>
-                <div>Average Quality: {stats.averageQuality}%</div>
-                <div>Total Usage: {stats.totalUsage}</div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-      </Tabs>
-    </div>
-  );
-
-  /*
-    <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-      <TabsList className="mb-4">
-        <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        <TabsTrigger value="coverage">Coverage</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="analytics">
-        <Card>
-          <CardHeader>
-            <CardTitle>Analytics</CardTitle>
-            <CardDescription>Overview of translation coverage and quality</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TranslationAnalytics stats={stats} />
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="coverage">
-        <Card>
-          <CardHeader>
-            <CardTitle>Translation Coverage</CardTitle>
-            <CardDescription>Extracted vs missing UI strings</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Button
-                aria-label="Scan UI Texts"
-                onClick={async () => {
-                  try {
-                    setCoverageLoading(true);
-                    const res = await fetch('/api/admin/translation-coverage', { method: 'POST' });
-                    if (!res.ok) throw new Error('Failed to scan UI texts');
-                    await fetchCoverage();
-                    toast({ title: 'Scanned', description: 'UI texts extracted and coverage updated.' });
-                  } catch (e: any) {
-                    toast({ title: 'Error', description: e.message || 'Scan failed', variant: 'destructive' });
-                  } finally {
-                    setCoverageLoading(false);
-                  }
-                }}
-                disabled={coverageLoading}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" /> Scan UI Texts
-              </Button>
-              <Button
-                aria-label="Refresh coverage"
-                variant="outline"
-                onClick={fetchCoverage}
-                disabled={coverageLoading}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-              </Button>
-              <Button
-                aria-label="Seed selected missing translations"
-                onClick={handleSeedSelected}
-                disabled={selectedMissing.size === 0 || coverageLoading}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Seed Selected
-              </Button>
-            </div>
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex flex-col">
-                <Label className="text-xs">Target language</Label>
-                <Select value={coverageTargetLang} onValueChange={setCoverageTargetLang}>
-                  <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="pt">Português</SelectItem>
-                  </SelectContent>
-                </Select>
-                      <SelectItem value="pt">Português</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex-1 min-w-[220px]">
-                  <Label htmlFor="search" className="text-sm">Search</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 text-muted-foreground transform -translate-y-1/2" />
-                    <Input
-                      aria-label="Search coverage"
-                      id="search"
-                      value={coverageSearch}
-                      onChange={(e) => setCoverageSearch(e.target.value)}
-                      placeholder="Filter text..."
-                      className="pl-10 h-10 focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-                <div className="ml-auto flex gap-2">
-                  <Button
-                    aria-label="Scan UI Texts"
-                    variant="default"
-                    size="sm"
-                    onClick={handleScanCoverage}
-                    disabled={coverageLoading}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" /> Scan UI Texts
-                  </Button>
-                  <Button
-                    aria-label="Seed Top Critical"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSeedTopCritical}
-                  >
-                    <Star className="h-4 w-4 mr-2" /> Seed Top Critical
-                  </Button>
-                  <Button
-                    aria-label="Refresh coverage"
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchCoverage}
-                    disabled={coverageLoading}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-                  </Button>
-                </div>
+              {/* Language Info */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                  🇵🇹 European Portuguese (PT-PT)
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  All translations use European Portuguese (PT-PT), not Brazilian Portuguese (PT-BR).
+                  DeepL is configured to target PT-PT, and additional glossary rules convert common 
+                  Brazilian terms to European equivalents.
+                </p>
               </div>
 
-              <div className="flex items-center gap-4 mt-2">
-                <div className="flex flex-col">
-                  <Label className="text-xs">Group</Label>
-                  <Select value={groupFilter} onValueChange={setGroupFilter}>
-                    <SelectTrigger id="coverage-group" className="w-[170px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="clients">Clients</SelectItem>
-                      <SelectItem value="events">Events</SelectItem>
-                      <SelectItem value="quotes">Quotes</SelectItem>
-                      <SelectItem value="rentals">Rentals</SelectItem>
-                      <SelectItem value="inventory">Inventory</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                      <SelectItem value="users">Users</SelectItem>
-                      <SelectItem value="categories">Categories</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="general">General</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="coverage-search" className="text-sm">Search</Label>
-                  <Input
-                    aria-label="Filter by source text"
-                    id="coverage-search"
-                    value={coverageSearch}
-                    onChange={(e) => setCoverageSearch(e.target.value)}
-                    placeholder="Filter text..."
-                    className="w-[260px]"
-                  />
-                </div>
-
-                <div className="ml-auto flex gap-2">
-                  <Button
-                    aria-label="Scan UI Texts"
-                    variant="default"
-                    size="sm"
-                    onClick={handleScanCoverage}
-                    disabled={coverageLoading}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" /> Scan UI Texts
-                  </Button>
-                  <Button
-                    aria-label="Seed Top Critical"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSeedTopCritical}
-                  >
-                    <Star className="h-4 w-4 mr-2" /> Seed Top Critical
-                  </Button>
-                  <Button
-                    aria-label="Refresh coverage"
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchCoverage}
-                    disabled={coverageLoading}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 mt-2">
-                <div className="flex flex-col">
-                  <Label className="text-xs">Target language</Label>
-                  <Select value={coverageTargetLang} onValueChange={setCoverageTargetLang}>
-                    <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="pt">Português</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-4 text-sm">
-                <Badge variant="secondary">Missing: {coverage.missingCount}</Badge>
-                <Badge variant="secondary">Extracted: {coverage.extractedCount}</Badge>
-                {coverage.groups && (
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(coverage.groups).map(([g, c]) => (
-                      <Badge key={g} variant={g === groupFilter ? 'default' : 'secondary'} className="capitalize">
-                        {g}: {c}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  aria-label="Select all missing translations"
-                  id="select-all-missing"
-                  onCheckedChange={(v) => handleSelectAllMissing(!!v)}
-                />
-                <Label htmlFor="select-all-missing">Select all shown ({coverage.sampleMissing.length})</Label>
-                <Button
-                  aria-label="Clear selected missing translations"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedMissing(new Set())}
-                >Clear</Button>
-                <div className="ml-auto flex gap-2">
-                  <Button
-                    aria-label="Seed selected missing translations"
-                    size="sm"
-                    onClick={handleSeedSelected}
-                    disabled={selectedMissing.size === 0 || coverageLoading}
-                  >
-                    <Plus className="h-4 w-4 mr-2" /> Seed Selected
-                  </Button>
-                  <Button
-                    aria-label="Refresh coverage"
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchCoverage}
-                    disabled={coverageLoading}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-                  </Button>
-                </div>
-              </div>
-
-              {coverageLoading ? (
-                <div>Loading coverage…</div>
-              ) : coverage.sampleMissing.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No missing strings to display.</div>
-              ) : (
-                <div className="max-h-[420px] overflow-auto border rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-10"></TableHead>
-                        <TableHead>Source Text</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {coverage.sampleMissing.map((text) => (
-                        <TableRow key={text}>
-                          <TableCell className="w-10">
-                            <Checkbox
-                              aria-label={`Select ${text}`}
-                              checked={selectedMissing.has(text)}
-                              onCheckedChange={(v) => handleSelectMissing(text, !!v)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-sm whitespace-pre-wrap">{text}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-muted-foreground">
-                  Page {coveragePage} of {coveragePages} — Showing {coverage.sampleMissing.length} items
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    aria-label="Previous page"
-                    variant="outline"
-                    size="sm"
-                    disabled={coveragePage <= 1 || coverageLoading}
-                    onClick={() => setCoveragePage((p) => Math.max(1, p - 1))}
-                  >Prev</Button>
-                  <Button
-                    aria-label="Next page"
-                    variant="outline"
-                    size="sm"
-                    disabled={coveragePage >= coveragePages || coverageLoading}
-                    onClick={() => setCoveragePage((p) => Math.min(coveragePages, p + 1))}
-                  >Next</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <TranslationAnalytics stats={stats} />
-        </TabsContent>
-
-        <TabsContent value="observability">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Translation Stats</CardTitle>
-                <CardDescription>Real-time stats from admin API</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div>Total: {stats.total}</div>
-                <div>Needs Review: {stats.needsReview}</div>
-                <div>Auto-translated: {stats.autoTranslated}</div>
-                <div>Average Quality: {stats.averageQuality}%</div>
-                <div>Total Usage: {stats.totalUsage}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Coverage</CardTitle>
-                <CardDescription>Extracted vs Missing</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div>Extracted: {coverage.extractedCount}</div>
-                <div>Missing: {coverage.missingCount}</div>
-                <div className="flex gap-2">
-                  <Button
-                    aria-label="Refresh coverage in observability"
-                    size="sm"
-                    variant="outline"
-                    onClick={fetchCoverage}
-                    disabled={coverageLoading}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>DeepL & Cache Metrics</CardTitle>
-                <CardDescription>Coming soon</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <div>DeepL requests/retries/latency: not instrumented</div>
-                <div>LRU cache hit rate/size: not instrumented</div>
-                <div>
-                  I can add lightweight counters and an admin metrics API to surface these.
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Translation Settings</CardTitle>
-              <CardDescription>
-                Configure translation workflows and quality controls
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Quality Controls</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="auto-approve">Auto-approve high quality translations</Label>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-muted-foreground">≥95%</span>
-                        <input type="checkbox" id="auto-approve" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="review-threshold">Flag for review below</Label>
-                      <div className="flex items-center space-x-2">
-                        <input 
-                          aria-label="Review threshold"
-                          type="number" 
-                          id="review-threshold" 
-                          className="w-16 px-2 py-1 border rounded text-center"
-                          defaultValue="70"
-                          min="0"
-                          max="100"
-                        />
-                        <span className="text-sm text-muted-foreground">%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Automation</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="auto-translate">Enable auto-translation</Label>
-                      <input type="checkbox" id="auto-translate" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="batch-processing">Enable batch processing</Label>
-                      <input type="checkbox" id="batch-processing" defaultChecked />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
               <Separator />
-              
+
+              {/* Maintenance Actions */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Export Options</h3>
-                <div className="flex gap-2">
-                  <Button
-                    aria-label="Export JSON"
-                    variant="outline"
-                    onClick={() => handleExport()}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export JSON
-                  </Button>
-                  <Button
-                    aria-label="Export CSV"
-                    variant="outline"
-                    onClick={() => window.open('/api/admin/translations/export?format=csv', '_blank')}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Export CSV
-                  </Button>
-                  <Button
-                    aria-label="Export Key-Value"
-                    variant="outline"
-                    onClick={() => window.open('/api/admin/translations/export?format=keyvalue', '_blank')}
-                  >
-                    <Database className="h-4 w-4 mr-2" />
-                    Export Key-Value
-                  </Button>
+                <h3 className="font-semibold">Maintenance Actions</h3>
+                
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center gap-2">
+                      <RefreshCw className="h-5 w-5 text-orange-500" />
+                      <h4 className="font-medium">Refresh PT Translations</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Clear all Portuguese translations to re-translate using PT-PT. 
+                      Use this if you see Brazilian Portuguese text.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={handleClearPTTranslations}
+                      disabled={loading}
+                    >
+                      Clear & Re-translate PT
+                    </Button>
+                  </div>
+
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Download className="h-5 w-5 text-blue-500" />
+                      <h4 className="font-medium">Export Translations</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Download all translations as JSON for backup or analysis.
+                    </p>
+                    <Button variant="outline" className="w-full" onClick={handleExport}>
+                      Export JSON
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsList className="grid grid-cols-7 w-full">
-          <TabsTrigger value="list">List</TabsTrigger>
-          <TabsTrigger value="rules">Rules</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="coverage">Coverage</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="pdf">PDF</TabsTrigger>
-          <TabsTrigger value="observability">Observability</TabsTrigger>
-        </TabsList>
-      </TableHeader>
-                  <TableBody>
-                    {history.map((h) => (
-                      <TableRow key={h.id}>
-                        <TableCell>{h.version}</TableCell>
-                        <TableCell>{h.changedBy || '—'}</TableCell>
-                        <TableCell>{h.createdAt ? new Date(h.createdAt).toLocaleString() : '—'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <Separator className="my-4" />
-                <div className="space-y-4">
-                  {history.map((h) => (
-                    <div key={`diff-${h.id}`} className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs">Old</Label>
-                        <Textarea readOnly value={h.oldTranslatedText} rows={4} />
-                      </div>
-                      <div>
-                        <Label className="text-xs">New</Label>
-                        <Textarea readOnly value={h.newTranslatedText} rows={4} />
-                      </div>
+              <Separator />
+
+              {/* PT-BR to PT-PT Glossary Info */}
+              <div className="space-y-3">
+                <h3 className="font-semibold">Built-in PT-BR → PT-PT Corrections</h3>
+                <p className="text-sm text-muted-foreground">
+                  These automatic corrections are applied after DeepL translation:
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                  {[
+                    ['contato', 'contacto'],
+                    ['conosco', 'connosco'],
+                    ['aluguel', 'aluguer'],
+                    ['celular', 'telemóvel'],
+                    ['ônibus', 'autocarro'],
+                    ['fato', 'facto'],
+                    ['trem', 'comboio'],
+                    ['banheiro', 'casa de banho'],
+                  ].map(([br, pt]) => (
+                    <div key={br} className="p-2 bg-muted rounded text-center">
+                      <span className="line-through text-muted-foreground">{br}</span>
+                      <span className="mx-2">→</span>
+                      <span className="font-medium">{pt}</span>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Add Translation Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Translation</DialogTitle>
+            <DialogDescription>
+              Add a custom translation for {targetLang === 'pt' ? 'Portuguese' : 'English'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Source Text (English)</Label>
+              <Textarea
+                placeholder="Enter the English text..."
+                value={newSource}
+                onChange={(e) => setNewSource(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Translation ({targetLang === 'pt' ? 'Português' : 'English'})</Label>
+              <Textarea
+                placeholder="Enter the translation..."
+                value={newTranslation}
+                onChange={(e) => setNewTranslation(e.target.value)}
+                rows={3}
+              />
+            </div>
           </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddTranslation}>
+              <Plus className="h-4 w-4 mr-2" />Add Translation
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-    
   );
-*/
 }

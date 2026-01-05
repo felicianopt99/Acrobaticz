@@ -78,8 +78,17 @@ export default function AIEquipmentAssistant({ onEquipmentGenerated, refreshData
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to analyze equipment');
+        let errorMessage = 'Failed to analyze equipment';
+        try {
+          const text = await response.text();
+          if (text) {
+            const error = JSON.parse(text);
+            errorMessage = error.error || errorMessage;
+          }
+        } catch {
+          // Response body was empty or invalid JSON
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -104,6 +113,9 @@ export default function AIEquipmentAssistant({ onEquipmentGenerated, refreshData
         // All good, proceed with form filling
         const needsRefresh = result.categoryInfo?.created || result.subcategoryInfo?.created;
         
+        console.log('AI Assistant - Equipment data to send:', result.equipment);
+        console.log('AI Assistant - dailyRate value:', result.equipment.dailyRate, 'type:', typeof result.equipment.dailyRate);
+        
         onEquipmentGenerated({
           ...result.equipment,
           categoryId: result.categoryInfo?.id,
@@ -111,6 +123,9 @@ export default function AIEquipmentAssistant({ onEquipmentGenerated, refreshData
         }, needsRefresh ? refreshData : undefined);
         
         let successMessage = `Generated details for: ${result.equipment.name}`;
+        if (result.equipment.dailyRate) {
+          successMessage += ` | Suggested rate: €${result.equipment.dailyRate}/day`;
+        }
         if (result.categoryInfo?.created) {
           successMessage += ` (Created new category: ${result.categoryInfo.name})`;
         }

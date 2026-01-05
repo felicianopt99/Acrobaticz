@@ -11,7 +11,9 @@ import { MobileWelcomeBar } from '@/components/layout/MobileWelcomeBar';
 export function MobileLayout({ children }: { children: React.ReactNode }) {
   return (
     <MobileNavProvider>
-      <div className="flex flex-col h-screen bg-white dark:bg-black text-gray-900 dark:text-gray-100 overflow-y-auto overflow-x-hidden relative">
+      <div 
+        className="flex flex-col min-h-screen bg-white dark:bg-black text-gray-900 dark:text-gray-100 overflow-x-hidden relative"
+      >
         <AppHeader />
         <main 
           className="flex-1 min-w-0 max-w-full bg-white dark:bg-black relative z-[1]"

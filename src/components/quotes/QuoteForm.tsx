@@ -33,6 +33,13 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useCallback, useState } from "react";
 import { Separator } from "../ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+import { QuoteFormHeader } from './QuoteFormHeader';
+import { QuoteSidebar } from './QuoteSidebar';
+import { QuoteItemsTable } from './QuoteItemsTable';
+import { getAvailableBusinessInfoSources, getDefaultBusinessInfo } from '@/lib/quote-business-info';
+import type { BusinessInfo } from '@/lib/quote-business-info';
 
 const QUOTE_STATUSES: QuoteStatus[] = ['Draft', 'Sent', 'Accepted', 'Declined', 'Archived'];
 const MANUAL_CLIENT_ENTRY_VALUE = "__manual_client__";
@@ -158,6 +165,17 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
   const { translated: selectExistingClientLabel } = useTranslate('Select Existing Client (Optional)');
   const { translated: selectExistingClientPh } = useTranslate('Select existing client or enter manually...');
   const { translated: enterNewClientDetails } = useTranslate('Enter New Client Details');
+  const { translated: selectClientLabel } = useTranslate('Select Existing Client (Optional)');
+  const { translated: selectClientPh } = useTranslate('Select a client or enter new details');
+  const { translated: enterNewClientLabel } = useTranslate('Enter New Client Details');
+  const { translated: clientNameLabel } = useTranslate('Client Name');
+  const { translated: clientNamePh } = useTranslate('e.g., John Smith');
+  const { translated: clientEmailLabel } = useTranslate('Email Address');
+  const { translated: clientEmailPh } = useTranslate('e.g., client@example.com');
+  const { translated: clientPhoneLabel } = useTranslate('Phone Number');
+  const { translated: clientPhonePh } = useTranslate('e.g., +1 (555) 123-4567');
+  const { translated: clientAddressLabel } = useTranslate('Address');
+  const { translated: clientAddressPh } = useTranslate('e.g., 123 Main Street, City, State');
   const { translated: clientNameRequiredLabel } = useTranslate('Client Name *');
   const { translated: additionalNotesTitle } = useTranslate('Additional Notes');
   const { translated: additionalNotesDesc } = useTranslate('Add any special instructions or additional information');
@@ -187,6 +205,52 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
   const { toast } = useToast();
   
   const rentableEquipment = equipment.filter(e => e.type === 'equipment');
+
+  // ============== DECLARE ALL STATE EARLY ==============
+  // PDF Preview state
+  const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false);
+  const [previewQuote, setPreviewQuote] = useState<Quote | null>(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  
+  // Auto-save status
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // Business Info state
+  const [selectedBusinessInfo, setSelectedBusinessInfo] = useState<BusinessInfo | null>(null);
+  const [availableBusinessSources, setAvailableBusinessSources] = useState<BusinessInfo[]>([]);
+
+  // Partner/Subrental states (declare early before hooks)
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string>('');
+  const [subrentalEquipmentName, setSubrentalEquipmentName] = useState<string>('');
+  const [subrentalCost, setSubrentalCost] = useState<number>(0);
+  const [subrentalPrice, setSubrentalPrice] = useState<number>(0);
+
+  // Responsive state
+  const [isDesktop, setIsDesktop] = useState(true);
+
+  // Add item states
+  const [addItemType, setAddItemType] = useState<'equipment'|'service'|'fee'|'subrental'>('equipment');
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>(rentableEquipment[0]?.id || '');
+  const [equipmentSearch, setEquipmentSearch] = useState('');
+  const [quantity, setQuantity] = useState<number>(1);
+  const [unitPrice, setUnitPrice] = useState<number>(0);
+  const [description, setDescription] = useState<string>('');
+  const [useManualEquipment, setUseManualEquipment] = useState<boolean>(false);
+  const [manualEquipmentName, setManualEquipmentName] = useState<string>('');
+  const [manualEquipmentPrice, setManualEquipmentPrice] = useState<number>(0);
+  const [useManualService, setUseManualService] = useState<boolean>(false);
+  const [manualServiceName, setManualServiceName] = useState<string>('');
+  const [manualServicePrice, setManualServicePrice] = useState<number>(0);
+
+  // Additional subrental related states
+  const [subrentalQuantity, setSubrentalQuantity] = useState<number>(1);
+  const [showNewPartnerForm, setShowNewPartnerForm] = useState<boolean>(false);
+  const [newPartnerName, setNewPartnerName] = useState<string>('');
+  const [isCreatingPartner, setIsCreatingPartner] = useState<boolean>(false);
+  
+  // ============== NOW CALL HOOKS ==============
 
   // Show a friendly summary when validation blocks submission and focus first invalid field
   const onInvalid = (errors: Record<string, any>) => {
@@ -398,14 +462,20 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
     name: "items",
   });
 
-  // PDF Preview state
-  const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false);
-  const [previewQuote, setPreviewQuote] = useState<Quote | null>(null);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  
-  // Auto-save status
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  // Watch form values (must be declared before useEffects)
+  const watchStartDate = form.watch("startDate");
+  const watchEndDate = form.watch("endDate");
+  const watchItems = form.watch("items");
+  const watchDiscountAmount = form.watch("discountAmount");
+  const watchDiscountType = form.watch("discountType");
+  const watchTaxRate = form.watch("taxRate");
+  const watchClientId = form.watch("clientId");
+  const watchClientName = form.watch("clientName");
+  const watchClientEmail = form.watch("clientEmail");
+  const watchClientPhone = form.watch("clientPhone");
+  const watchClientAddress = form.watch("clientAddress");
+  const watchQuoteName = form.watch("name");
+  const watchQuoteStatus = form.watch("status");
 
   // Clean up any invalid items without a type field (safety check for corrupted data)
   useEffect(() => {
@@ -424,14 +494,6 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
     });
   }, []); // Run only once on mount
 
-  const watchStartDate = form.watch("startDate");
-  const watchEndDate = form.watch("endDate");
-  const watchItems = form.watch("items");
-  const watchDiscountAmount = form.watch("discountAmount");
-  const watchDiscountType = form.watch("discountType");
-  const watchTaxRate = form.watch("taxRate");
-  const watchClientId = form.watch("clientId");
-
   useEffect(() => {
     if (watchClientId && watchClientId !== MANUAL_CLIENT_ENTRY_VALUE) {
       const selectedClient = clients.find(c => c.id === watchClientId);
@@ -447,6 +509,36 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
         // This is handled by the onValueChange of the Select component.
     }
   }, [watchClientId, clients, form]);
+
+  // Initialize business info sources and watch for changes
+  useEffect(() => {
+    // This will be re-initialized after partners are loaded
+    const sources = getAvailableBusinessInfoSources(
+      watchClientId,
+      form.getValues("clientName"),
+      form.getValues("partnerId"), // If you have a partner field
+      clients,
+      [], // partners will be loaded asynchronously, start with empty
+      getDefaultBusinessInfo()
+    );
+    setAvailableBusinessSources(sources);
+    
+    // Set default to first source (client if available, else partner, else app)
+    if (!selectedBusinessInfo && sources.length > 0) {
+      setSelectedBusinessInfo(sources[0]);
+    }
+  }, [watchClientId, clients, form, selectedBusinessInfo]);
+
+  // Handle responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024); // lg breakpoint
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const rentalDays = useCallback(() => {
     if (watchStartDate && watchEndDate && watchEndDate >= watchStartDate) {
@@ -496,40 +588,20 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
 
   const { subTotal, discountedSubTotal, feeTotal, percentageFeeTotal, taxAmount, totalAmount, days } = calculateTotals();
 
-  // Unified add item state
-  const [addItemType, setAddItemType] = React.useState<'equipment'|'service'|'fee'|'subrental'>('equipment');
-  const [selectedEquipmentId, setSelectedEquipmentId] = React.useState<string>(rentableEquipment[0]?.id || '');
-  const [equipmentSearch, setEquipmentSearch] = React.useState('');
-  const [selectedServiceId, setSelectedServiceId] = React.useState<string>(services[0]?.id || '');
-  const [selectedFeeId, setSelectedFeeId] = React.useState<string>(fees[0]?.id || '');
-  const [addQuantity, setAddQuantity] = React.useState<number>(1);
-  const [addUnitPrice, setAddUnitPrice] = React.useState<number>(0);
-  const [addFeeType, setAddFeeType] = React.useState<'fixed'|'percentage'>('fixed');
-  const [addFeeAmount, setAddFeeAmount] = React.useState<number>(0);
-  // Manual item states (allow adding items not in stock/list)
-  const [useManualEquipment, setUseManualEquipment] = React.useState<boolean>(false);
-  const [manualEquipmentName, setManualEquipmentName] = React.useState<string>('');
-  const [manualEquipmentPrice, setManualEquipmentPrice] = React.useState<number>(0);
-  const [useManualService, setUseManualService] = React.useState<boolean>(false);
-  const [manualServiceName, setManualServiceName] = React.useState<string>('');
-  const [manualServicePrice, setManualServicePrice] = React.useState<number>(0);
-  
-  // Partner/Subrental states
-  const [partners, setPartners] = React.useState<Partner[]>([]);
-  const [selectedPartnerId, setSelectedPartnerId] = React.useState<string>('');
-  const [subrentalEquipmentName, setSubrentalEquipmentName] = React.useState<string>('');
-  const [subrentalCost, setSubrentalCost] = React.useState<number>(0);
-  const [subrentalPrice, setSubrentalPrice] = React.useState<number>(0);
-  const [subrentalQuantity, setSubrentalQuantity] = React.useState<number>(1);
-  const [showNewPartnerForm, setShowNewPartnerForm] = React.useState<boolean>(false);
-  const [newPartnerName, setNewPartnerName] = React.useState<string>('');
-  const [newPartnerCompany, setNewPartnerCompany] = React.useState<string>('');
-  const [newPartnerPhone, setNewPartnerPhone] = React.useState<string>('');
-  const [newPartnerEmail, setNewPartnerEmail] = React.useState<string>('');
-  const [isCreatingPartner, setIsCreatingPartner] = React.useState<boolean>(false);
+  // Additional form-specific state (add quantity, fee type, etc.)
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(services[0]?.id || '');
+  const [selectedFeeId, setSelectedFeeId] = useState<string>(fees[0]?.id || '');
+  const [addQuantity, setAddQuantity] = useState<number>(1);
+  const [addUnitPrice, setAddUnitPrice] = useState<number>(0);
+  const [addFeeType, setAddFeeType] = useState<'fixed'|'percentage'>('fixed');
+  const [addFeeAmount, setAddFeeAmount] = useState<number>(0);
+  // Partner company info
+  const [newPartnerCompany, setNewPartnerCompany] = useState<string>('');
+  const [newPartnerPhone, setNewPartnerPhone] = useState<string>('');
+  const [newPartnerEmail, setNewPartnerEmail] = useState<string>('');
 
   // Fetch partners on mount
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchPartners = async () => {
       try {
         const response = await fetch('/api/partners?activeOnly=true');
@@ -546,6 +618,25 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
     };
     fetchPartners();
   }, []);
+
+  // Update business info sources when partners are loaded
+  useEffect(() => {
+    if (partners.length > 0) {
+      const sources = getAvailableBusinessInfoSources(
+        watchClientId,
+        form.getValues("clientName"),
+        form.getValues("partnerId"),
+        clients,
+        partners,
+        getDefaultBusinessInfo()
+      );
+      setAvailableBusinessSources(sources);
+      
+      if (!selectedBusinessInfo && sources.length > 0) {
+        setSelectedBusinessInfo(sources[0]);
+      }
+    }
+  }, [partners, watchClientId, clients, form, selectedBusinessInfo]);
 
   // Create new partner inline
   const handleCreatePartner = async () => {
@@ -956,196 +1047,211 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
     <>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6">
-        {/* Header Section */}
+        
+        {/* Invoice-Style Header with Business Info Selector */}
+        <QuoteFormHeader
+          selectedBusinessInfo={selectedBusinessInfo}
+          availableSources={availableBusinessSources}
+          onSourceChange={setSelectedBusinessInfo}
+          quoteNumber={initialData?.quoteNumber}
+          isEditing={!!initialData}
+          autoSaveStatus={autoSaveStatus as any}
+          lastSaved={lastSaved || undefined}
+          onPreview={handlePreviewPDF}
+          onDownload={handleDownloadPDF}
+          isGeneratingPDF={isGeneratingPDF}
+          clientName={watchClientName}
+          clientEmail={watchClientEmail}
+          clientPhone={watchClientPhone}
+          clientAddress={watchClientAddress}
+          location={form.getValues("location")}
+        />
+
+        {/* Main Content + Sidebar Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Left Column: Main Content (3 columns on desktop = 75%) */}
+          <div className="lg:col-span-3 space-y-6">
+
+        {/* Event & Client Details Section - Compact Collapsible */}
         <Card className="shadow-xl border-border/60">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <CardTitle>
-                    {initialData ? editQuoteTitleText : createQuoteTitleText}
-                  </CardTitle>
-                  <CardDescription>
-                    {pdfSubtitleText}
-                  </CardDescription>
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                {initialData && (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-700 rounded-full">
-                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                      Quote #{initialData.quoteNumber}
-                    </span>
+          <CardHeader className="pb-3">
+            <Collapsible defaultOpen={false} className="w-full">
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center justify-between w-full hover:bg-muted/30 -m-4 p-4 rounded-t-lg transition-colors">
+                  <div>
+                    <CardTitle className="text-lg">{eventClientTitle}</CardTitle>
+                    <CardDescription>{eventClientDesc}</CardDescription>
                   </div>
-                )}
-                
-                {/* Auto-save Status Indicator */}
-                {!initialData && (
-                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-200 ${
-                    autoSaveStatus === 'saved' ? 'bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-700' :
-                    autoSaveStatus === 'saving' ? 'bg-yellow-50 dark:bg-yellow-900/50 border-yellow-200 dark:border-yellow-700' :
-                    'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
-                  }`}>
-                    <div className={`h-2 w-2 rounded-full transition-colors duration-200 ${
-                      autoSaveStatus === 'saved' ? 'bg-green-500' :
-                      autoSaveStatus === 'saving' ? 'bg-yellow-500 animate-pulse' :
-                      'bg-gray-400'
-                    }`}></div>
-                    <span className={`text-sm font-medium ${
-                      autoSaveStatus === 'saved' ? 'text-green-600 dark:text-green-400' :
-                      autoSaveStatus === 'saving' ? 'text-yellow-600 dark:text-yellow-400' :
-                      'text-gray-600 dark:text-gray-400'
-                    }`}>
-                      {autoSaveStatus === 'saved' && lastSaved ? 
-                        (savedAtLabel || 'Saved {time}').replace('{time}', lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) :
-                        autoSaveStatus === 'saving' ? savingLabel :
-                        draftLabel
-                      }
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-        {/* Quote Information Section */}
-        <Card className="shadow-xl border-border/60">
-          <CardHeader>
-            <CardTitle>{quoteInfoTitleText}</CardTitle>
-            <CardDescription>{quoteInfoDescText}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{quoteNameLabel}</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder={quoteNamePh}
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{quoteStatusLabel}</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={selectStatusPh} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {QUOTE_STATUSES.map(status => (
-                          <SelectItem key={status} value={status}>
-                            <div className="flex items-center gap-2">
-                              <div className={`h-2 w-2 rounded-full ${
-                                status === 'Draft' ? 'bg-gray-400' :
-                                status === 'Sent' ? 'bg-gray-400' :
-                                status === 'Accepted' ? 'bg-green-400' :
-                                status === 'Declined' ? 'bg-red-400' :
-                                'bg-gray-400'
-                              }`}></div>
-                              {status}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Event & Client Information Section */}
-        <Card className="shadow-xl border-border/60">
-          <CardHeader>
-            <CardTitle>{eventClientTitle}</CardTitle>
-            <CardDescription>{eventClientDesc}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            
-            <div className="space-y-6">
-              {/* Event Location */}
-              <div>
-                <h4 className="font-medium mb-4">{eventLocationHeader}</h4>
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{venueLocationLabel}</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder={venueLocationPh}
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Separator />
-
-              {/* Client Selection */}
-              <div>
-                <h4 className="font-medium mb-4">{clientInfoHeader}</h4>
-
-                <FormField
-                  control={form.control}
-                  name="clientId"
-                  render={({ field }) => (
-                    <FormItem className="mb-4">
-                      <FormLabel>{selectExistingClientLabel}</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          if (value === MANUAL_CLIENT_ENTRY_VALUE || value === "") {
-                            form.setValue("clientName", "");
-                            form.setValue("clientEmail", "");
-                            form.setValue("clientPhone", "");
-                            form.setValue("clientAddress", "");
-                          }
-                        }}
-                        value={field.value || MANUAL_CLIENT_ENTRY_VALUE}
-                      >
+                  <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                {/* Quote Basics */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">{quoteNameLabel}</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={selectExistingClientPh} />
+                          <Input 
+                            placeholder={quoteNamePh}
+                            size="sm"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">{quoteStatusLabel}</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger size="sm">
+                              <SelectValue placeholder={selectStatusPh} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="rounded-lg">
+                            {QUOTE_STATUSES.map(status => (
+                              <SelectItem key={status} value={status}>
+                                <div className="flex items-center gap-2">
+                                  <div className={`h-2 w-2 rounded-full ${
+                                    status === 'Draft' ? 'bg-gray-400' :
+                                    status === 'Sent' ? 'bg-gray-400' :
+                                    status === 'Accepted' ? 'bg-green-400' :
+                                    status === 'Declined' ? 'bg-red-400' :
+                                    'bg-gray-400'
+                                  }`}></div>
+                                  {status}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Event Location & Rental Dates */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-semibold text-muted-foreground">Event Details</h4>
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">{venueLocationLabel}</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder={venueLocationPh}
+                            size="sm"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField control={form.control} name="startDate" render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-xs">Start Date *</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal text-xs",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-3 w-3 opacity-70" />
+                                {field.value ? format(field.value, "MMM d") : <span>Select</span>}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date < new Date(new Date().setHours(0, 0, 0, 0))
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="endDate" render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-xs">End Date *</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal text-xs",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-3 w-3 opacity-70" />
+                                {field.value ? format(field.value, "MMM d") : <span>Select</span>}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date <= watchStartDate || date < new Date(new Date().setHours(0, 0, 0, 0))
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                </div>
+
+                {/* Client Information */}
+                <div className="space-y-4 border-t border-border/30 pt-4">
+                  <h4 className="text-xs font-semibold text-muted-foreground">{clientInfoHeader}</h4>
+                  <FormField control={form.control} name="clientId" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">{selectClientLabel}</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || '__manual_client__'}>
+                        <FormControl>
+                          <SelectTrigger size="sm">
+                            <SelectValue placeholder={selectClientPh} />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value={MANUAL_CLIENT_ENTRY_VALUE}>
-                            <div className="flex items-center gap-2">
-                              <PlusCircle className="h-4 w-4" />
-                              {enterNewClientDetails}
-                            </div>
-                          </SelectItem>
-                          {clients.map(client => (
-                            <SelectItem key={client.id} value={client.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{client.name}</span>
-                                {client.email && (
-                                  <span className="text-xs text-muted-foreground">{client.email}</span>
-                                )}
-                              </div>
+                        <SelectContent className="rounded-lg">
+                          <SelectItem value="__manual_client__" className="rounded-md">{enterNewClientLabel}</SelectItem>
+                          {clients && clients.length > 0 && clients.map(client => (
+                            <SelectItem key={client.id} value={client.id} className="rounded-md">
+                              {client.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1154,151 +1260,141 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                     </FormItem>
                   )} />
 
-                  <FormField control={form.control} name="clientEmail" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client Email</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="email" 
-                          placeholder="client@company.com" 
-                          {...field} 
-                          disabled={!!watchClientId && watchClientId !== MANUAL_CLIENT_ENTRY_VALUE}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-
-                  <FormField control={form.control} name="clientPhone" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client Phone</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Phone Number" 
-                          {...field} 
-                          disabled={!!watchClientId && watchClientId !== MANUAL_CLIENT_ENTRY_VALUE}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-
-                  <FormField control={form.control} name="clientAddress" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client Address</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Client's Address" 
-                          {...field} 
-                          disabled={!!watchClientId && watchClientId !== MANUAL_CLIENT_ENTRY_VALUE}
-                          className="min-h-[40px]"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+                  {/* Manual Client Entry / Existing Client Display */}
+                  {!watchClientId || watchClientId === '__manual_client__' ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      <FormField
+                        control={form.control}
+                        name="clientName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">{clientNameLabel}</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder={clientNamePh}
+                                size="sm"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="clientEmail"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">{clientEmailLabel}</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="email"
+                                placeholder={clientEmailPh}
+                                size="sm"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="clientPhone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">{clientPhoneLabel}</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder={clientPhonePh}
+                                size="sm"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="clientAddress"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">{clientAddressLabel}</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder={clientAddressPh}
+                                size="sm"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-sm">
+                      {selectedClient && (
+                        <>
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">{clientNameLabel}</div>
+                            <div className="font-semibold text-sm">{selectedClient.name}</div>
+                          </div>
+                          {selectedClient.email && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">{clientEmailLabel}</div>
+                              <div className="font-semibold text-sm">{selectedClient.email}</div>
+                            </div>
+                          )}
+                          {selectedClient.phone && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">{clientPhoneLabel}</div>
+                              <div className="font-semibold text-sm">{selectedClient.phone}</div>
+                            </div>
+                          )}
+                          {selectedClient.address && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">{clientAddressLabel}</div>
+                              <div className="font-semibold text-sm">{selectedClient.address}</div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-          </CardContent>
-        </Card>
-
-        {/* Quote Period Section */}
-        <Card className="shadow-xl border-border/60">
-          <CardHeader>
-            <CardTitle>Rental Period</CardTitle>
-            <CardDescription>Select the start and end dates for equipment rental</CardDescription>
+              </CollapsibleContent>
+            </Collapsible>
           </CardHeader>
-          <CardContent>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <FormField control={form.control} name="startDate" render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>Start Date *</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button 
-                            variant="outline" 
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-3 h-4 w-4 opacity-70" />
-                            {field.value ? format(field.value, "PPP") : <span>Select start date</span>}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
-                        <Calendar 
-                          mode="single" 
-                          selected={field.value} 
-                          onSelect={field.onChange} 
-                          initialFocus 
-                          className="rounded-lg"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                
-                <FormField control={form.control} name="endDate" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>End Date *</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button 
-                            variant="outline" 
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-3 h-4 w-4 opacity-70" />
-                            {field.value ? format(field.value, "PPP") : <span>Select end date</span>}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
-                        <Calendar 
-                          mode="single" 
-                          selected={field.value} 
-                          onSelect={field.onChange} 
-                          disabled={(date) => date < (form.getValues("startDate") || new Date(0))} 
-                          initialFocus 
-                          className="rounded-lg"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-              
-              <div className="mt-4 p-4 bg-muted/50 rounded-lg border border-border/50">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Rental Duration</span>
-                  <div className="text-right">
-                    <div className="font-semibold">{days} day{days !== 1 ? 's' : ''}</div>
-                    <div className="text-xs text-muted-foreground">Equipment rates are per day</div>
-                  </div>
-                </div>
-              </div>
-          </CardContent>
         </Card>
 
         {/* Quote Items Section */}
         <Card className="shadow-xl border-border/60">
           <CardHeader>
-            <CardTitle>Equipment & Services</CardTitle>
-            <CardDescription>Add rental items, services, and fees to your quote</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-muted-foreground" />
+              Items & Pricing
+            </CardTitle>
+            <CardDescription>Equipment, services, and fees for this quote</CardDescription>
           </CardHeader>
           <CardContent>
               
-              <div className="space-y-4">
-                {/* List all items (equipment, service, fee) */}
+              {/* List all items (equipment, service, fee) */}
+                {fields.length === 0 ? (
+                  <div className="text-center py-16 bg-muted/20 rounded-xl border-2 border-dashed border-border/50">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="h-20 w-20 bg-muted/30 rounded-full flex items-center justify-center">
+                        <Package className="h-10 w-10 text-muted-foreground/60" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-bold text-card-foreground mb-1">No items yet</h4>
+                        <p className="text-sm text-muted-foreground">Add equipment, services, or fees using the form below</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
                 {fields.map((field, index) => {
                   // Skip rendering items without a type (shouldn't happen, but safety check)
                   if (!field.type) {
@@ -1308,83 +1404,88 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                   return (
                     <Card
                       key={field.id}
-                      className="group relative p-4 shadow-lg hover:shadow-primary/20 hover:border-primary/30 transition-all duration-300 transform hover:-translate-y-1"
+                      className="group relative p-4 shadow-md hover:shadow-lg hover:border-primary/40 transition-all duration-200 border-l-4"
+                      style={{
+                        borderLeftColor: field.type === 'equipment' ? '#666' : 
+                                       field.type === 'service' ? '#666' :
+                                       field.type === 'subrental' ? '#10b981' : '#999'
+                      }}
                     >
                       <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute top-2 right-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
-                  onClick={() => remove(index)}
-                  aria-label="Remove item"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-                
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  {/* Item Type Badge */}
-                  <div className="flex items-center gap-3">
-                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-sm backdrop-blur border
-                      ${field.type === 'equipment' ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600' :
-                        field.type === 'service' ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600' :
-                        field.type === 'subrental' ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-600' :
-                        'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600'}`}
-                    >
-                      {field.type === 'equipment' && <FileText className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
-                      {field.type === 'service' && <PlusCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
-                      {field.type === 'fee' && <CalendarIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
-                      {field.type === 'subrental' && <Handshake className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider backdrop-blur border
-                          ${field.type === 'equipment' ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600' :
-                            field.type === 'service' ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600' :
-                            field.type === 'subrental' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600' :
-                            'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'}`}
-                        >
-                          {field.type === 'subrental' ? 'Partner' : field.type}
-                        </span>
-                        {field.type === 'subrental' && field.partnerName && (
-                          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                            via {field.partnerName}
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1">
-                        <input
-                          type="text"
-                          className="w-full px-2 py-1 text-sm border rounded-md bg-background/50 text-card-foreground"
-                          placeholder={field.type === 'equipment' ? 'Equipment name' : field.type === 'service' ? 'Service name' : field.type === 'subrental' ? 'Equipment name' : 'Fee name'}
-                          value={
-                            field.type === 'equipment'
-                              ? (form.getValues(`items.${index}.equipmentName`) || '')
-                              : field.type === 'service'
-                                ? (form.getValues(`items.${index}.serviceName`) || '')
-                                : field.type === 'subrental'
-                                  ? (form.getValues(`items.${index}.equipmentName`) || '')
-                                  : (form.getValues(`items.${index}.feeName`) || '')
-                          }
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            if (field.type === 'equipment' || field.type === 'subrental') {
-                              form.setValue(`items.${index}.equipmentName`, v, { shouldDirty: true, shouldValidate: true });
-                            } else if (field.type === 'service') {
-                              form.setValue(`items.${index}.serviceName`, v, { shouldDirty: true, shouldValidate: true });
-                            } else {
-                              form.setValue(`items.${index}.feeName`, v, { shouldDirty: true, shouldValidate: true });
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-2 right-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
+                        onClick={() => remove(index)}
+                        aria-label="Remove item"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                        {/* Item Type Badge */}
+                        <div className="flex items-center gap-3">
+                          <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-sm backdrop-blur border
+                            ${field.type === 'equipment' ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600' :
+                              field.type === 'service' ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600' :
+                              field.type === 'subrental' ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-600' :
+                              'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600'}`}
+                          >
+                            {field.type === 'equipment' && <FileText className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
+                            {field.type === 'service' && <PlusCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
+                            {field.type === 'fee' && <CalendarIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
+                            {field.type === 'subrental' && <Handshake className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider backdrop-blur border
+                                ${field.type === 'equipment' ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600' :
+                                  field.type === 'service' ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600' :
+                                  field.type === 'subrental' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600' :
+                                  'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'}`}
+                              >
+                                {field.type === 'subrental' ? 'Partner' : field.type}
+                              </span>
+                              {field.type === 'subrental' && field.partnerName && (
+                                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                  via {field.partnerName}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1">
+                              <input
+                                type="text"
+                                className="w-full px-2 py-1 text-sm border rounded-md bg-background/50 text-card-foreground"
+                                placeholder={field.type === 'equipment' ? 'Equipment name' : field.type === 'service' ? 'Service name' : field.type === 'subrental' ? 'Equipment name' : 'Fee name'}
+                                value={
+                                  field.type === 'equipment'
+                                    ? (form.getValues(`items.${index}.equipmentName`) || '')
+                                    : field.type === 'service'
+                                      ? (form.getValues(`items.${index}.serviceName`) || '')
+                                      : field.type === 'subrental'
+                                        ? (form.getValues(`items.${index}.equipmentName`) || '')
+                                        : (form.getValues(`items.${index}.feeName`) || '')
+                                }
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  if (field.type === 'equipment' || field.type === 'subrental') {
+                                    form.setValue(`items.${index}.equipmentName`, v, { shouldDirty: true, shouldValidate: true });
+                                  } else if (field.type === 'service') {
+                                    form.setValue(`items.${index}.serviceName`, v, { shouldDirty: true, shouldValidate: true });
+                                  } else {
+                                    form.setValue(`items.${index}.feeName`, v, { shouldDirty: true, shouldValidate: true });
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
 
-                  {/* Item Details */}
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    {(field.type === 'equipment' || field.type === 'service') && (
-                      <>
-                        <div className="flex items-center gap-2">
+                        {/* Item Details */}
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                          {(field.type === 'equipment' || field.type === 'service') && (
+                            <>
+                              <div className="flex items-center gap-2">
                           <label className="font-medium" htmlFor={`items.${index}.quantity`}>Qty:</label>
                           <input
                             id={`items.${index}.quantity`}
@@ -1424,11 +1525,11 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                             <span className="text-card-foreground font-semibold">{days}</span>
                           </div>
                         )}
-                      </>
-                    )}
-                    {field.type === 'subrental' && (
-                      <>
-                        <div className="flex items-center gap-2">
+                            </>
+                          )}
+                          {field.type === 'subrental' && (
+                            <>
+                              <div className="flex items-center gap-2">
                           <label className="font-medium" htmlFor={`items.${index}.quantity`}>Qty:</label>
                           <input
                             id={`items.${index}.quantity`}
@@ -1528,59 +1629,53 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                         </div>
                       </div>
                     )}
-                  </div>
+                        </div>
 
-                  {/* Line Total */}
-                  <div className="ml-auto">
-                    <div className="text-right">
-                      <div className="text-xs text-muted-foreground font-medium">Line Total</div>
-                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        €{field.lineTotal?.toFixed(2) || '0.00'}
+                        {/* Line Total */}
+                        <div className="ml-auto text-right">
+                          <div className="text-xs text-muted-foreground font-medium">Line Total</div>
+                          <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                            €{field.lineTotal?.toFixed(2) || '0.00'}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Description row */}
-                <div className="mt-3 pt-3 border-t border-border/50">
-                  <label className="text-xs font-medium text-muted-foreground" htmlFor={`items.${index}.description`}>Description (optional)</label>
-                  <textarea
-                    id={`items.${index}.description`}
-                    rows={2}
-                    className="w-full mt-1 px-2 py-1 text-sm border rounded-md bg-background/50 resize-none"
-                    placeholder="Add notes or details..."
-                    value={form.getValues(`items.${index}.description`) || ''}
-                    onChange={(e) => {
-                      form.setValue(`items.${index}.description`, e.target.value, { shouldDirty: true, shouldValidate: true });
-                    }}
-                  />
-                </div>
-              </Card>
+
+                      {/* Description row */}
+                      <div className="mt-3 pt-3 border-t border-border/50">
+                        <label className="text-xs font-medium text-muted-foreground" htmlFor={`items.${index}.description`}>Description (optional)</label>
+                        <textarea
+                          id={`items.${index}.description`}
+                          rows={2}
+                          className="w-full mt-1 px-2 py-1 text-sm border rounded-md bg-background/50 resize-none"
+                          placeholder="Add notes or details..."
+                          value={form.getValues(`items.${index}.description`) || ''}
+                          onChange={(e) => {
+                            form.setValue(`items.${index}.description`, e.target.value, { shouldDirty: true, shouldValidate: true });
+                          }}
+                        />
+                      </div>
+                    </Card>
                   );
                 })}
-                
-                {/* Enhanced Add Item Section */}
-              {fields.length === 0 && (
-                <div className="text-center py-12 bg-muted/30 rounded-lg border-2 border-dashed border-border">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="h-16 w-16 bg-muted/20 rounded-full flex items-center justify-center">
-                      <PlusCircle className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-semibold text-card-foreground">No items added yet</h4>
-                      <p className="text-muted-foreground">Add equipment, services, or fees to get started</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </div>
+            )}
 
-              <div className="border-2 border-dashed border-border bg-muted/30 rounded-lg p-6">
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold text-card-foreground mb-2">Add New Item</h4>
-                  <p className="text-sm text-muted-foreground">Choose the type of item you want to add to this quote</p>
+              {form.formState.errors.items && typeof form.formState.errors.items === 'object' && !Array.isArray(form.formState.errors.items) && (
+                <p className="text-sm font-medium text-destructive mt-4">{form.formState.errors.items.message}</p>
+              )}
+              
+              {/* Enhanced Add Item Section */}
+              <div className="border border-dashed border-border bg-muted/20 rounded-xl p-6 space-y-6">
+                <div>
+                  <h4 className="font-semibold text-card-foreground mb-1 flex items-center gap-2">
+                    <PlusCircle className="h-5 w-5 text-muted-foreground" />
+                    Add Item to Quote
+                  </h4>
+                  <p className="text-xs text-muted-foreground">Select what type of item you want to add</p>
                 </div>
                 
                 {/* Tab Navigation */}
-                <div className="flex flex-wrap gap-2 mb-6 p-1 bg-muted/50 rounded-lg border border-border/50">
+                <div className="flex flex-wrap gap-2 p-1 bg-muted/50 rounded-lg border border-border/50">
                   <button
                     type="button"
                     onClick={() => setAddItemType('equipment')}
@@ -2102,7 +2197,6 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                   )}
                 </div>
               </div>
-              </div>
               
               {form.formState.errors.items && typeof form.formState.errors.items === 'object' && !Array.isArray(form.formState.errors.items) && (
                 <p className="text-sm font-medium text-destructive mt-4">{form.formState.errors.items.message}</p>
@@ -2110,225 +2204,84 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
             </CardContent>
         </Card>
 
-        {/* Financial Summary Section */}
+        {/* Notes & Terms - Collapsible Section */}
         <Card className="shadow-xl border-border/60">
-          <CardHeader>
-            <CardTitle>Financial Summary</CardTitle>
-            <CardDescription>Configure pricing, discounts, and tax calculations</CardDescription>
-          </CardHeader>
-          <CardContent>
-              
-              {/* Pricing Configuration */}
-              <div className="bg-muted/20 p-6 rounded-lg mb-6 border border-border/30">
-                <h4 className="font-semibold text-card-foreground mb-4">
-                  Pricing Configuration
-                </h4>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <FormField control={form.control} name="discountType" render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel className="text-sm font-semibold">
-                        Discount Type
-                      </FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select discount type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="rounded-lg">
-                          <SelectItem value="fixed" className="rounded-md">Fixed Amount (€)</SelectItem>
-                          <SelectItem value="percentage" className="rounded-md">Percentage (%)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  
-                  <FormField control={form.control} name="discountAmount" render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel className="text-sm font-semibold">
-                        Discount Amount {watchDiscountType === 'percentage' ? '(%)' : '(€)'}
-                      </FormLabel>
+          <CardHeader className="pb-3">
+            <Collapsible defaultOpen={false} className="w-full">
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center justify-between w-full hover:bg-muted/30 -m-4 p-4 rounded-t-lg transition-colors">
+                  <div>
+                    <CardTitle className="text-lg">Notes & Terms</CardTitle>
+                    <CardDescription>Add instructions and custom terms</CardDescription>
+                  </div>
+                  <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-6 pt-4">
+                <FormField control={form.control} name="notes" render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel className="text-sm font-semibold">{additionalNotesTitle}</FormLabel>
+                    <FormDescription className="text-xs">{additionalNotesDesc}</FormDescription>
+                    <FormControl>
+                      <Textarea 
+                        placeholder={notesPh}
+                        {...field} 
+                        rows={3}
+                        className="min-h-[90px] resize-vertical"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <div className="border-t border-border/30 pt-6">
+                  <FormField control={form.control} name="terms" render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel className="text-sm font-semibold">Terms & Conditions (optional)</FormLabel>
+                      <FormDescription className="text-xs">Customize for this quote or leave blank to use defaults</FormDescription>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
-                          placeholder={watchDiscountType === 'percentage' ? 'e.g., 10 for 10%' : 'e.g., 50.00'}
+                        <Textarea 
+                          placeholder="• Standard payment terms\n• Delivery conditions\n• Cancellation policy\n• Other terms..."
                           {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  
-                  <FormField control={form.control} name="taxRate" render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel className="text-sm font-semibold">
-                        Tax Rate (%)
-                      </FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
-                          placeholder="e.g., 23 for 23%" 
-                          {...field} 
-                          onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                          rows={4}
+                          className="min-h-[110px] resize-vertical"
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                 </div>
-              </div>
-              
-              {/* Financial Breakdown */}
-              <div className="bg-muted/20 p-6 rounded-lg border border-border/30" aria-live="polite" aria-label="Financial summary">
-                <h4 className="font-semibold text-card-foreground mb-4">Cost Breakdown</h4>
-                
-                <div className="space-y-3">
-                  {/* Subtotal */}
-                  <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-muted-foreground">Subtotal (Items & Services)</span>
-                    <span className="font-semibold text-card-foreground">€{subTotal.toFixed(2)}</span>
-                  </div>
-                  
-                  {/* Discount */}
-                  {watchDiscountAmount > 0 && (
-                    <div className="flex justify-between items-center py-2 border-b border-border/50">
-                      <span className="text-destructive">
-                        Discount {watchDiscountType === 'percentage' ? `(${watchDiscountAmount.toFixed(1)}%)` : ''}
-                      </span>
-                      <span className="font-semibold text-destructive">
-                        - €{watchDiscountType === 'percentage' 
-                          ? (subTotal * (watchDiscountAmount / 100)).toFixed(2)
-                          : watchDiscountAmount.toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {/* Fees */}
-                  {feeTotal > 0 && (
-                    <div className="flex justify-between items-center py-2 border-b border-border/50">
-                      <span className="text-muted-foreground">Fixed Fees</span>
-                      <span className="font-semibold text-card-foreground">€{feeTotal.toFixed(2)}</span>
-                    </div>
-                  )}
-                  
-                  {percentageFeeTotal > 0 && (
-                    <div className="flex justify-between items-center py-2 border-b border-border/50">
-                      <span className="text-muted-foreground">Percentage Fees ({percentageFeeTotal.toFixed(1)}%)</span>
-                      <span className="font-semibold text-card-foreground">
-                        €{((discountedSubTotal) * (percentageFeeTotal / 100)).toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {/* Pre-tax Total */}
-                  <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-muted-foreground">Total Before Tax</span>
-                    <span className="font-semibold text-card-foreground">
-                      €{(discountedSubTotal + feeTotal + (percentageFeeTotal > 0 ? discountedSubTotal * (percentageFeeTotal / 100) : 0)).toFixed(2)}
-                    </span>
-                  </div>
-                  
-                  {/* Tax */}
-                  {watchTaxRate > 0 && (
-                    <div className="flex justify-between items-center py-2 border-b border-border/50">
-                      <span className="text-accent">Tax ({watchTaxRate.toFixed(1)}%)</span>
-                      <span className="font-semibold text-accent">€{taxAmount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  
-                  {/* Final Total */}
-                  <div className="bg-background/70 text-foreground p-6 rounded-xl mt-4 border border-border/50 shadow-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xl font-bold">Total Amount</span>
-                      <span className="text-3xl font-bold">€{totalAmount.toFixed(2)}</span>
-                    </div>
-                    <p className="text-muted-foreground text-sm mt-2">
-                      Final quote total including all items, discounts, fees, and taxes
-                    </p>
-                  </div>
-                </div>
-              </div>
-          </CardContent>
-        </Card>
-
-        {/* Notes Section */}
-        <Card className="shadow-xl border-border/60">
-          <CardHeader>
-            <CardTitle>{additionalNotesTitle}</CardTitle>
-            <CardDescription>{additionalNotesDesc}</CardDescription>
+              </CollapsibleContent>
+            </Collapsible>
           </CardHeader>
-          <CardContent>
-            <FormField control={form.control} name="notes" render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel className="text-sm font-semibold">{notesOptionalLabel}</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder={notesPh}
-                    {...field} 
-                    rows={4}
-                    className="min-h-[120px] resize-vertical"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-          </CardContent>
         </Card>
 
-        {/* Terms & Conditions */}
-        <Card className="shadow-xl border-border/60">
-          <CardHeader>
-            <CardTitle>Terms & Conditions</CardTitle>
-            <CardDescription>Customize terms for this specific quote. Leave blank to use defaults.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FormField control={form.control} name="terms" render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel className="text-sm font-semibold">Terms & Conditions (optional)</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder={"• Add terms, one per line"}
-                    {...field} 
-                    rows={6}
-                    className="min-h-[140px] resize-vertical"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-          </CardContent>
-        </Card>
-
-        {/* Action Buttons */}
-        <Card className="shadow-xl border-border/60">
+        {/* Action Buttons - Compact Section */}
+        <Card className="shadow-xl border-border/60 sticky bottom-0 z-40 bg-card/95 backdrop-blur-sm border-t-2">
           <CardContent className="pt-6">
-            <div className="flex flex-col lg:flex-row gap-4 items-center">
-              <div className="flex-1 w-full lg:w-auto">
-                <Button 
-                  type="submit" 
-                  size="lg"
-                  className="w-full bg-gray-800 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white active:scale-95 transition-all duration-200"
-                  disabled={form.formState.isSubmitting}
-                >
-                  {form.formState.isSubmitting ? (
-                    <div className="flex items-center gap-3">
-                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      {initialData ? submitUpdating : submitCreating}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5" />
-                      {initialData ? submitUpdate : submitCreate}
-                    </div>
-                  )}
-                </Button>
-              </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              {/* Primary Action */}
+              <Button 
+                type="submit" 
+                size="lg"
+                className="sm:flex-1 bg-gray-800 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white active:scale-95 transition-all duration-200"
+                disabled={form.formState.isSubmitting}
+              >
+                {form.formState.isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span className="text-sm">{initialData ? submitUpdating : submitCreating}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span className="text-sm">{initialData ? submitUpdate : submitCreate}</span>
+                  </div>
+                )}
+              </Button>
               
-              <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+              {/* Secondary Actions */}
+              <div className="flex gap-2 sm:ml-auto">
                 <Button
                   type="button"
                   variant="outline"
@@ -2336,8 +2289,10 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                   className="hover:bg-gray-50 dark:hover:bg-gray-800 active:scale-95 transition-all duration-200"
                   onClick={form.handleSubmit(onSubmitDraft, onInvalid)}
                   disabled={form.formState.isSubmitting}
+                  title="Save as draft for later"
                 >
-                  {saveDraftBtn}
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2 text-sm">{saveDraftBtn}</span>
                 </Button>
                 <Button
                   type="button"
@@ -2346,9 +2301,10 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                   className="hover:bg-gray-50 dark:hover:bg-gray-800 active:scale-95 transition-all duration-200"
                   onClick={handlePreviewPDF}
                   disabled={form.formState.isSubmitting}
+                  title="Preview PDF"
                 >
-                  <Eye className="h-5 w-5 mr-2" />
-                  {previewPdfBtn}
+                  <Eye className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2 text-sm">{previewPdfBtn}</span>
                 </Button>
                 
                 <Button
@@ -2358,25 +2314,56 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                   className="hover:bg-gray-50 dark:hover:bg-gray-800 active:scale-95 transition-all duration-200"
                   onClick={handleDownloadPDF}
                   disabled={isGeneratingPDF || form.formState.isSubmitting}
+                  title="Download as PDF"
                 >
                   {isGeneratingPDF ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : (
-                    <Download className="h-5 w-5 mr-2" />
+                    <Download className="h-4 w-4" />
                   )}
-                  {isGeneratingPDF ? generatingLabel : downloadPdfBtn}
+                  <span className="hidden sm:inline ml-2 text-sm">{isGeneratingPDF ? generatingLabel : downloadPdfBtn}</span>
                 </Button>
               </div>
             </div>
             
-            <div className="mt-4 text-center text-sm text-muted-foreground">
-              <p>
-                Your quote will be automatically saved as a draft while you work. 
-                <span className="font-semibold text-gray-700 dark:text-gray-300"> All changes are saved continuously.</span>
-              </p>
-            </div>
+            {autoSaveStatus !== 'unsaved' && (
+              <div className="mt-3 text-center text-xs text-muted-foreground">
+                {autoSaveStatus === 'saved' && lastSaved && (
+                  <p>✓ Saved {format(lastSaved, 'HH:mm')}</p>
+                )}
+                {autoSaveStatus === 'saving' && (
+                  <p>Saving...</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
+        
+        {/* Closing divs for grid layout */}
+          </div>
+
+          {/* Right Column: Financial Summary Sidebar */}
+          <div className="lg:col-span-1 space-y-6 sticky top-4 h-fit">
+            {/* Financial Summary Sidebar */}
+            <QuoteSidebar
+              form={form}
+              quoteName={watchQuoteName}
+              quoteStatus={watchQuoteStatus}
+              startDate={watchStartDate}
+              endDate={watchEndDate}
+              rentalDays={days}
+              subtotal={subTotal}
+              discountAmount={watchDiscountAmount}
+              discountType={watchDiscountType}
+              taxRate={watchTaxRate}
+              totalAmount={totalAmount}
+              onPreview={handlePreviewPDF}
+              onDownload={handleDownloadPDF}
+              isGeneratingPDF={isGeneratingPDF}
+            />
+          </div>
+        </div>
+
         </form>
       </Form>
 

@@ -32,6 +32,7 @@ model User {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   notifications   Notification[]
+  notificationPreferences NotificationPreference?
   cloudFolders    CloudFolder[]
   cloudFiles      CloudFile[]
   fileActivities  FileActivity[]
@@ -80,6 +81,7 @@ model EquipmentItem {
   id              String           @id @default(cuid())
   name            String
   description     String
+  descriptionPt   String?
   categoryId      String
   subcategoryId   String?
   quantity        Int
@@ -118,45 +120,53 @@ model MaintenanceLog {
 }
 
 model Client {
-  id            String     @id @default(cuid())
-  name          String
-  contactPerson String?
-  email         String?
-  phone         String?
-  address       String?
-  notes         String?
-  version       Int        @default(1)
-  createdBy     String?
-  updatedBy     String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  events        Event[]
-  quotes        Quote[]
-  partnerLinks  Partner[]  // Partners that are also clients (agency partners we work with directly)
+  id               String            @id @default(cuid())
+  name             String
+  contactPerson    String?
+  email            String?
+  phone            String?
+  address          String?
+  notes            String?
+  partnerId        String?           // Link to a Partner/Agency that this client is associated with
+  version          Int               @default(1)
+  createdBy        String?
+  updatedBy        String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  events           Event[]
+  quotes           Quote[]
+  partnerLinks     Partner[]         // Partners that are also clients (agency partners we work with directly)
+  agency           Partner?          @relation("ClientAgency", fields: [partnerId], references: [id], onDelete: SetNull)
+  subEventAssignments EventSubClient[] @relation("EventSubClients") // Sub-client assignments for agency events
 
   @@index([name])
   @@index([email])
+  @@index([partnerId])
 }
 
 model Event {
-  id           String         @id @default(cuid())
-  name         String
-  clientId     String
-  location     String
-  startDate    DateTime
-  endDate      DateTime
-  assignedTo   String?
-  version      Int            @default(1)
-  createdBy    String?
-  updatedBy    String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  client       Client         @relation(fields: [clientId], references: [id])
-  rentals      Rental[]
-  subrentals   Subrental[]
+  id            String         @id @default(cuid())
+  name          String
+  clientId      String
+  agencyId      String?        // Partner/Agency that created or owns this event
+  location      String
+  startDate     DateTime
+  endDate       DateTime
+  assignedTo    String?
+  version       Int            @default(1)
+  createdBy     String?
+  updatedBy     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  client        Client         @relation(fields: [clientId], references: [id])
+  agency        Partner?       @relation("EventAgency", fields: [agencyId], references: [id])
+  subClients    EventSubClient[] // Multiple sub-clients for this event
+  rentals       Rental[]
+  subrentals    Subrental[]
   jobReferences JobReference[]
 
   @@index([clientId])
+  @@index([agencyId])
   @@index([startDate])
   @@index([endDate])
   @@index([assignedTo])
@@ -247,6 +257,7 @@ model CustomizationSettings {
   pdfFooterContactText         String?
   pdfShowFooterContact         Boolean?
   useTextLogo                  Boolean  @default(true)
+  themePreset                  String?
   primaryColor                 String?
   secondaryColor               String?
   accentColor                  String?
@@ -287,6 +298,7 @@ model CustomizationSettings {
   loginLightRaysMouseInfluence Float?
   loginLightRaysNoiseAmount    Float?
   loginLightRaysDistortion     Float?
+  catalogTermsAndConditions    String?
   customCSS                    String?
   footerText                   String?
   systemName                   String?
@@ -399,14 +411,16 @@ model Fee {
 model Notification {
   id         String   @id @default(cuid())
   userId     String
-  type       String
+  type       String   // conflict, status_change, event_timeline, overdue, critical_event, low_stock, equipment_available, monthly_summary
   title      String
   message    String
-  priority   String   @default("medium")
+  priority   String   @default("medium")  // critical, high, medium, low
   isRead     Boolean  @default(false)
-  entityType String?
+  entityType String?  // event, rental, equipment, inventory
   entityId   String?
   actionUrl  String?
+  groupKey   String?
+  expiresAt  DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -414,7 +428,29 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@index([type])
+  @@index([priority])
   @@index([createdAt])
+  @@index([groupKey])
+  @@index([expiresAt])
+}
+
+model NotificationPreference {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  conflictAlerts    Boolean  @default(true)
+  statusChanges     Boolean  @default(true)
+  eventReminders    Boolean  @default(true)
+  overdueAlerts     Boolean  @default(true)
+  criticalAlerts    Boolean  @default(true)
+  stockAlerts       Boolean  @default(true)
+  equipmentAvailable Boolean @default(true)
+  monthlySummary    Boolean  @default(true)
+  toastCritical     Boolean  @default(true)
+  toastHigh         Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Translation {
@@ -480,14 +516,19 @@ model Partner {
   partnerType   String         @default("provider")  // "provider" | "agency" | "both"
   commission    Float?         // For agency partners - commission percentage
   isActive      Boolean        @default(true)
+  logoUrl       String?        // Company logo URL for catalogs
   version       Int            @default(1)
   createdBy     String?
   updatedBy     String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   client        Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  associatedClients Client[]   @relation("ClientAgency")  // Clients associated with this agency
+  events        Event[]        @relation("EventAgency")  // Events created by this agency
   subrentals    Subrental[]
   jobReferences JobReference[]
+  catalogShares CatalogShare[]
+  inquiries     CatalogShareInquiry[] @relation("PartnerInquiries")
 
   @@index([name])
   @@index([isActive])
@@ -672,7 +713,6 @@ model StorageQuota {
   userId                String   @unique
   usedBytes             BigInt   @default(0)
   quotaBytes            BigInt   @default(10737418240) // 10GB default
-  roleDefaultQuotaBytes BigInt?  // Track what the role default was
   cloudEnabled          Boolean  @default(false) // Whether user has access to cloud features
   lastUpdated           DateTime @default(now()) @updatedAt
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -780,4 +820,69 @@ model BatchOperation {
   @@index([performedBy])
   @@index([status])
   @@index([initiatedAt])
+}
+
+// EventSubClient - Many-to-many relationship for events with multiple sub-clients
+// Used when an agency creates an event that involves multiple clients
+model EventSubClient {
+  id        String   @id @default(cuid())
+  eventId   String
+  clientId  String
+  createdAt DateTime @default(now())
+  
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  client    Client   @relation("EventSubClients", fields: [clientId], references: [id], onDelete: Cascade)
+  
+  @@unique([eventId, clientId])
+  @@index([eventId])
+  @@index([clientId])
+}
+
+// CatalogShare (public shareable catalog links)
+model CatalogShare {
+  id                   String    @id @default(cuid())
+  token                String    @unique
+  partnerId            String
+  selectedEquipmentIds String[]  // Array of equipment IDs to include in the catalog
+  expiresAt            DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  partner              Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  inquiries            CatalogShareInquiry[]
+
+  @@index([token])
+  @@index([partnerId])
+  @@index([expiresAt])
+}
+
+// CatalogShareInquiry (inquiries submitted through shared catalogs)
+model CatalogShareInquiry {
+  id                    String         @id @default(cuid())
+  catalogShareId        String
+  partnerId             String
+  eventName             String
+  eventType             String?
+  eventLocation         String
+  startDate             DateTime
+  endDate               DateTime
+  deliveryLocation      String?
+  setupDateTime         DateTime?
+  breakdownDateTime     DateTime?
+  customerName          String
+  customerEmail         String
+  customerPhone         String
+  customerCompany       String?
+  specialRequirements   String?
+  budget                String?
+  items                 Json
+  status                String         @default("pending")
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  catalogShare          CatalogShare   @relation(fields: [catalogShareId], references: [id], onDelete: Cascade)
+  partner               Partner        @relation("PartnerInquiries", fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([catalogShareId])
+  @@index([partnerId])
+  @@index([status])
+  @@index([createdAt])
 }

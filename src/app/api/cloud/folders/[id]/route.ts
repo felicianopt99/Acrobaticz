@@ -27,7 +27,7 @@ export async function PATCH(
 
   try {
     const folderId = id;
-    const { name, parentId, isStarred, color } = await request.json();
+    const { name, parentId, isStarred, color, isTrashed } = await request.json();
 
     // Verify folder exists and belongs to user
     const folder = await prisma.cloudFolder.findUnique({
@@ -35,8 +35,13 @@ export async function PATCH(
       select: { ownerId: true, isTrashed: true },
     });
 
-    if (!folder || folder.ownerId !== auth.userId || folder.isTrashed) {
+    if (!folder || folder.ownerId !== auth.userId) {
       return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
+    }
+
+    // Allow update if not trashed, or if we're setting isTrashed to true
+    if (folder.isTrashed && !isTrashed) {
+      return NextResponse.json({ error: 'Folder is in trash' }, { status: 404 });
     }
 
     // Verify new parent if moving
@@ -61,6 +66,7 @@ export async function PATCH(
         ...(parentId !== undefined && { parentId: parentId || null }),
         ...(isStarred !== undefined && { isStarred }),
         ...(color && { color }),
+        ...(isTrashed !== undefined && { isTrashed }),
       },
       select: {
         id: true,

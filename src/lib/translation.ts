@@ -5,6 +5,63 @@ import { prisma } from '@/lib/db';
 
 export type Language = 'en' | 'pt';
 
+/**
+ * Apply post-translation word replacements
+ * Replaces known translations of rule keys with the desired terms
+ * For example: replaces "citações"/"cotações" with "orçamentos"
+ */
+function applyPostTranslationRules(translated: string, sourceText: string, rules: Record<string, string>): string {
+  let result = translated;
+  
+  // For each rule, find what DeepL might have translated the source to, and replace it
+  for (const [sourcePattern, replacement] of Object.entries(rules)) {
+    // Get approximate translations of the source pattern
+    // This is a heuristic - we translate the source to see what DeepL would produce
+    // Then we can replace those terms with our desired replacement
+    
+    // For now, use a simple heuristic:
+    // If the source contains the rule key, find where it appears in the translated text
+    // and replace nearby words
+    
+    // Check if source pattern appears in the original text (case-insensitive)
+    if (sourceText.toLowerCase().includes(sourcePattern.toLowerCase())) {
+      // The source contains this rule key, so we should replace known translations of it
+      // Common Portuguese translations:
+      // - "Quotes" -> "citações", "cotações" 
+      // - "Quote" -> "citação", "cotação"
+      
+      const lowerPattern = sourcePattern.toLowerCase();
+      const lowerReplacement = replacement.toLowerCase();
+      
+      // Build list of possible translations to search for
+      const possibleTranslations: string[] = [];
+      
+      if (lowerPattern === 'quote') {
+        possibleTranslations.push('citação', 'cotação', 'proposta', 'orçamento');
+      } else if (lowerPattern === 'quotes') {
+        possibleTranslations.push('citações', 'cotações', 'propostas', 'orçamentos');
+      }
+      
+      // Replace all possible translations with case preservation
+      for (const possibleTranslation of possibleTranslations) {
+        const pattern = new RegExp(`\\b${possibleTranslation}\\b`, 'gi');
+        result = result.replace(pattern, (match) => {
+          // Preserve case
+          if (match === match.toUpperCase()) {
+            return lowerReplacement.toUpperCase();
+          } else if (match[0] === match[0].toUpperCase()) {
+            return lowerReplacement.charAt(0).toUpperCase() + lowerReplacement.slice(1);
+          } else {
+            return lowerReplacement;
+          }
+        });
+      }
+    }
+  }
+  
+  return result;
+}
+
 // LRU in-memory cache to bound memory usage
 class LRUCache {
   private max: number;
@@ -67,14 +124,34 @@ function getCacheKey(text: string, targetLang: Language): string {
   return `${targetLang}:${text}`;
 }
 
-// Simple glossary overrides for Portuguese (PT)
-// Ensures specific business terms use desired wording instead of generic DeepL choices
+// Simple glossary overrides for Portuguese (PT-PT - European Portuguese)
+// Ensures specific business terms use PT-PT instead of PT-BR
 const PT_GLOSSARY: Array<{ pattern: RegExp; replace: string }> = [
-  // Whole-word replacements with case sensitivity preserved via explicit patterns
+  // Business terms - keep consistent
   { pattern: /\bQuotes\b/g, replace: 'Orçamentos' },
   { pattern: /\bQuote\b/g, replace: 'Orçamento' },
   { pattern: /\bquotes\b/g, replace: 'orçamentos' },
   { pattern: /\bquote\b/g, replace: 'orçamento' },
+  
+  // PT-BR → PT-PT corrections (common differences)
+  { pattern: /\bcontato\b/gi, replace: 'contacto' },
+  { pattern: /\bContato\b/g, replace: 'Contacto' },
+  { pattern: /\bconosco\b/gi, replace: 'connosco' },
+  { pattern: /\baluguel\b/gi, replace: 'aluguer' },
+  { pattern: /\bAluguel\b/g, replace: 'Aluguer' },
+  { pattern: /\bcelular\b/gi, replace: 'telemóvel' },
+  { pattern: /\bCelular\b/g, replace: 'Telemóvel' },
+  { pattern: /\bônibus\b/gi, replace: 'autocarro' },
+  { pattern: /\bÔnibus\b/g, replace: 'Autocarro' },
+  { pattern: /\bfato\b/g, replace: 'facto' },
+  { pattern: /\bFato\b/g, replace: 'Facto' },
+  { pattern: /\btrem\b/g, replace: 'comboio' },
+  { pattern: /\bTrem\b/g, replace: 'Comboio' },
+  { pattern: /\bxícara\b/gi, replace: 'chávena' },
+  { pattern: /\bgeladeira\b/gi, replace: 'frigorífico' },
+  { pattern: /\bGeladeira\b/g, replace: 'Frigorífico' },
+  { pattern: /\bbanheiro\b/gi, replace: 'casa de banho' },
+  { pattern: /\bBanheiro\b/g, replace: 'Casa de banho' },
 ];
 
 function applyGlossary(text: string, targetLang: Language): string {
@@ -160,7 +237,8 @@ async function batchFetchFromDb(
 async function batchTranslateWithAI(
   texts: string[],
   targetLang: Language,
-  _maxChunkSize: number = 10
+  _maxChunkSize: number = 10,
+  _rules?: Record<string, string>
 ): Promise<Map<string, string>> {
   // Retry DeepL batch with exponential backoff
   try {
@@ -170,6 +248,7 @@ async function batchTranslateWithAI(
       maxTimeout: 3000,
       factor: 2,
     });
+    
     return result;
   } catch (e) {
     // Failover: translate individually (best-effort) to salvage partial results
@@ -218,8 +297,11 @@ async function processTranslationQueue(): Promise<void> {
       const targetLang = queueItems[0].targetLang;
       
       try {
+        // Load rules for this batch
+        const rules = loadTranslationRules();
+        
         // Process the batch
-        const results = await batchTranslateWithAI(uniqueTexts, targetLang, 15);
+        const results = await batchTranslateWithAI(uniqueTexts, targetLang, 15, rules);
         
         // Resolve all queue items
         queueItems.forEach(item => {
@@ -289,13 +371,23 @@ export async function translateText(
     return cached;
   }
 
-  // 1a. Check translation rules for override
+  // 1a. Check translation rules for override - ONLY for exact matches on simple terms
   const rules = loadTranslationRules();
-  if (rules[text] !== undefined) {
-    if (rules[text] === "NO_TRANSLATE") {
-      return text;
+  // Only apply rules if the text is EXACTLY a rule key (no extra words)
+  const trimmedText = text.trim();
+  for (const [sourcePattern, replacement] of Object.entries(rules)) {
+    if (trimmedText.toLowerCase() === sourcePattern.toLowerCase()) {
+      // Exact match! Preserve case and return
+      let result = replacement;
+      if (trimmedText === trimmedText.toUpperCase() && trimmedText.length > 1) {
+        result = replacement.toUpperCase();
+      } else if (trimmedText[0] === trimmedText[0].toUpperCase()) {
+        result = replacement.charAt(0).toUpperCase() + replacement.slice(1).toLowerCase();
+      } else {
+        result = replacement.toLowerCase();
+      }
+      return result;
     }
-    return rules[text];
   }
 
   // 2. Check if translation is already in progress (deduplicate)
@@ -327,22 +419,19 @@ export async function translateText(
 
       // 5. Not in database, translate with DeepL (with retry/backoff)
       console.log(`🔄 Translating "${text}" with DeepL...`);
+      
       let translated = await pRetry(() => translateTextWithDeepL(text, targetLang), {
         retries: 3,
         minTimeout: 500,
         maxTimeout: 3000,
         factor: 2,
       });
+      
+      // Apply post-translation word replacements for override rules
+      translated = applyPostTranslationRules(translated, text, rules);
+      
       // Apply glossary overrides
       translated = applyGlossary(translated, targetLang);
-      // Apply translation rules post-glossary (in case rules are for output)
-      if (rules[translated] !== undefined) {
-        if (rules[translated] === "NO_TRANSLATE") {
-          translated = text;
-        } else {
-          translated = rules[translated];
-        }
-      }
       console.log(`✅ DeepL result: "${text}" → "${translated}"`);
 
       // 6. Save to database permanently (await for reliability)
@@ -411,9 +500,32 @@ export async function translateBatch(
   const uncachedTexts: string[] = [];
   const uncachedIndices: number[] = [];
 
-  // 1. Check in-memory cache first
+  // Load override rules once for this batch
+  const rules = loadTranslationRules();
+
+  // 1. Check in-memory cache first AND override rules
   texts.forEach((text, index) => {
     const cacheKey = getCacheKey(text, targetLang);
+    
+    // Check override rules first - ONLY for exact matches
+    const trimmedText = text.trim();
+    for (const [sourcePattern, replacement] of Object.entries(rules)) {
+      if (trimmedText.toLowerCase() === sourcePattern.toLowerCase()) {
+        // Exact match! Preserve case
+        let result = replacement;
+        if (trimmedText === trimmedText.toUpperCase() && trimmedText.length > 1) {
+          result = replacement.toUpperCase();
+        } else if (trimmedText[0] === trimmedText[0].toUpperCase()) {
+          result = replacement.charAt(0).toUpperCase() + replacement.slice(1).toLowerCase();
+        } else {
+          result = replacement.toLowerCase();
+        }
+        results[index] = result;
+        return; // Continue to next text
+      }
+    }
+    
+    // Then check in-memory cache
     const cached = translationCache.get(cacheKey);
     
     if (cached) {
@@ -426,7 +538,7 @@ export async function translateBatch(
     }
   });
 
-  // If all cached, return immediately
+  // If all cached or matched rules, return immediately
   if (uncachedTexts.length === 0) {
     return results;
   }
@@ -437,6 +549,7 @@ export async function translateBatch(
     translateBatchBackground(uncachedTexts, targetLang, uncachedIndices, results);
     return results;
   }
+
 
   // 2. Batch fetch from database (single query)
   const dbResults = await batchFetchFromDb(uncachedTexts, targetLang);
@@ -463,7 +576,7 @@ export async function translateBatch(
 
   // 3. Translate remaining with AI using intelligent batching
   if (stillMissing.length > 0) {
-    const aiResults = await batchTranslateWithAI(stillMissing, targetLang);
+    const aiResults = await batchTranslateWithAI(stillMissing, targetLang, 10, rules);
     stillMissing.forEach((text, i) => {
       const index = missingIndices[i];
       const translatedRaw = aiResults.get(text) || text;
@@ -527,7 +640,8 @@ async function translateBatchBackground(
     
     // Translate remaining with AI if any
     if (stillMissing.length > 0) {
-      const aiResults = await batchTranslateWithAI(stillMissing, targetLang, 15); // Larger batches for background
+      const rules = loadTranslationRules();
+      const aiResults = await batchTranslateWithAI(stillMissing, targetLang, 15, rules); // Larger batches for background
       
       stillMissing.forEach(text => {
         const translated = applyGlossary(aiResults.get(text) || text, targetLang);

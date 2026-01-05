@@ -5,7 +5,8 @@ import { requireReadAccess, requirePermission } from '@/lib/api-auth'
 
 
 const QuoteItemSchema = z.object({
-  type: z.enum(['equipment', 'service', 'fee']),
+  id: z.string().optional(),
+  type: z.enum(['equipment', 'service', 'fee', 'subrental']),
   // Equipment fields
   equipmentId: z.string().optional(),
   equipmentName: z.string().optional(),
@@ -17,12 +18,23 @@ const QuoteItemSchema = z.object({
   feeName: z.string().optional(),
   amount: z.number().optional(),
   feeType: z.enum(['fixed', 'percentage']).optional(),
+  // Subrental fields
+  partnerId: z.string().optional(),
+  partnerName: z.string().optional(),
+  subrentalCost: z.number().optional(),
   // Common fields
   quantity: z.number().optional(),
   unitPrice: z.number().optional(),
   days: z.number().optional(),
-  lineTotal: z.number().min(0),
-})
+  lineTotal: z.number().min(0).optional(),
+  description: z.string().optional(),
+  // Database fields - allow but ignore
+  quoteId: z.string().optional(),
+  createdAt: z.union([z.string(), z.date()]).optional(),
+  updatedAt: z.union([z.string(), z.date()]).optional(),
+  // Relations (will be stripped out before Prisma operations)
+  equipment: z.any().optional(),
+}).passthrough()
 
 const QuoteSchema = z.object({
   name: z.string().min(1),
@@ -32,8 +44,8 @@ const QuoteSchema = z.object({
   clientEmail: z.string().email().optional().or(z.literal('')),
   clientPhone: z.string().optional(),
   clientAddress: z.string().optional(),
-  startDate: z.string().transform(str => new Date(str)),
-  endDate: z.string().transform(str => new Date(str)),
+  startDate: z.union([z.string(), z.date()]).transform(val => typeof val === 'string' ? new Date(val) : val),
+  endDate: z.union([z.string(), z.date()]).transform(val => typeof val === 'string' ? new Date(val) : val),
   items: z.array(QuoteItemSchema),
   subTotal: z.number().min(0),
   discountAmount: z.number().min(0).default(0),
@@ -44,7 +56,7 @@ const QuoteSchema = z.object({
   status: z.enum(['Draft', 'Sent', 'Accepted', 'Declined', 'Archived']).default('Draft'),
   notes: z.string().optional(),
   terms: z.string().optional().or(z.literal('')),
-})
+}).passthrough()
 
 // GET /api/quotes - Get all quotes
 export async function GET(request: NextRequest) {
@@ -157,21 +169,41 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { id, items, ...updateData } = body
+    const { id, items, quoteNumber, createdAt, updatedAt, ...updateData } = body
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json({ error: 'Quote ID is required' }, { status: 400 })
     }
 
-    // Validate fields; allow partial updates. Items validated separately when present.
-    const baseValidated = QuoteSchema.partial({
-      items: true,
-    }).parse({ ...updateData, items: undefined })
+    // Validate fields; allow partial updates for all fields since we're doing partial updates
+    let baseValidated
+    try {
+      baseValidated = QuoteSchema.partial().parse({ ...updateData, items: undefined })
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        console.error('Quote validation error:', e.errors)
+        return NextResponse.json({ error: 'Invalid data', details: e.errors }, { status: 400 })
+      }
+      throw e
+    }
 
-    // If items provided, validate them as array of QuoteItemSchema
-    let validatedItems: z.infer<typeof QuoteItemSchema>[] | undefined = undefined
-    if (Array.isArray(items)) {
-      validatedItems = z.array(QuoteItemSchema).parse(items)
+    // If items provided, just clean them for Prisma without strict validation
+    let validatedItems: any[] | undefined = undefined
+    if (Array.isArray(items) && items.length > 0) {
+      try {
+        console.log('Items being processed for update:', JSON.stringify(items.slice(0, 1), null, 2), `... (${items.length} total)`)
+        // Don't validate during updates, just clean the data
+        // Remove database-generated and relation fields that shouldn't be included in create operations
+        validatedItems = items.map(({ id, quoteId, createdAt, updatedAt, equipment, ...item }: any) => ({
+          ...item,
+          // Ensure required fields have proper types
+          type: String(item.type),
+          lineTotal: typeof item.lineTotal === 'number' ? item.lineTotal : 0,
+        }))
+      } catch (e) {
+        console.error('Error processing items:', e)
+        return NextResponse.json({ error: 'Failed to process items', details: String(e) }, { status: 400 })
+      }
     }
 
     // Build update payload (exclude items for now)
@@ -182,8 +214,13 @@ export async function PUT(request: NextRequest) {
 
     // Run in a transaction if items are being replaced
     const result = await prisma.$transaction(async (tx) => {
-      if (validatedItems) {
+      // Only replace items if explicitly provided AND they appear to be new data
+      // (i.e., don't have database timestamps or have been explicitly modified)
+      const shouldUpdateItems = validatedItems && validatedItems.length > 0 && items?.some((item: any) => !item.id || item.isNew)
+      
+      if (shouldUpdateItems) {
         // Replace items atomically
+        console.log('Updating quote items')
         await tx.quoteItem.deleteMany({ where: { quoteId: id } })
         await tx.quote.update({
           where: { id },
@@ -194,6 +231,7 @@ export async function PUT(request: NextRequest) {
         })
       } else {
         // Only update quote fields
+        console.log('Updating quote fields only')
         await tx.quote.update({ where: { id }, data: updatePayload })
       }
 

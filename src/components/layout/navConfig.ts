@@ -1,28 +1,29 @@
 import { Home, CalendarDays, Users, FileText, Package, Wrench, Shield, Settings, Palette, Users2, FileType, Languages, Handshake, Cloud, HardDrive } from 'lucide-react';
+import { ROLES, ROLE_GROUPS, type RoleValue } from '@/lib/roles';
 
 export type NavItem = {
   href?: string;
   label: string;
   icon?: any;
-  requiredRole: Array<'Admin' | 'Manager' | 'Technician' | 'Employee' | 'Viewer'>;
+  requiredRole: RoleValue[];
   subItems?: Array<{ href: string; label: string }>
 }
 
 export const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: Home, requiredRole: ['Admin', 'Manager', 'Technician', 'Employee', 'Viewer'] },
-  { label: 'Inventory', icon: Package, requiredRole: ['Admin', 'Manager', 'Technician', 'Employee', 'Viewer'], subItems: [
+  { href: '/dashboard', label: 'Dashboard', icon: Home, requiredRole: ROLE_GROUPS.ALL },
+  { label: 'Inventory', icon: Package, requiredRole: ROLE_GROUPS.ALL, subItems: [
     { href: '/inventory', label: 'View Inventory' },
     { href: '/categories', label: 'Categories' }
   ] },
-  { href: '/maintenance', label: 'Maintenance', icon: Wrench, requiredRole: ['Admin', 'Manager', 'Technician'] },
-  { href: '/clients', label: 'Clients', icon: Users, requiredRole: ['Admin', 'Manager', 'Employee'] },
-  { href: '/partners', label: 'Partners', icon: Handshake, requiredRole: ['Admin', 'Manager'] },
-  { href: '/team', label: 'Team', icon: Users2, requiredRole: ['Admin', 'Manager', 'Technician', 'Employee', 'Viewer'] },
-  { label: 'Rentals', icon: CalendarDays, requiredRole: ['Admin', 'Manager', 'Employee'], subItems: [
+  { href: '/maintenance', label: 'Maintenance', icon: Wrench, requiredRole: ROLE_GROUPS.OPERATIONS },
+  { href: '/clients', label: 'Clients', icon: Users, requiredRole: [ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE] },
+  { href: '/partners', label: 'Partners', icon: Handshake, requiredRole: ROLE_GROUPS.MANAGEMENT },
+  { href: '/team', label: 'Team', icon: Users2, requiredRole: ROLE_GROUPS.ALL },
+  { label: 'Rentals', icon: CalendarDays, requiredRole: [ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE], subItems: [
     { href: '/rentals/calendar', label: 'Event Calendar' },
     { href: '/events', label: 'Events' }
   ] },
-  { label: 'Quotes', icon: FileText, requiredRole: ['Admin', 'Manager', 'Technician', 'Employee', 'Viewer'], subItems: [
+  { label: 'Quotes', icon: FileText, requiredRole: ROLE_GROUPS.ALL, subItems: [
     { href: '/quotes', label: 'Quotes' },
     { href: '/quotes/services', label: 'Services' },
     { href: '/quotes/fees', label: 'Fees' }
@@ -30,10 +31,10 @@ export const navItems: NavItem[] = [
 ];
 
 export const adminItems: NavItem[] = [
-  { href: '/admin/users', label: 'User Management', icon: Shield, requiredRole: ['Admin'] },
-  { href: '/admin/translations', label: 'Translation Management', icon: Languages, requiredRole: ['Admin'] },
-  { href: '/admin/customization', label: 'Customization', icon: Palette, requiredRole: ['Admin'] },
-  { href: '/admin/pdf-branding', label: 'PDF Branding', icon: FileType, requiredRole: ['Admin'] },
-  { href: '/admin/storage-dashboard', label: 'Storage Dashboard', icon: HardDrive, requiredRole: ['Admin'] },
-  { href: '/admin/settings', label: 'System Settings', icon: Settings, requiredRole: ['Admin'] },
+  { href: '/admin/users', label: 'User Management', icon: Shield, requiredRole: ROLE_GROUPS.ADMIN_ONLY },
+  { href: '/admin/translations', label: 'Translation Management', icon: Languages, requiredRole: ROLE_GROUPS.ADMIN_ONLY },
+  { href: '/admin/customization', label: 'Customization', icon: Palette, requiredRole: ROLE_GROUPS.ADMIN_ONLY },
+  { href: '/admin/pdf-branding', label: 'PDF Branding', icon: FileType, requiredRole: ROLE_GROUPS.ADMIN_ONLY },
+  { href: '/admin/storage-dashboard', label: 'Storage Dashboard', icon: HardDrive, requiredRole: ROLE_GROUPS.ADMIN_ONLY },
+  { href: '/admin/settings', label: 'System Settings', icon: Settings, requiredRole: ROLE_GROUPS.ADMIN_ONLY },
 ];

@@ -44,6 +44,7 @@ interface CloudFile {
   name: string;
   mimeType: string;
   size: string | number;
+  isPublic: boolean;
   createdAt: string;
 }
 
@@ -87,17 +88,11 @@ export function TrashContent({ userId }: TrashContentProps) {
     try {
       setLoading(true);
       
-      const [folderRes, fileRes] = await Promise.all([
-        fetch('/api/cloud/folders?trashed=true'),
-        fetch('/api/cloud/files?trashed=true'),
-      ]);
+      const res = await fetch('/api/cloud/trash');
 
-      if (folderRes.ok) {
-        const data = await folderRes.json();
+      if (res.ok) {
+        const data = await res.json();
         setFolders(data.folders || []);
-      }
-      if (fileRes.ok) {
-        const data = await fileRes.json();
         setFiles(data.files || []);
       }
     } catch (error) {

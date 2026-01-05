@@ -30,10 +30,10 @@ export function LanguageToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" title={tSync('Change Language')}>
-          <Languages className="h-5 w-5" />
+        <Button variant="ghost" className="h-8 w-8 p-0 flex items-center justify-center relative" title={tSync('Change Language')}>
+          <Languages className="h-4 w-4" />
           <span className="sr-only">{tSync('Toggle language')}</span>
-          <span className="absolute -bottom-1 -right-1 text-[10px] font-bold uppercase bg-primary text-primary-foreground rounded px-1">
+          <span className="absolute -bottom-1 -right-1 text-[8px] font-bold uppercase bg-primary text-primary-foreground rounded px-0.5">
             {language}
           </span>
         </Button>

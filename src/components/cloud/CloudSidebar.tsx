@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { useTranslate } from '@/contexts/TranslationContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,12 +42,12 @@ interface CloudSidebarProps {
   isMobile?: boolean;
 }
 
-const navItems = [
-  { href: '/drive', label: 'My Drive', icon: HardDrive },
-  { href: '/drive/starred', label: 'Starred', icon: Star },
-  { href: '/drive/shared', label: 'Shared with me', icon: Users },
-  { href: '/drive/recent', label: 'Recent', icon: Clock },
-  { href: '/drive/trash', label: 'Trash', icon: Trash2 },
+const baseNavItems = [
+  { href: '/drive', label: 'My Drive', icon: HardDrive, key: 'My Drive' },
+  { href: '/drive/starred', label: 'Starred', icon: Star, key: 'Starred' },
+  { href: '/drive/shared', label: 'Shared with me', icon: Users, key: 'Shared with me' },
+  { href: '/drive/recent', label: 'Recent', icon: Clock, key: 'Recent' },
+  { href: '/drive/trash', label: 'Trash', icon: Trash2, key: 'Trash' },
 ];
 
 export function CloudSidebar({ 
@@ -59,6 +60,24 @@ export function CloudSidebar({
   const pathname = usePathname();
   const { toast } = useToast();
   const { data: settings } = useCustomizationSettings();
+  const { translated: myDrive } = useTranslate('My Drive');
+  const { translated: starred } = useTranslate('Starred');
+  const { translated: sharedWithMe } = useTranslate('Shared with me');
+  const { translated: recent } = useTranslate('Recent');
+  const { translated: trash } = useTranslate('Trash');
+  const { translated: uploadSuccessful } = useTranslate('Upload successful');
+  const { translated: uploadFailed } = useTranslate('Upload failed');
+  const { translated: folderUploaded } = useTranslate('Folder uploaded');
+  const { translated: pleaseRetry } = useTranslate('Please try again');
+  
+  const navItems = [
+    { href: '/drive', label: myDrive, icon: HardDrive },
+    { href: '/drive/starred', label: starred, icon: Star },
+    { href: '/drive/shared', label: sharedWithMe, icon: Users },
+    { href: '/drive/recent', label: recent, icon: Clock },
+    { href: '/drive/trash', label: trash, icon: Trash2 },
+  ];
+  
   const [quota, setQuota] = useState<{ usedBytes: number; quotaBytes: number } | null>(null);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
 
@@ -105,7 +124,7 @@ export function CloudSidebar({
         }
 
         toast({
-          title: 'Upload successful',
+          title: uploadSuccessful,
           description: `${files.length} file(s) uploaded`,
         });
 
@@ -113,8 +132,8 @@ export function CloudSidebar({
         window.dispatchEvent(new CustomEvent('cloud-refresh'));
       } catch (error) {
         toast({
-          title: 'Upload failed',
-          description: error instanceof Error ? error.message : 'Please try again',
+          title: uploadFailed,
+          description: error instanceof Error ? error.message : pleaseRetry,
           variant: 'destructive',
         });
       }
@@ -149,7 +168,7 @@ export function CloudSidebar({
         }
 
         toast({
-          title: 'Folder uploaded',
+          title: folderUploaded,
           description: `${files.length} file(s) uploaded`,
         });
 
@@ -157,8 +176,8 @@ export function CloudSidebar({
         window.dispatchEvent(new CustomEvent('cloud-refresh'));
       } catch (error) {
         toast({
-          title: 'Upload failed',
-          description: error instanceof Error ? error.message : 'Please try again',
+          title: uploadFailed,
+          description: error instanceof Error ? error.message : pleaseRetry,
           variant: 'destructive',
         });
       }

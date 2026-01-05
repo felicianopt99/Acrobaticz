@@ -139,8 +139,8 @@ export function PartnersContent() {
   }), [partners, searchTerm, typeFilter]);
 
   // Allow Admin and Manager to access partners
-  const allowedRoles = ['Admin', 'Manager'];
-  if (!currentUser || !allowedRoles.includes(currentUser.role)) {
+  const { hasRole, ROLE_GROUPS } = require('@/lib/roles');
+  if (!currentUser || !hasRole(currentUser.role, ROLE_GROUPS.MANAGEMENT)) {
     return (
       <div className="flex flex-col min-h-screen">
         <div className="flex-1 overflow-y-auto p-2 md:p-6 flex items-center justify-center">

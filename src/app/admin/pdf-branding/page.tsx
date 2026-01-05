@@ -70,8 +70,11 @@ export default function PDFBrandingPage() {
       setPdfContactEmail(data.pdfContactEmail ?? data.contactEmail ?? '');
       setPdfContactPhone(data.pdfContactPhone ?? data.contactPhone ?? '');
       // Prefer PDF-specific fields; fall back to legacy ones without writing back implicitly
-      setPdfLogoUrl(data.pdfLogoUrl ?? data.logoUrl ?? '');
-      setPdfUseTextLogo(data.pdfUseTextLogo ?? data.useTextLogo ?? true);
+      const logoUrl = data.pdfLogoUrl ?? data.logoUrl ?? '';
+      setPdfLogoUrl(logoUrl);
+      // If logo URL exists, default to using image logo; otherwise use text
+      const useTextDefault = logoUrl ? false : (data.pdfUseTextLogo ?? data.useTextLogo ?? true);
+      setPdfUseTextLogo(useTextDefault);
       // Footer fields
       setPdfFooterMessage(data.pdfFooterMessage ?? '');
       setPdfFooterContactText(data.pdfFooterContactText ?? '');

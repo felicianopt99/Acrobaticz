@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
-import { generateConflictAlerts, generateLowStockAlerts, generateOverdueAlerts } from '@/lib/notifications'
 import { requireReadAccess, requirePermission } from '@/lib/api-auth'
 
 const RentalSchema = z.object({
@@ -109,10 +108,23 @@ export async function POST(request: NextRequest) {
 
     // After creating rentals, check for conflicts and low stock
     try {
-      await generateConflictAlerts()
-      await generateLowStockAlerts()
+      const { checkEquipmentConflicts, createConflictNotification } = await import('@/lib/notifications')
+      
+      for (const rental of rentals) {
+        // Check for equipment conflicts
+        const conflictingEventIds = await checkEquipmentConflicts(
+          rental.equipmentId,
+          event.startDate,
+          event.endDate,
+          rental.id
+        )
+        
+        if (conflictingEventIds.length > 0) {
+          await createConflictNotification([event.id, ...conflictingEventIds], rental.equipment.name)
+        }
+      }
     } catch (e) {
-      // non-critical
+      console.error('Error processing notifications:', e)
     }
 
     return NextResponse.json(rentals, { status: 201 })
@@ -140,6 +152,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Rental ID is required' }, { status: 400 })
     }
     
+    // Get old rental data for comparison
+    const oldRental = await prisma.rental.findUnique({
+      where: { id },
+      include: {
+        equipment: true,
+      },
+    })
+    
     const validatedData = SingleRentalUpdateSchema.parse(updateData)
     
     const rental = await prisma.rental.update({
@@ -155,13 +175,14 @@ export async function PUT(request: NextRequest) {
       },
     })
     
-    // After updates, re-check overdue and conflicts (e.g., prep status or quantities change)
-    try {
-      await generateOverdueAlerts()
-      await generateConflictAlerts()
-      await generateLowStockAlerts()
-    } catch (e) {
-      // non-critical
+    // Trigger notifications for status changes
+    if (oldRental?.prepStatus && oldRental.prepStatus !== rental.prepStatus) {
+      try {
+        const { createStatusChangeNotification } = await import('@/lib/notifications')
+        await createStatusChangeNotification(id, oldRental.prepStatus, rental.prepStatus)
+      } catch (e) {
+        console.error('Error sending status change notification:', e)
+      }
     }
 
     return NextResponse.json(rental)

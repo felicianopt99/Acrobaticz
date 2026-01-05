@@ -7,6 +7,8 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { useTranslate } from '@/contexts/TranslationContext';
+import { useState, useEffect } from "react";
+import type { Client, Partner } from "@/types";
 import {
   Form,
   FormControl,
@@ -18,7 +20,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { Client } from "@/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAppDispatch } from "@/contexts/AppContext";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +38,7 @@ const clientFormSchema = z.object({
   phone: z.string().max(30).optional().or(z.literal('')),
   address: z.string().max(200).optional().or(z.literal('')),
   notes: z.string().max(1000).optional().or(z.literal('')),
+  partnerId: z.string().optional().or(z.literal('none')),
 });
 
 type ClientFormValues = z.infer<typeof clientFormSchema>;
@@ -60,30 +69,73 @@ export function ClientForm({ initialData, onSubmitSuccess }: ClientFormProps) {
   const { translated: notesDescription } = useTranslate('Internal notes for client management.');
   const { translated: btnUpdateClient } = useTranslate('Update Client');
   const { translated: btnAddClient } = useTranslate('Add Client');
+  const { translated: labelAgency } = useTranslate('Related Agency/Partner (Optional)');
+  const { translated: phAgency } = useTranslate('Select an agency if this client is associated with a partner');
+  const { translated: descAgency } = useTranslate('Link this client to a partner agency or provider');
+  const { translated: noAgency } = useTranslate('None');
 
   const { addClient, updateClient } = useAppDispatch();
   const router = useRouter();
   const { toast } = useToast();
+  const [agencies, setAgencies] = useState<Partner[]>([]);
+
+  // Fetch agencies/partners on mount
+  useEffect(() => {
+    const fetchAgencies = async () => {
+      try {
+        const response = await fetch('/api/partners?activeOnly=true');
+        if (response.ok) {
+          const data = await response.json();
+          // Filter to only agency-type or both-type partners
+          const agencyPartners = data.filter((p: Partner) => p.partnerType === 'agency' || p.partnerType === 'both');
+          setAgencies(agencyPartners);
+        }
+      } catch (error) {
+        console.error('Error fetching agencies:', error);
+      }
+    };
+    fetchAgencies();
+  }, []);
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      name: initialData.name || "",
+      contactPerson: initialData.contactPerson || "",
+      email: initialData.email || "",
+      phone: initialData.phone || "",
+      address: initialData.address || "",
+      notes: initialData.notes || "",
+      partnerId: "",
+    } : {
       name: "",
       contactPerson: "",
       email: "",
       phone: "",
       address: "",
       notes: "",
+      partnerId: "none",
     },
   });
 
   function onSubmit(data: ClientFormValues) {
     try {
+      // Prepare client data, excluding "none" for partnerId
+      const clientData = {
+        name: data.name,
+        contactPerson: data.contactPerson,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        notes: data.notes,
+        partnerId: data.partnerId && data.partnerId !== 'none' ? data.partnerId : undefined,
+      }
+      
       if (initialData) {
-        updateClient({ ...initialData, ...data });
+        updateClient({ ...initialData, ...clientData });
         toast({ title: toastClientUpdatedTitleText, description: `Client "${data.name}" has been successfully updated.` });
       } else {
-        addClient(data);
+        addClient(clientData);
         toast({ title: toastClientAddedTitleText, description: `Client "${data.name}" has been successfully added.` });
       }
       onSubmitSuccess ? onSubmitSuccess() : router.push("/clients");
@@ -171,6 +223,37 @@ export function ClientForm({ initialData, onSubmitSuccess }: ClientFormProps) {
                 <Textarea placeholder={phNotes} {...field} rows={4} />
               </FormControl>
               <FormDescription>{notesDescription}</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="partnerId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{labelAgency}</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value || "none"}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={phAgency} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none">{noAgency}</SelectItem>
+                  {agencies.map((agency) => (
+                    <SelectItem key={agency.id} value={agency.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{agency.name}</span>
+                        {agency.companyName && (
+                          <span className="text-xs text-muted-foreground">{agency.companyName}</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>{descAgency}</FormDescription>
               <FormMessage />
             </FormItem>
           )}

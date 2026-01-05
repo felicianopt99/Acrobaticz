@@ -48,7 +48,16 @@ if [ -z "${SKIP_MIGRATIONS:-}" ]; then
         echo "⚠️  Database seeding failed, but continuing startup"
       fi
     else
-      echo "✅ Database already seeded, skipping seed script"
+      echo "✅ Database already seeded"
+      # Check if comprehensive seed should be run (for testing all features)
+      if [ "${SEED_COMPREHENSIVE:-false}" = "true" ]; then
+        echo "Running comprehensive test data seed..."
+        if npx tsx scripts/seed-comprehensive.ts --full; then
+          echo "✅ Comprehensive test data seeding completed successfully"
+        else
+          echo "⚠️  Comprehensive test data seeding failed, but continuing startup"
+        fi
+      fi
     fi
   fi
 fi

@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Pencil, Trash2, QrCode } from 'lucide-react';
+import { Pencil, Trash2, QrCode, Copy } from 'lucide-react';
 import { CategoryIconMapper } from '@/components/icons/CategoryIconMapper';
 import { useAppContext } from '@/contexts/AppContext';
 
@@ -19,9 +19,10 @@ interface EquipmentCardProps {
   subcategory?: Subcategory;
   onEdit: (item: EquipmentItem) => void;
   onDelete: (itemId: string) => void;
+  onDuplicate?: (item: EquipmentItem) => void;
 }
 
-export function EquipmentCard({ item, category, subcategory, onEdit, onDelete }: EquipmentCardProps) {
+export function EquipmentCard({ item, category, subcategory, onEdit, onDelete, onDuplicate }: EquipmentCardProps) {
   const { categories } = useAppContext();
   const [isQrCodeOpen, setIsQrCodeOpen] = useState(false);
   const itemCategory = category || categories.find(c => c.id === item.categoryId);
@@ -112,6 +113,18 @@ export function EquipmentCard({ item, category, subcategory, onEdit, onDelete }:
           >
             <QrCode className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
+          {onDuplicate && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDuplicate(item)}
+              aria-label="Duplicate item"
+              className="text-muted-foreground hover:text-primary h-7 w-7 sm:h-8 sm:w-8 p-0"
+              title="Duplicate"
+            >
+              <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"

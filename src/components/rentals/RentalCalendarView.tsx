@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Edit3, ListChecks, PlusCircle, ChevronLeft, ChevronRight, Trash2, Edit } from 'lucide-react';
+import { AlertTriangle, Edit3, ListChecks, PlusCircle, ChevronLeft, ChevronRight, Trash2, Edit, Calendar } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,6 @@ import {
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import { createEvents } from 'ics';
-import { CalendarExport } from './CalendarExport';
 
 interface RentalCalendarViewProps {
   searchQuery: string;
@@ -419,28 +418,82 @@ export function RentalCalendarView({ searchQuery, filters }: RentalCalendarViewP
                 </div>
                 {!isMobile && (
                   <div className="flex-shrink-0">
-                    <CalendarExport onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} onExportICS={handleExportICS} />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        const icsUrl = `/api/rentals/calendar.ics`;
+                        const link = document.createElement('a');
+                        link.href = `webcal://${window.location.host}/api/rentals/calendar.ics`;
+                        link.click();
+                      }}
+                      title="Subscribe to calendar in your calendar app"
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Sync ICS
+                    </Button>
                   </div>
                 )}
               </div>
               {isMobile && (
                 <div className="flex justify-center">
-                  <CalendarExport onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} onExportICS={handleExportICS} />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const icsUrl = `/api/rentals/calendar.ics`;
+                      const link = document.createElement('a');
+                      link.href = `webcal://${window.location.host}/api/rentals/calendar.ics`;
+                      link.click();
+                    }}
+                    title="Subscribe to calendar in your calendar app"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Sync ICS
+                  </Button>
                 </div>
               )}
             </CardHeader>
             <CardContent className={`p-1 sm:p-4 ${isMobile ? 'h-[400px]' : 'h-[500px] sm:h-[600px] lg:h-[700px]'}`}>
-              <style jsx>{`
-                .fc .fc-button {
-                  background-color: hsl(var(--primary));
-                  border-color: hsl(var(--primary));
-                  color: hsl(var(--primary-foreground));
+              <style jsx global>{`
+                .fc .fc-button-primary {
+                  background-color: hsl(var(--primary)) !important;
+                  border: 1px solid hsl(var(--primary)) !important;
+                  color: hsl(var(--primary-foreground)) !important;
+                  text-transform: capitalize !important;
+                  font-weight: 600 !important;
+                  font-size: 0.875rem !important;
+                  padding: 8px 14px !important;
+                  cursor: pointer !important;
                 }
-                .fc .fc-button:hover {
-                  background-color: hsl(var(--primary) / 0.8);
+                .fc .fc-button-primary:hover {
+                  background-color: hsl(var(--primary) / 0.85) !important;
+                  border-color: hsl(var(--primary) / 0.85) !important;
+                }
+                .fc .fc-button-primary.fc-button-active {
+                  background-color: hsl(var(--primary) / 0.7) !important;
+                  border-color: hsl(var(--primary) / 0.7) !important;
+                }
+                .fc-button-primary:not(:disabled) {
+                  background-color: hsl(var(--primary)) !important;
+                  border-color: hsl(var(--primary)) !important;
+                  color: hsl(var(--primary-foreground)) !important;
                 }
                 .fc .fc-today-button {
-                  background-color: hsl(var(--muted));
+                  background-color: hsl(var(--accent)) !important;
+                  border-color: hsl(var(--accent)) !important;
+                  color: hsl(var(--accent-foreground)) !important;
+                }
+                .fc .fc-today-button:hover {
+                  background-color: hsl(var(--accent) / 0.85) !important;
+                  border-color: hsl(var(--accent) / 0.85) !important;
+                }
+                /* Hide view toggle buttons only */
+                .fc .fc-dayGridMonth-button,
+                .fc .fc-timeGridWeek-button,
+                .fc .fc-timeGridDay-button,
+                .fc .fc-multiMonthYear-button {
+                  display: none !important;
                 }
                 .fc .fc-header-toolbar {
                   margin-bottom: 1rem;
@@ -550,12 +603,12 @@ export function RentalCalendarView({ searchQuery, filters }: RentalCalendarViewP
                   } : {
                     left: 'prev,next today',
                     center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                    right: ''
                   }}
                   footerToolbar={isMobile ? {
-                    left: 'today',
+                    left: '',
                     center: '',
-                    right: 'dayGridMonth'
+                    right: ''
                   } : undefined}
                   height={isMobile ? 'auto' : '100%'}
                   aspectRatio={isMobile ? 1 : 1.35}

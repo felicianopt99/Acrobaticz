@@ -30,15 +30,15 @@ export default async function StorageDashboardPage() {
     }
 
     // Check if user is admin
-    if (!['Admin'].includes(user.role)) {
+    const { isAdmin } = await import('@/lib/roles');
+    if (!isAdmin(user.role)) {
       redirect('/cloud');
     }
 
     return (
-      <>
-        <AppHeader title="Storage Dashboard" />
+      <div className="container mx-auto py-6">
         <StorageDashboardContent userId={user.id} />
-      </>
+      </div>
     );
   } catch (error) {
     console.error('Auth error:', error);

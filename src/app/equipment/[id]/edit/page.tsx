@@ -5,12 +5,15 @@ import { useEffect, useState } from 'react';
 import type { EquipmentItem } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { EquipmentForm } from '@/components/equipment/EquipmentForm';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import Link from 'next/link';
 import { useTranslate } from '@/contexts/TranslationContext';
+
 export default function EditEquipmentPage() {
   // Translation hooks
   const { translated: uiEditEquipmentText } = useTranslate('Edit Equipment');
+  const { translated: uiInventoryText } = useTranslate('Inventory');
+  const { translated: uiDashboardText } = useTranslate('Dashboard');
 
   const params = useParams();
   const router = useRouter();
@@ -59,19 +62,49 @@ export default function EditEquipmentPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-background to-secondary/5">
+      {/* Breadcrumb Navigation */}
+      <div className="px-2 md:px-6 pt-2 md:pt-4">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/dashboard">{uiDashboardText}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/inventory">{uiInventoryText}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{uiEditEquipmentText}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+
+      {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
-        <Card className="max-w-4xl mx-auto">
-          <CardHeader>
-            <CardTitle>{uiEditEquipmentText}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <EquipmentForm
-              initialData={equipmentItem}
-              onSubmitSuccess={() => router.push('/inventory')}
-            />
-          </CardContent>
-        </Card>
+        <div className="max-w-4xl mx-auto">
+          {/* Page Header */}
+          <div className="mb-6">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
+              {uiEditEquipmentText}
+            </h1>
+            <p className="text-muted-foreground text-base md:text-lg">
+              {equipmentItem.name}
+            </p>
+          </div>
+
+          {/* Equipment Form */}
+          <EquipmentForm
+            initialData={equipmentItem}
+            onSubmitSuccess={() => router.push('/inventory')}
+          />
+        </div>
       </div>
     </div>
   );
