@@ -31,12 +31,17 @@ services:
           memory: 256M
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      cache_from:
-        - av-rentals:latest
-    image: av-rentals:latest
+    # Use pre-built image from GitHub Container Registry (GHCR)
+    # To use local build instead, uncomment 'build' section below
+    image: ghcr.io/felicianopt99/av-rentals:latest
+    # Alternative: Build locally
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    #   cache_from:
+    #     - av-rentals:latest
+    # image: av-rentals:latest
+    
     container_name: av-rentals
     restart: unless-stopped
     env_file:

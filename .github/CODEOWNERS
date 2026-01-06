@@ -1,0 +1,11 @@
+# GitHub repository code owners
+# This file defines which users/teams are responsible for reviewing code changes
+
+*                                        @felicianopt99
+/.github/                                @felicianopt99
+/src/                                    @felicianopt99
+/prisma/                                 @felicianopt99
+/scripts/deployment/                     @felicianopt99
+/.github/workflows/                      @felicianopt99
+/Dockerfile                              @felicianopt99
+/docker-compose.yml                      @felicianopt99

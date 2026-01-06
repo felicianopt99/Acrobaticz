@@ -53,3 +53,39 @@ scripts/logs/*.log
 reports/
 prisma/*.db
 prisma/**/dev.db
+
+# secrets and sensitive data (NEVER COMMIT)
+/secrets/
+.env
+!.env.example
+
+# development-only files
+docker-compose.dev.yml
+Dockerfile.dev
+dev-helper.sh
+debug-login.js
+fix-login.js
+
+# docker artifacts
+.docker
+build-output.log
+
+# local development
+.idx/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.tmp/
+tmp/
+
+# build cache
+.turbopack/
+.next/
+dist/
+coverage/
+
+# OS files
+.DS_Store
+*.swp
