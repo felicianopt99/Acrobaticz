@@ -17,7 +17,6 @@ export async function GET(
     }
 
     // Find catalog share by token
-    // @ts-expect-error - CatalogShare model exists in database
     const catalogShare = await prisma.catalogShare.findUnique({
       where: { token },
       include: {

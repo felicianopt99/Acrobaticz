@@ -85,7 +85,6 @@ export async function POST(request: NextRequest) {
     const shareToken = randomBytes(32).toString('hex');
 
     // Create catalog share record
-    // @ts-expect-error - CatalogShare model exists in database
     const catalogShare = await prisma.catalogShare.create({
       data: {
         token: shareToken,

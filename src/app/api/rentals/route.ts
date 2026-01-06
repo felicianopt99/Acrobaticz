@@ -176,7 +176,7 @@ export async function PUT(request: NextRequest) {
     })
     
     // Trigger notifications for status changes
-    if (oldRental?.prepStatus && oldRental.prepStatus !== rental.prepStatus) {
+    if (oldRental?.prepStatus && rental.prepStatus && oldRental.prepStatus !== rental.prepStatus) {
       try {
         const { createStatusChangeNotification } = await import('@/lib/notifications')
         await createStatusChangeNotification(id, oldRental.prepStatus, rental.prepStatus)

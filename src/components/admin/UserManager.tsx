@@ -54,13 +54,13 @@ export function UserManager({ currentUser }: UserManagerProps) {
   const [uploadingCoverPhoto, setUploadingCoverPhoto] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const createForm = useForm<CreateUserData>({
+  const createForm = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema),
     defaultValues: {
       name: '',
       username: '',
       password: '',
-      role: 'Viewer',
+      role: 'viewer',
     },
   });
 
@@ -106,7 +106,7 @@ export function UserManager({ currentUser }: UserManagerProps) {
     loadUsers();
   }, []);
 
-  const onCreateUser = async (data: UserFormValues) => {
+  const onCreateUser = async (data: CreateUserFormValues) => {
     try {
       const response = await fetch('/api/users', {
         method: 'POST',
@@ -329,7 +329,7 @@ export function UserManager({ currentUser }: UserManagerProps) {
       name: user.name,
       username: user.username,
       password: '',
-      role: user.role,
+      role: user.role.toLowerCase() as typeof roleValues[number],
       isActive: user.isActive,
       isTeamMember: user.isTeamMember || false,
       teamTitle: user.teamTitle || '',

@@ -145,6 +145,119 @@ async function extractPartners() {
   }))
 }
 
+async function extractCustomization() {
+  log('\n🎨 Extracting Customization Settings...', '📤')
+  const settings = await prisma.customizationSettings.findMany()
+  
+  return settings.map(setting => ({
+    id: setting.id,
+    companyName: setting.companyName,
+    companyTagline: setting.companyTagline,
+    contactEmail: setting.contactEmail,
+    contactPhone: setting.contactPhone,
+    // PDF Branding
+    pdfCompanyName: setting.pdfCompanyName,
+    pdfCompanyTagline: setting.pdfCompanyTagline,
+    pdfContactEmail: setting.pdfContactEmail,
+    pdfContactPhone: setting.pdfContactPhone,
+    pdfFooterMessage: setting.pdfFooterMessage,
+    pdfFooterContactText: setting.pdfFooterContactText,
+    pdfShowFooterContact: setting.pdfShowFooterContact,
+    // Branding
+    useTextLogo: setting.useTextLogo,
+    themePreset: setting.themePreset,
+    primaryColor: setting.primaryColor,
+    secondaryColor: setting.secondaryColor,
+    accentColor: setting.accentColor,
+    darkMode: setting.darkMode,
+    logoUrl: setting.logoUrl ? path.basename(setting.logoUrl) : null,
+    faviconUrl: setting.faviconUrl ? path.basename(setting.faviconUrl) : null,
+    pdfLogoUrl: setting.pdfLogoUrl ? path.basename(setting.pdfLogoUrl) : null,
+    pdfUseTextLogo: setting.pdfUseTextLogo,
+    // Login Customization
+    loginBackgroundType: setting.loginBackgroundType,
+    loginBackgroundColor1: setting.loginBackgroundColor1,
+    loginBackgroundColor2: setting.loginBackgroundColor2,
+    loginBackgroundImage: setting.loginBackgroundImage ? path.basename(setting.loginBackgroundImage) : null,
+    loginCardOpacity: setting.loginCardOpacity,
+    loginCardBlur: setting.loginCardBlur,
+    loginCardPosition: setting.loginCardPosition,
+    loginCardWidth: setting.loginCardWidth,
+    loginCardBorderRadius: setting.loginCardBorderRadius,
+    loginCardShadow: setting.loginCardShadow,
+    loginLogoUrl: setting.loginLogoUrl ? path.basename(setting.loginLogoUrl) : null,
+    loginLogoSize: setting.loginLogoSize,
+    loginWelcomeMessage: setting.loginWelcomeMessage,
+    loginWelcomeSubtitle: setting.loginWelcomeSubtitle,
+    loginFooterText: setting.loginFooterText,
+    loginShowCompanyName: setting.loginShowCompanyName,
+    loginFormSpacing: setting.loginFormSpacing,
+    loginButtonStyle: setting.loginButtonStyle,
+    loginInputStyle: setting.loginInputStyle,
+    loginAnimations: setting.loginAnimations,
+    loginLightRaysOrigin: setting.loginLightRaysOrigin,
+    loginLightRaysColor: setting.loginLightRaysColor,
+    loginLightRaysSpeed: setting.loginLightRaysSpeed,
+    loginLightRaysSpread: setting.loginLightRaysSpread,
+    loginLightRaysLength: setting.loginLightRaysLength,
+    loginLightRaysPulsating: setting.loginLightRaysPulsating,
+    loginLightRaysFadeDistance: setting.loginLightRaysFadeDistance,
+    loginLightRaysSaturation: setting.loginLightRaysSaturation,
+    loginLightRaysFollowMouse: setting.loginLightRaysFollowMouse,
+    loginLightRaysMouseInfluence: setting.loginLightRaysMouseInfluence,
+    loginLightRaysNoiseAmount: setting.loginLightRaysNoiseAmount,
+    loginLightRaysDistortion: setting.loginLightRaysDistortion,
+    // Catalog
+    catalogTermsAndConditions: setting.catalogTermsAndConditions,
+    customCSS: setting.customCSS,
+    footerText: setting.footerText,
+    // System
+    systemName: setting.systemName,
+    timezone: setting.timezone,
+    dateFormat: setting.dateFormat,
+    currency: setting.currency,
+    language: setting.language,
+    sessionTimeout: setting.sessionTimeout,
+    // Security
+    requireStrongPasswords: setting.requireStrongPasswords,
+    enableTwoFactor: setting.enableTwoFactor,
+    maxLoginAttempts: setting.maxLoginAttempts,
+    // Email
+    emailEnabled: setting.emailEnabled,
+    smtpServer: setting.smtpServer,
+    smtpPort: setting.smtpPort,
+    smtpUsername: setting.smtpUsername,
+    fromEmail: setting.fromEmail,
+    // Backup
+    autoBackup: setting.autoBackup,
+    backupFrequency: setting.backupFrequency,
+    backupRetention: setting.backupRetention
+  }))
+}
+
+function copyLogosToSeeding() {
+  log('\n🎨 Copying logo files...', '📤')
+  const publicImagesDir = path.join(process.cwd(), 'public', 'images')
+  const seedingLogosDir = path.join(process.cwd(), 'seeding', 'logos')
+  
+  if (!fs.existsSync(seedingLogosDir)) {
+    fs.mkdirSync(seedingLogosDir, { recursive: true })
+  }
+  
+  try {
+    // Copy logo files (various formats)
+    execSync(`cp "${publicImagesDir}"/logo*.* "${seedingLogosDir}/" 2>/dev/null || true`)
+    execSync(`cp "${publicImagesDir}"/favicon*.* "${seedingLogosDir}/" 2>/dev/null || true`)
+    execSync(`cp "${publicImagesDir}"/pdf-logo*.* "${seedingLogosDir}/" 2>/dev/null || true`)
+    execSync(`cp "${publicImagesDir}"/login-*.* "${seedingLogosDir}/" 2>/dev/null || true`)
+    
+    const logoCount = fs.readdirSync(seedingLogosDir).length
+    log(`✅ Copied ${logoCount} logo files to seeding/logos/`)
+  } catch (error) {
+    log(`⚠️  Logo copy had issues (non-critical): ${error}`)
+  }
+}
+
 // ==============================================================================
 // MAIN EXTRACTION
 // ==============================================================================
@@ -157,8 +270,9 @@ async function main() {
     const seedingDataDir = path.join(process.cwd(), 'seeding', 'data')
     await ensureDirectory(seedingDataDir)
     
-    // Copy images first
+    // Copy images and logos first
     copyImagesToSeeding()
+    copyLogosToSeeding()
     
     // Extract all data
     const categories = await extractCategories()
@@ -166,6 +280,7 @@ async function main() {
     const products = await extractProducts()
     const clients = await extractClients()
     const partners = await extractPartners()
+    const customization = await extractCustomization()
     
     // Save to JSON files
     log('\n💾 SAVING DATA TO JSON FILES...', '📁')
@@ -174,6 +289,7 @@ async function main() {
     saveToJSON(path.join(seedingDataDir, 'products.json'), products)
     saveToJSON(path.join(seedingDataDir, 'clients.json'), clients)
     saveToJSON(path.join(seedingDataDir, 'partners.json'), partners)
+    saveToJSON(path.join(seedingDataDir, 'customization.json'), customization)
     
     // Summary
     log('\n✨ EXTRACTION COMPLETE!', '✅')
@@ -183,7 +299,9 @@ async function main() {
     log(`   Products: ${products.length}`)
     log(`   Clients: ${clients.length}`)
     log(`   Partners: ${partners.length}`)
+    log(`   Customization Settings: ${customization.length}`)
     log(`\n📁 Files saved to: ${seedingDataDir}`, '✅')
+    log(`📁 Logos saved to: seeding/logos/`, '✅')
     
     await prisma.$disconnect()
     process.exit(0)

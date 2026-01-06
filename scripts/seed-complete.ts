@@ -39,38 +39,7 @@ async function seedUsers() {
       contactEmail: 'lourenco@acrobaticz.pt',
       contactPhone: '+351 900 000 002'
     },
-    {
-      name: 'João Technician',
-      username: 'joao',
-      password: 'joao123',
-      role: 'Technician',
-      contactEmail: 'joao@acrobaticz.pt',
-      contactPhone: '+351 900 000 003'
-    },
-    {
-      name: 'Maria Silva',
-      username: 'maria',
-      password: 'maria123',
-      role: 'Employee',
-      contactEmail: 'maria@acrobaticz.pt',
-      contactPhone: '+351 900 000 004'
-    },
-    {
-      name: 'Pedro Santos',
-      username: 'pedro',
-      password: 'pedro123',
-      role: 'Employee',
-      contactEmail: 'pedro@acrobaticz.pt',
-      contactPhone: '+351 900 000 005'
-    },
-    {
-      name: 'Rosa Costa',
-      username: 'rosa',
-      password: 'rosa123',
-      role: 'Employee',
-      contactEmail: 'rosa@acrobaticz.pt',
-      contactPhone: '+351 900 000 006'
-    }
+    
   ]
 
   const createdUsers = []
@@ -258,6 +227,84 @@ async function seedCategoriesAndSubcategories() {
   }
 
   return { categoryMap, subcategoryMap }
+}
+
+// ==============================================================================
+// CUSTOMIZATION SEEDING
+// ==============================================================================
+
+async function seedCustomization(adminId: string) {
+  log('\n🎨 SEEDING CUSTOMIZATION SETTINGS...', '⚙️')
+
+  const settings = await prisma.customizationSettings.upsert({
+    where: { id: 'default-settings' },
+    update: { 
+      updatedBy: adminId,
+      updatedAt: new Date()
+    },
+    create: {
+      id: 'default-settings',
+      companyName: 'Acrobaticz AV Rentals',
+      companyTagline: 'Professional Audio Visual Equipment Rental',
+      contactEmail: 'info@acrobaticz.pt',
+      contactPhone: '+351 910 000 000',
+      // PDF Branding
+      pdfCompanyName: 'Acrobaticz AV Rentals',
+      pdfCompanyTagline: 'Professional Audio Visual Equipment Rental',
+      pdfContactEmail: 'info@acrobaticz.pt',
+      pdfContactPhone: '+351 910 000 000',
+      pdfFooterMessage: 'Thank you for your business',
+      pdfFooterContactText: 'For questions, contact us at info@acrobaticz.pt',
+      pdfShowFooterContact: true,
+      // Branding
+      useTextLogo: true,
+      pdfUseTextLogo: true,
+      themePreset: 'default',
+      primaryColor: '#3b82f6',
+      secondaryColor: '#8b5cf6',
+      accentColor: '#10b981',
+      darkMode: false,
+      // Login Customization
+      loginBackgroundType: 'gradient',
+      loginBackgroundColor1: '#3b82f6',
+      loginBackgroundColor2: '#8b5cf6',
+      loginCardOpacity: 0.95,
+      loginCardBlur: true,
+      loginCardPosition: 'center',
+      loginCardWidth: 400,
+      loginCardBorderRadius: 8,
+      loginCardShadow: 'large',
+      loginLogoSize: 80,
+      loginWelcomeMessage: 'Welcome Back',
+      loginWelcomeSubtitle: 'Sign in to manage your equipment rentals',
+      loginShowCompanyName: true,
+      loginFormSpacing: 16,
+      loginButtonStyle: 'default',
+      loginInputStyle: 'default',
+      loginAnimations: true,
+      loginLightRaysFollowMouse: true,
+      // System
+      systemName: 'AV Rentals',
+      timezone: 'Europe/Lisbon',
+      dateFormat: 'DD/MM/YYYY',
+      currency: 'EUR',
+      language: 'pt',
+      sessionTimeout: 30,
+      // Security
+      requireStrongPasswords: true,
+      enableTwoFactor: false,
+      maxLoginAttempts: 5,
+      // Email
+      emailEnabled: false,
+      // Backup
+      autoBackup: true,
+      backupFrequency: 'daily',
+      backupRetention: 7,
+      updatedBy: adminId,
+    },
+  })
+  log('✅ Customization settings created/updated')
+  return settings
 }
 
 // ==============================================================================
@@ -812,7 +859,9 @@ async function main() {
     log('\n🌱 STARTING COMPREHENSIVE DATABASE SEEDING...', '🚀')
 
     // Seed data
-    await seedUsers()
+    const users = await seedUsers()
+    const adminId = users[0]?.id || 'admin-id'
+    await seedCustomization(adminId)
     await seedClients()
     const { categoryMap, subcategoryMap } = await seedCategoriesAndSubcategories()
     await seedEquipment(categoryMap, subcategoryMap)
@@ -822,7 +871,8 @@ async function main() {
 
     log('\n✅ SEEDING COMPLETED SUCCESSFULLY!', '🎉')
     log('Database is now populated with sample data:', '📊')
-    log('  • 6 Users (Admin, Manager, Technician, Employees)')
+    log('  • 2 Users (Admin, Manager)')
+    log('  • Customization Settings (Branding, PDF, Login)')
     log('  • 8 Clients (Event organizers and companies)')
     log('  • 6 Categories with 16 Subcategories')
     log('  • 25 Equipment/Products with descriptions and images')

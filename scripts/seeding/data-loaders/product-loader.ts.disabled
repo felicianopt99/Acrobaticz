@@ -1,0 +1,180 @@
+/**
+ * Product Data Loader
+ * Handles seeding of products/equipment
+ */
+
+import { PrismaClient } from '@prisma/client'
+import { Logger, Validator, FileLoader } from '../utils'
+
+interface ProductData {
+  name: string
+  model?: string
+  serialNumber?: string
+  description?: string
+  dailyRate?: number
+  weeklyRate?: number
+  quantity?: number
+  categoryId?: string
+  categoryName?: string
+  subcategoryId?: string
+  subcategoryName?: string
+  condition?: string
+  location?: string
+}
+
+export class ProductLoader {
+  private prisma: PrismaClient
+  private categoryMap: Map<string, string> = new Map()
+  private subcategoryMap: Map<string, string> = new Map()
+
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma
+  }
+
+  /**
+   * Build category and subcategory maps for reference lookups
+   */
+  async buildMaps() {
+    const categories = await this.prisma.category.findMany()
+    const subcategories = await this.prisma.subcategory.findMany()
+
+    categories.forEach(cat => this.categoryMap.set(cat.name, cat.id))
+    subcategories.forEach(sub => this.subcategoryMap.set(sub.name, sub.id))
+
+    Logger.debug(`Built maps: ${categories.length} categories, ${subcategories.length} subcategories`)
+  }
+
+  /**
+   * Validate product data
+   */
+  private validateProduct(product: ProductData): boolean {
+    const result = Validator.validateRequiredFields(
+      product,
+      ['name'],
+      'Product'
+    )
+
+    if (!result.isValid) {
+      Validator.logValidationErrors(result.errors, product.name)
+      return false
+    }
+
+    return true
+  }
+
+  /**
+   * Resolve category and subcategory IDs
+   */
+  private async resolveCategoryIds(product: ProductData): Promise<{categoryId?: string, subcategoryId?: string}> {
+    let categoryId = product.categoryId
+    let subcategoryId = product.subcategoryId
+
+    // Resolve category by name if not provided
+    if (!categoryId && product.categoryName) {
+      categoryId = this.categoryMap.get(product.categoryName)
+      if (!categoryId) {
+        Logger.warning(`Category not found: ${product.categoryName}`)
+      }
+    }
+
+    // Resolve subcategory by name if not provided
+    if (!subcategoryId && product.subcategoryName) {
+      subcategoryId = this.subcategoryMap.get(product.subcategoryName)
+      if (!subcategoryId) {
+        Logger.warning(`Subcategory not found: ${product.subcategoryName}`)
+      }
+    }
+
+    return { categoryId, subcategoryId }
+  }
+
+  /**
+   * Seed a single product
+   */
+  async seedProduct(productData: ProductData): Promise<any | null> {
+    if (!this.validateProduct(productData)) {
+      return null
+    }
+
+    try {
+      // Check if product already exists (by name and model)
+      const existing = await this.prisma.product.findFirst({
+        where: {
+          name: productData.name,
+          model: productData.model || undefined
+        }
+      })
+
+      if (existing) {
+        Logger.info(`Product '${productData.name}' already exists`)
+        return existing
+      }
+
+      // Resolve category and subcategory
+      const { categoryId, subcategoryId } = await this.resolveCategoryIds(productData)
+
+      // Create product
+      const product = await this.prisma.product.create({
+        data: {
+          name: productData.name,
+          model: productData.model || '',
+          serialNumber: productData.serialNumber || '',
+          description: productData.description || '',
+          dailyRate: productData.dailyRate || 0,
+          weeklyRate: productData.weeklyRate || 0,
+          quantity: productData.quantity || 1,
+          condition: productData.condition || 'Good',
+          location: productData.location || '',
+          categoryId: categoryId || undefined,
+          subcategoryId: subcategoryId || undefined
+        }
+      })
+
+      Logger.success(`Created product: ${productData.name}`)
+      return product
+    } catch (error) {
+      Logger.error(`Failed to create product ${productData.name}`, error as Error)
+      return null
+    }
+  }
+
+  /**
+   * Seed multiple products
+   */
+  async seedProducts(products: ProductData[]): Promise<any[]> {
+    Logger.subsection('Seeding Products')
+    Logger.info(`Processing ${products.length} products...`)
+    
+    // Build reference maps first
+    await this.buildMaps()
+    
+    const createdProducts: any[] = []
+    
+    for (let i = 0; i < products.length; i++) {
+      const product = await this.seedProduct(products[i])
+      if (product) {
+        createdProducts.push(product)
+      }
+      Logger.progress(i + 1, products.length, products[i].name)
+    }
+    
+    Logger.success(`Successfully seeded ${createdProducts.length}/${products.length} products`)
+    return createdProducts
+  }
+
+  /**
+   * Seed products from JSON file
+   */
+  async seedFromJSON(): Promise<any[]> {
+    const data = FileLoader.loadJSON<ProductData[]>('products.json')
+    
+    if (!data || data.length === 0) {
+      Logger.warning('No product data found in JSON file')
+      return []
+    }
+
+    return this.seedProducts(data)
+  }
+}
+
+export default ProductLoader

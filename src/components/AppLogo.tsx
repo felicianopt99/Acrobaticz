@@ -36,7 +36,7 @@ export function AppLogo() {
         <img 
           src={settings.logoUrl} 
           alt={displayName}
-          className="h-8 w-auto max-w-[160px] object-contain"
+          className="h-16 w-auto max-w-[320px] object-contain"
         />
       ) : (
         // Final fallback

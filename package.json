@@ -7,11 +7,17 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:run": "vitest run",
     "db:generate": "prisma generate",
-    "db:seed": "node scripts/seed.js",
-    "db:seed:test": "tsx scripts/seed-comprehensive.ts --full",
-    "db:seed:test:clean": "tsx scripts/seed-comprehensive.ts --full --clean",
-    "db:seed:complete": "tsx scripts/seed-complete.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:seed:clean": "tsx scripts/seed.ts -- --clean",
+    "db:seed:verbose": "tsx scripts/seed.ts -- --verbose",
+    "db:seed:defaults": "tsx scripts/seed.ts -- --defaults",
+    "db:seed:users": "tsx scripts/seed.ts -- --users-only",
+    "db:seed:dry-run": "tsx scripts/seed.ts -- --dry-run",
     "extract:seed": "tsx scripts/extract-seed-data.ts",
     "notifications:generate": "tsx scripts/notifications/run-generators.ts"
   },
@@ -97,16 +103,23 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/papaparse": "^5.3.16",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitest/ui": "^4.0.16",
     "baseline-browser-mapping": "latest",
+    "happy-dom": "^20.0.11",
+    "jsdom": "^27.4.0",
     "lucide-react": "^0.553.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.19.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.16"
   }
 }

@@ -54,10 +54,10 @@ RUN npx prisma generate 2>&1 || echo "Prisma generation will complete on contain
 COPY . .
 
 # Copy scripts folder and make entrypoint executable
-RUN chmod +x ./scripts/dev-entrypoint.sh && \
+RUN chmod +x ./scripts/deployment/dev-entrypoint.sh && \
     mkdir -p /app/dev-storage/cloud-storage /app/dev-storage/temp
 
 EXPOSE 3000
 
-ENTRYPOINT ["sh", "./scripts/dev-entrypoint.sh"]
+ENTRYPOINT ["sh", "./scripts/deployment/dev-entrypoint.sh"]
 CMD ["npm", "run", "dev"]

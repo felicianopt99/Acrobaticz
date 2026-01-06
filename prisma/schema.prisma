@@ -49,6 +49,7 @@ model User {
 model Category {
   id            String          @id @default(cuid())
   name          String
+  description   String?
   icon          String?
   version       Int             @default(1)
   createdBy     String?
@@ -127,6 +128,7 @@ model Client {
   phone            String?
   address          String?
   notes            String?
+  taxId            String?
   partnerId        String?           // Link to a Partner/Agency that this client is associated with
   version          Int               @default(1)
   createdBy        String?

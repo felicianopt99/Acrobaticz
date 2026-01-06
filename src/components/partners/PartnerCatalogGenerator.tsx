@@ -132,7 +132,7 @@ export function PartnerCatalogGenerator({ partnerId, partnerName }: PartnerCatal
   const filteredEquipment = equipment.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || item.category?.name === filterCategory;
+    const matchesCategory = filterCategory === 'all' || item.categoryId === filterCategory;
     return matchesSearch && matchesCategory;
   });
 

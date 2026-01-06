@@ -248,6 +248,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
   const [subrentalQuantity, setSubrentalQuantity] = useState<number>(1);
   const [showNewPartnerForm, setShowNewPartnerForm] = useState<boolean>(false);
   const [newPartnerName, setNewPartnerName] = useState<string>('');
+
   const [isCreatingPartner, setIsCreatingPartner] = useState<boolean>(false);
   
   // ============== NOW CALL HOOKS ==============
@@ -477,6 +478,11 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
   const watchQuoteName = form.watch("name");
   const watchQuoteStatus = form.watch("status");
 
+  // Computed: selected client based on watchClientId
+  const selectedClient = watchClientId && watchClientId !== MANUAL_CLIENT_ENTRY_VALUE 
+    ? clients.find(c => c.id === watchClientId) 
+    : undefined;
+
   // Clean up any invalid items without a type field (safety check for corrupted data)
   useEffect(() => {
     // Skip cleanup for existing quotes to preserve legacy items; mapping above infers missing types
@@ -516,7 +522,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
     const sources = getAvailableBusinessInfoSources(
       watchClientId,
       form.getValues("clientName"),
-      form.getValues("partnerId"), // If you have a partner field
+      undefined, // partnerId not in form schema
       clients,
       [], // partners will be loaded asynchronously, start with empty
       getDefaultBusinessInfo()
@@ -625,7 +631,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
       const sources = getAvailableBusinessInfoSources(
         watchClientId,
         form.getValues("clientName"),
-        form.getValues("partnerId"),
+        undefined, // partnerId not in form schema
         clients,
         partners,
         getDefaultBusinessInfo()
@@ -1050,7 +1056,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
         
         {/* Invoice-Style Header with Business Info Selector */}
         <QuoteFormHeader
-          selectedBusinessInfo={selectedBusinessInfo}
+          selectedBusinessInfo={selectedBusinessInfo || undefined}
           availableSources={availableBusinessSources}
           onSourceChange={setSelectedBusinessInfo}
           quoteNumber={initialData?.quoteNumber}
@@ -1097,7 +1103,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                         <FormControl>
                           <Input 
                             placeholder={quoteNamePh}
-                            size="sm"
+                            
                             {...field} 
                           />
                         </FormControl>
@@ -1114,7 +1120,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                         <FormLabel className="text-xs">{quoteStatusLabel}</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger size="sm">
+                            <SelectTrigger >
                               <SelectValue placeholder={selectStatusPh} />
                             </SelectTrigger>
                           </FormControl>
@@ -1153,7 +1159,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                         <FormControl>
                           <Input 
                             placeholder={venueLocationPh}
-                            size="sm"
+                            
                             {...field} 
                           />
                         </FormControl>
@@ -1171,7 +1177,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                             <FormControl>
                               <Button
                                 variant="outline"
-                                size="sm"
+                                
                                 className={cn(
                                   "w-full justify-start text-left font-normal text-xs",
                                   !field.value && "text-muted-foreground"
@@ -1206,7 +1212,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                             <FormControl>
                               <Button
                                 variant="outline"
-                                size="sm"
+                                
                                 className={cn(
                                   "w-full justify-start text-left font-normal text-xs",
                                   !field.value && "text-muted-foreground"
@@ -1243,7 +1249,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                       <FormLabel className="text-xs">{selectClientLabel}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value || '__manual_client__'}>
                         <FormControl>
-                          <SelectTrigger size="sm">
+                          <SelectTrigger >
                             <SelectValue placeholder={selectClientPh} />
                           </SelectTrigger>
                         </FormControl>
@@ -1272,7 +1278,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                             <FormControl>
                               <Input 
                                 placeholder={clientNamePh}
-                                size="sm"
+                                
                                 {...field} 
                               />
                             </FormControl>
@@ -1290,7 +1296,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                               <Input 
                                 type="email"
                                 placeholder={clientEmailPh}
-                                size="sm"
+                                
                                 {...field} 
                               />
                             </FormControl>
@@ -1307,7 +1313,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                             <FormControl>
                               <Input 
                                 placeholder={clientPhonePh}
-                                size="sm"
+                                
                                 {...field} 
                               />
                             </FormControl>
@@ -1324,7 +1330,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                             <FormControl>
                               <Input 
                                 placeholder={clientAddressPh}
-                                size="sm"
+                                
                                 {...field} 
                               />
                             </FormControl>
@@ -1414,7 +1420,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        
                         className="absolute top-2 right-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
                         onClick={() => remove(index)}
                         aria-label="Remove item"
@@ -2072,7 +2078,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                           <div className="flex gap-2 mt-3">
                             <Button
                               type="button"
-                              size="sm"
+                              
                               onClick={handleCreatePartner}
                               disabled={!newPartnerName.trim() || isCreatingPartner}
                               className="bg-emerald-600 hover:bg-emerald-700"
@@ -2081,7 +2087,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                             </Button>
                             <Button
                               type="button"
-                              size="sm"
+                              
                               variant="ghost"
                               onClick={() => {
                                 setShowNewPartnerForm(false);

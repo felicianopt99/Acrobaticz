@@ -24,6 +24,8 @@ interface BrandingSettings {
   pdfCompanyTagline?: string;
   pdfContactEmail?: string;
   pdfContactPhone?: string;
+  pdfFooterMessage?: string;
+  catalogTermsAndConditions?: string;
   logoUrl?: string;
   useTextLogo?: boolean;
   pdfLogoUrl?: string;
@@ -157,7 +159,7 @@ export async function POST(request: NextRequest) {
       id: item.id,
       name: item.name,
       description: item.description,
-      imageUrl: item.imageUrl,
+      imageUrl: item.imageUrl ?? undefined,
       dailyRate: item.dailyRate,
       category: item.category?.name,
       subcategory: item.subcategory?.name,
@@ -257,7 +259,7 @@ export async function POST(request: NextRequest) {
       ? `${(partnerInfo.name || partnerName)}-equipment-catalog-${new Date().toISOString().split('T')[0]}.pdf`.replace(/\s+/g, '-')
       : `equipment-catalog-${Date.now()}.pdf`;
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer.buffer as ArrayBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': download 

@@ -558,7 +558,7 @@ export function DriveContent({ userId, folderId, folderName }: DriveContentProps
           body: formData,
         });
 
-        let responseData = {};
+        let responseData: any = {};
         try {
           responseData = await res.json();
         } catch (parseErr) {
@@ -568,7 +568,7 @@ export function DriveContent({ userId, folderId, folderName }: DriveContentProps
         
         if (!res.ok) {
           console.error('Upload API error (Status ' + res.status + '):', responseData);
-          const errorMsg = responseData.error || responseData.errors?.[0]?.error || `HTTP ${res.status}: Upload failed`;
+          const errorMsg = (responseData as any).error || (responseData as any).errors?.[0]?.error || `HTTP ${res.status}: Upload failed`;
           throw new Error(errorMsg);
         }
 
