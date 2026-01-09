@@ -76,11 +76,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Copy custom server and scripts
 COPY --from=builder --chown=nextjs:nodejs /app/server.js ./server.js
-COPY --from=builder --chown=nextjs:nodejs /app/backup-helper.sh ./backup-helper.sh
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
 # Fix permissions
-RUN chmod +x ./scripts/docker-entrypoint.sh ./backup-helper.sh
+RUN chmod +x ./scripts/deployment/docker-entrypoint.sh 2>/dev/null || true
 
 USER nextjs
 
@@ -93,4 +92,4 @@ ENTRYPOINT ["/sbin/tini", "--"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -qO- http://localhost:3000/api/health || exit 1
 
-CMD ["sh", "./scripts/docker-entrypoint.sh"]
+CMD ["sh", "./scripts/deployment/docker-entrypoint.sh"]

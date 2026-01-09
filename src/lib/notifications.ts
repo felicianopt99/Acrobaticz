@@ -100,12 +100,9 @@ export async function sendNotificationToTeam(
   payload: Omit<NotificationPayload, 'userId'>
 ) {
   try {
-    // Get event with staff
+    // Get event
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      include: {
-        eventStaff: true,
-      },
     });
 
     if (!event) {
@@ -114,18 +111,7 @@ export async function sendNotificationToTeam(
 
     const notifications = [];
 
-    // Send to event staff
-    if (event.eventStaff && event.eventStaff.length > 0) {
-      for (const staffMember of event.eventStaff) {
-        const notification = await sendNotificationToUser({
-          ...payload,
-          userId: staffMember.userId,
-        });
-        notifications.push(notification);
-      }
-    }
-
-    // Also send to managers and admins
+    // Send to managers and admins
     const managers = await prisma.user.findMany({
       where: {
         role: { in: ['Manager', 'Admin'] },
@@ -202,11 +188,7 @@ export async function createStatusChangeNotification(
     const rental = await prisma.rental.findUnique({
       where: { id: rentalId },
       include: {
-        event: {
-          include: {
-            eventStaff: true,
-          },
-        },
+        event: true,
         equipment: true,
       },
     });
@@ -224,22 +206,6 @@ export async function createStatusChangeNotification(
 
     const title = `📋 ${rental.equipment.name} - Status Changed`;
     const message = `Status changed from ${statusMessages[oldStatus]} to ${statusMessages[newStatus]}`;
-
-    // Send to technician assigned
-    if (rental.event.eventStaff && rental.event.eventStaff.length > 0) {
-      for (const staff of rental.event.eventStaff) {
-        await sendNotificationToUser({
-          userId: staff.userId,
-          type: 'status_change',
-          title,
-          message,
-          priority: newStatus === 'checked-in' ? 'high' : 'medium',
-          entityType: 'rental',
-          entityId: rentalId,
-          actionUrl: `/rentals/${rentalId}/prep`,
-        });
-      }
-    }
 
     // Send to managers
     await sendNotificationToRole('Manager', {
@@ -267,9 +233,6 @@ export async function createEventTimelineNotification(
   try {
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      include: {
-        eventStaff: true,
-      },
     });
 
     if (!event) {
@@ -376,7 +339,6 @@ export async function createCriticalEventNotification(eventId: string) {
       where: { id: eventId },
       include: {
         rentals: true,
-        eventStaff: true,
       },
     });
 
@@ -461,11 +423,19 @@ export async function createLowStockNotification(
  */
 export async function createEquipmentAvailableNotification(
   equipmentId: string,
-  equipmentName: string
+  equipmentName: string,
+  quantityByStatus?: { good: number; damaged: number; maintenance: number }
 ) {
   try {
+    let message = `${equipmentName} is back in service and available for rental.`;
+    
+    // Include quantity breakdown if provided
+    if (quantityByStatus) {
+      const total = quantityByStatus.good + quantityByStatus.damaged + quantityByStatus.maintenance;
+      message += ` Status: ${quantityByStatus.good}/${total} units in good condition.`;
+    }
+    
     const title = '✅ Equipment Available';
-    const message = `${equipmentName} is back in service and available for rental.`;
 
     await sendNotificationToRole('Manager', {
       type: 'equipment_available',

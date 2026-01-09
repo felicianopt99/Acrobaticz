@@ -17,10 +17,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle } from "lucide-react";
-import type { Event } from "@/types";
+import type { Event, QuantityByStatus } from "@/types";
 import { useAppContext, useAppDispatch } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
+import { getStatusBreakdownString } from "@/lib/equipment-utils";
 
 const addEquipmentSchema = z.object({
   equipmentId: z.string().min(1, "Please select an equipment."),
@@ -78,10 +79,18 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
       });
       
       const rentedOutDuringPeriod = overlappingRentals.reduce((sum, r) => sum + r.quantityRented, 0);
-      const availableQuantity = targetEquipment.quantity - rentedOutDuringPeriod;
+      
+      // Use only 'good' status units for availability
+      const qbs = (targetEquipment.quantityByStatus || {
+        good: targetEquipment.quantity || 0,
+        damaged: 0,
+        maintenance: 0,
+      }) as QuantityByStatus;
+      
+      const availableQuantity = qbs.good - rentedOutDuringPeriod;
 
       if (quantityToRent > availableQuantity) {
-        setAvailabilityConflict(`Not enough stock. Available in this period: ${availableQuantity}, Requested: ${quantityToRent}.`);
+        setAvailabilityConflict(`Not enough stock. Available units in good condition: ${availableQuantity}, Requested: ${quantityToRent}.`);
       } else {
         setAvailabilityConflict(null);
       }
@@ -122,26 +131,47 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
             <FormField
               control={form.control}
               name="equipmentId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Equipment</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select equipment to add" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {equipment.map(eq => (
-                        <SelectItem key={eq.id} value={eq.id}>
-                          {eq.name} (Total Stock: {eq.quantity})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const selectedItem = equipment.find(e => e.id === field.value);
+                const qbs = (selectedItem?.quantityByStatus || {
+                  good: selectedItem?.quantity || 0,
+                  damaged: 0,
+                  maintenance: 0,
+                }) as QuantityByStatus;
+                
+                return (
+                  <FormItem>
+                    <FormLabel>Equipment</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select equipment to add" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {equipment.map(eq => {
+                          const eqbs = (eq.quantityByStatus || {
+                            good: eq.quantity || 0,
+                            damaged: 0,
+                            maintenance: 0,
+                          }) as QuantityByStatus;
+                          return (
+                            <SelectItem key={eq.id} value={eq.id}>
+                              {eq.name} ({eqbs.good} good / {eq.quantity} total)
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    {selectedItem && (
+                      <div className="text-xs text-muted-foreground mt-2">
+                        Status breakdown: {getStatusBreakdownString(qbs)}
+                      </div>
+                    )}
+                  </FormItem>
+                );
+              }}
             />
             <FormField
               control={form.control}
@@ -174,5 +204,3 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
     </Dialog>
   );
 }
-
-    

@@ -93,23 +93,38 @@ export function DashboardContent() {
     }).length;
 
     const acceptedQuotes = quotes.filter(q => q.status === 'Accepted');
+    
+    // Get events with revenue (either from associated quote or direct totalRevenue)
+    const eventsWithRevenue = events.filter(e => (e as any).totalRevenue > 0 || (e as any).quoteId);
 
-    // Monthly Revenue (last 6 months)
+    // Monthly Revenue (last 6 months) - combine from quotes AND events
     const monthlyRevenue: { month: string; revenue: number }[] = [];
     for (let i = 5; i >= 0; i--) {
         const date = subMonths(today, i);
         const month = getMonth(date);
         const year = getYear(date);
         
-        const revenue = acceptedQuotes
+        // Revenue from accepted quotes
+        const quoteRevenue = acceptedQuotes
             .filter(q => getMonth(new Date(q.createdAt ?? 0)) === month && getYear(new Date(q.createdAt ?? 0)) === year)
             .reduce((sum, q) => sum + q.totalAmount, 0);
 
-        monthlyRevenue.push({ month: format(date, 'MMM'), revenue });
+        // Revenue from events (created in this month, excluding those from quotes to avoid double-counting)
+        const eventRevenue = eventsWithRevenue
+            .filter(e => {
+                const eventMonth = getMonth(new Date((e as any).startDate));
+                const eventYear = getYear(new Date((e as any).startDate));
+                return eventMonth === month && eventYear === year;
+            })
+            .reduce((sum, e) => sum + ((e as any).totalRevenue || 0), 0);
+
+        monthlyRevenue.push({ month: format(date, 'MMM'), revenue: quoteRevenue + eventRevenue });
     }
 
-    // Top 5 Clients
+    // Top 5 Clients - combine from quotes and events
     const clientRevenue: { [id: string]: { name: string; revenue: number } } = {};
+    
+    // Add revenue from quotes
     acceptedQuotes.forEach(q => {
         if (q.clientId) {
             const client = clients.find(c => c.id === q.clientId);
@@ -121,6 +136,20 @@ export function DashboardContent() {
             }
         }
     });
+
+    // Add revenue from events
+    eventsWithRevenue.forEach(e => {
+        if (e.clientId) {
+            const client = clients.find(c => c.id === e.clientId);
+            if (client) {
+                if (!clientRevenue[client.id]) {
+                    clientRevenue[client.id] = { name: client.name, revenue: 0 };
+                }
+                clientRevenue[client.id].revenue += (e as any).totalRevenue || 0;
+            }
+        }
+    });
+
     const topClients = Object.values(clientRevenue)
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5);
@@ -147,11 +176,18 @@ export function DashboardContent() {
                isWithinInterval(eventStartDate, { start: weekStart, end: weekEnd });
     });
 
+    // Count total units in maintenance across all equipment (from quantityByStatus)
+    let totalUnitsInMaintenance = 0;
+    equipment.forEach(eq => {
+      const qbs = (eq as any).quantityByStatus || { good: 0, damaged: 0, maintenance: 0 };
+      totalUnitsInMaintenance += qbs.maintenance || 0;
+    });
+
     return {
       totalEquipment: equipment.length,
       totalClients: clients.length,
       upcomingEvents: upcomingEventsCount,
-      maintenanceItems: equipment.filter(e => e.status === 'maintenance').length,
+      maintenanceItems: totalUnitsInMaintenance,
       assignedEventsThisWeek,
       monthlyRevenue,
       topClients,
@@ -257,7 +293,7 @@ export function DashboardContent() {
                 <StatCard title="Total Equipment" value={analyticsData.totalEquipment} icon={Package} href="/inventory" />
                 <StatCard title="Total Clients" value={analyticsData.totalClients} icon={Users} href="/clients" />
                 <StatCard title="Upcoming Events" value={analyticsData.upcomingEvents} icon={CalendarClock} description="In next 7 days" href="/events" />
-                <StatCard title="Needs Maintenance" value={analyticsData.maintenanceItems} icon={Wrench} href="/maintenance" />
+                <StatCard title="Units in Maintenance" value={analyticsData.maintenanceItems} icon={Wrench} description="Total units needing service" href="/maintenance" />
               </div>
 
 

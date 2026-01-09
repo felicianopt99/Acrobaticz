@@ -3,6 +3,27 @@ import { parse } from 'url'
 import next from 'next'
 import { Server as SocketIOServer } from 'socket.io'
 import jwt from 'jsonwebtoken'
+import fs from 'fs'
+import path from 'path'
+
+// Load secrets from Docker secret files if not already set
+try {
+  const secrets = ['jwt_secret', 'deepl_api_key']
+  const secretDir = '/run/secrets'
+  
+  for (const secret of secrets) {
+    const envName = secret.toUpperCase()
+    if (!process.env[envName]) {
+      const secretPath = path.join(secretDir, secret)
+      if (fs.existsSync(secretPath)) {
+        const value = fs.readFileSync(secretPath, 'utf-8').trim()
+        process.env[envName] = value
+      }
+    }
+  }
+} catch (err) {
+  console.error('Failed to load secrets:', err.message)
+}
 
 // Stable PrismaClient singleton
 import { PrismaClient } from '@prisma/client'

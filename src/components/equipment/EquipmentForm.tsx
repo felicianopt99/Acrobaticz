@@ -22,7 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import type { EquipmentItem, Category, Subcategory, EquipmentStatus, EquipmentType } from "@/types";
+import type { EquipmentItem, Category, Subcategory, EquipmentStatus, EquipmentType, QuantityByStatus } from "@/types";
 import { EQUIPMENT_STATUSES } from "@/lib/constants";
 import { useAppContext, useAppDispatch } from "@/contexts/AppContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -31,6 +31,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState, useMemo, useCallback, forwardRef } from "react";
 import AIEquipmentAssistant from "./AIEquipmentAssistant";
+import { getStatusBreakdownString } from "@/lib/equipment-utils";
 import { 
   Eye, 
   EyeOff, 
@@ -974,6 +975,24 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                 </FormItem>
               )}
             />
+            {/* Display quantity breakdown if editing existing equipment */}
+            {initialData && (
+              <div className="mt-4 p-4 bg-muted rounded-lg border border-border">
+                <p className="text-sm font-semibold mb-2">Quantity Breakdown by Status</p>
+                <p className="text-sm text-muted-foreground">
+                  {getStatusBreakdownString(
+                    (initialData.quantityByStatus || {
+                      good: initialData.quantity || 0,
+                      damaged: 0,
+                      maintenance: 0,
+                    }) as QuantityByStatus
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Use the Maintenance Log feature to update individual unit statuses.
+                </p>
+              </div>
+            )}
           </SectionCard>
 
           {/* MEDIA SECTION */}

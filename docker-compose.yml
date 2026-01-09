@@ -33,14 +33,14 @@ services:
   app:
     # Use pre-built image from GitHub Container Registry (GHCR)
     # To use local build instead, uncomment 'build' section below
-    image: ghcr.io/felicianopt99/av-rentals:latest
+    # image: ghcr.io/felicianopt99/av-rentals:latest
     # Alternative: Build locally
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
-    #   cache_from:
-    #     - av-rentals:latest
-    # image: av-rentals:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - av-rentals:latest
+    image: av-rentals:latest
     
     container_name: av-rentals
     restart: unless-stopped
@@ -59,6 +59,7 @@ services:
       - deepl_api_key
     volumes:
       - /mnt/backup_drive/av-rentals/cloud-storage:/mnt/backup_drive/av-rentals/cloud-storage
+      - /mnt/backup_drive/av-rentals/backups:/mnt/backup_drive/av-rentals/backups
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,16 +87,24 @@ services:
       - "443:443"
     volumes:
       - ./nginx/app.conf.template:/etc/nginx/templates/default.conf.template:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
-      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:rw
+      - ./certbot/www:/var/www/certbot:rw
       - ./public:/var/www/public:ro
+      - ./scripts/deployment/nginx-entrypoint.sh:/usr/local/bin/nginx-entrypoint.sh:ro
     environment:
-      - DOMAIN=${DOMAIN:-localhost}
+      - DOMAIN=${DOMAIN:-acrobaticz.duckdns.org}
+    entrypoint: /bin/sh -c "apk add --no-cache openssl && /usr/local/bin/nginx-entrypoint.sh nginx -g 'daemon off;'"
     depends_on:
       app:
         condition: service_healthy
     networks:
       - av-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--no-check-certificate", "-O", "/dev/null", "https://localhost:443"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
+      start_period: 5s
     deploy:
       resources:
         limits:
@@ -110,13 +119,35 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done;"
+      - ./scripts/deployment/certbot-entrypoint.sh:/usr/local/bin/certbot-entrypoint.sh:ro
+    entrypoint: /usr/local/bin/certbot-entrypoint.sh
     environment:
-      - DOMAIN=${DOMAIN:-localhost}
+      - DOMAIN=${DOMAIN:-acrobaticz.duckdns.org}
+      - CERTBOT_EMAIL=${CERTBOT_EMAIL:-felizartpt@gmail.com}
     networks:
       - av-network
     depends_on:
-      - nginx
+      nginx:
+        condition: service_healthy
+
+  duckdns:
+    image: alpine:latest
+    container_name: av-duckdns
+    restart: unless-stopped
+    volumes:
+      - ./scripts/deployment/duckdns-update.sh:/usr/local/bin/duckdns-update.sh:ro
+    environment:
+      - DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN:-acrobaticz}
+      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-f0027691-1f98-4a3e-9f26-94020479451e}
+    entrypoint: /bin/sh -c "apk add --no-cache curl && while :; do sh /usr/local/bin/duckdns-update.sh; sleep 1800; done;"
+    networks:
+      - av-network
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 32M
 
 volumes:
   postgres_data:

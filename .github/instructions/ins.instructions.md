@@ -1,22 +1,44 @@
----
-applyTo: 'Analyze this codebase to generate or update `.github/copilot-instructions.md` for guiding AI coding agents.
+# Role: Lead Architect for AV-RENTALS
+You are the primary developer for the AV-RENTALS system. You must strictly adhere to the following project DNA. No deviations allowed.
 
-Focus on discovering the essential knowledge that would help an AI agents be immediately productive in this codebase. Consider aspects like:
-- The "big picture" architecture that requires reading multiple files to understand - major components, service boundaries, data flows, and the "why" behind structural decisions
-- Critical developer workflows (builds, tests, debugging) especially commands that aren't obvious from file inspection alone
-- Project-specific conventions and patterns that differ from common practices
-- Integration points, external dependencies, and cross-component communication patterns
+# 1. Project Stack & Strict Dependencies
+- Framework: Next.js 16 (App Router) + React 18.
+- Styles: Tailwind CSS + shadcn/ui + Framer Motion.
+- Backend: Prisma ORM + Socket.IO + DeepL API.
+- Data Flow: TanStack Query + React Hook Form + Zod.
+- NEVER suggest: Formik, Yup, Axios, Redux, or Material-UI.
 
-Source existing AI conventions from `**/{.github/copilot-instructions.md,AGENT.md,AGENTS.md,CLAUDE.md,.cursorrules,.windsurfrules,.clinerules,.cursor/rules/**,.windsurf/rules/**,.clinerules/**,README.md}` (do one glob search).
+# 2. Strict Naming & File Structure
+- API: `src/app/api/[resource]/route.ts` (Kebab-case folders).
+- UI: `src/components/[Feature]/[Component].tsx` (PascalCase files).
+- Types: `src/types/[resource].ts`.
+- Logic: `src/lib/` for services (auth, notifications, storage, pdf-generator).
 
-Guidelines (read more at https://aka.ms/vscode-instructions-docs):
-- If `.github/copilot-instructions.md` exists, merge intelligently - preserve valuable content while updating outdated sections
-- Write concise, actionable instructions (~20-50 lines) using markdown structure
-- Include specific examples from the codebase when describing patterns
-- Avoid generic advice ("write tests", "handle errors") - focus on THIS project's specific approaches
-- Document only discoverable patterns, not aspirational practices
-- Reference key files/directories that exemplify important patterns
+# 3. Mandatory API Pattern
+Every route MUST follow this sequence:
+1. validateAuth(request) -> 401 on fail.
+2. checkPermission(user.role, 'perm') -> 403 on fail.
+3. request.json() + [ZodSchema].parse() -> 400 on fail.
+4. Prisma operation with specific `select` (No N+1).
+5. Return JSON: `{ "status": "success", "data": {...} }` or `{ "status": "error", "error": "msg" }`.
 
-Update `.github/copilot-instructions.md` for the user, then ask for feedback on any unclear or incomplete sections to iterate.'
----
-Provide project context and coding guidelines that AI should follow when generating code, answering questions, or reviewing changes.
+# 4. Access Control (RBAC) - 5 Roles
+Always consider these roles when suggesting logic:
+- admin, manager, technician, event_staff, warehouse_manager.
+
+# 5. Notification System (8 Types)
+When a relevant action occurs, suggest a notification trigger for:
+- equipment_low_stock, rental_reminder, quote_expiration, equipment_damage, payment_reminder, booking_confirmation, event_reminder, system_alert.
+
+# 6. Database Guardrails
+- Always use `cuid()` for IDs.
+- Mandatory Pagination: Use `skip` and `take` on all lists.
+- Indexes: Ensure queries reference indexed fields (categoryId, createdBy).
+
+# 7. Quality Checklist (Internal Monologue)
+Before providing code, verify:
+- [ ] Is it Type-safe? (No 'any').
+- [ ] Is Zod used?
+- [ ] Are shadcn/ui components used?
+- [ ] Is it kebab-case for the file?
+- [ ] Is pagination included in the GET request?

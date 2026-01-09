@@ -11,7 +11,6 @@ import {
   UserLoader,
   CategoryLoader,
   ClientLoader,
-  ProductLoader,
   CustomizationLoader
 } from '../data-loaders'
 
@@ -63,9 +62,9 @@ export class SeedingOrchestrator {
       }
 
       // Step 5: Seed products
-      if (this.config.seedProducts) {
-        await this.seedProducts()
-      }
+      // if (this.config.seedProducts) {
+      //   await this.seedProducts()
+      // }
 
       // Step 6: Seed customization
       if (this.config.seedCustomization) {
@@ -137,14 +136,15 @@ export class SeedingOrchestrator {
 
   /**
    * Seed products
+   * Disabled: ProductLoader doesn't exist (product model not implemented)
    */
-  private async seedProducts(): Promise<void> {
-    const loader = new ProductLoader(this.prisma)
-
-    if (this.config.useJSONData) {
-      await loader.seedFromJSON()
-    }
-  }
+  // private async seedProducts(): Promise<void> {
+  //   const loader = new ProductLoader(this.prisma)
+  //
+  //   if (this.config.useJSONData) {
+  //     await loader.seedFromJSON()
+  //   }
+  // }
 
   /**
    * Seed customization settings

@@ -10,8 +10,8 @@
 set -e
 
 # Configuration
-BACKUP_DIR="/mnt/server_data/backups/daily"
-BACKUP_LOGS="/mnt/server_data/backups/logs"
+BACKUP_DIR="/mnt/backup_drive/av-rentals/backups/daily"
+BACKUP_LOGS="/mnt/backup_drive/av-rentals/backups/logs"
 DB_USER="avrentals_user"
 DB_NAME="avrentals_db"
 DB_HOST="postgres"

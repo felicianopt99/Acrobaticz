@@ -324,13 +324,15 @@ async function seedClients() {
 
   const created = []
   for (const clientData of clients) {
+    // Remove taxId if it doesn't exist in schema
+    const { taxId, ...clientDataClean } = clientData as any
     const existing = await prisma.client.findFirst({ where: { name: clientData.name } })
     if (existing) {
       log(`Client '${clientData.name}' already exists`, 'ℹ️')
       created.push(existing)
       continue
     }
-    const client = await prisma.client.create({ data: clientData })
+    const client = await prisma.client.create({ data: clientDataClean })
     log(`Created client: ${clientData.name}`, '✅')
     created.push(client)
   }

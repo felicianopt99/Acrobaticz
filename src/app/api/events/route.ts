@@ -10,6 +10,8 @@ const EventSchema = z.object({
   startDate: z.string().transform(str => new Date(str)),
   endDate: z.string().transform(str => new Date(str)),
   agencyId: z.string().optional(),
+  quoteId: z.string().optional(),
+  totalRevenue: z.number().default(0),
 })
 
 // GET /api/events - Get all events
@@ -25,6 +27,7 @@ export async function GET(request: NextRequest) {
       include: {
         client: true,
         agency: true,
+        quote: true,
         rentals: {
           include: {
             equipment: true,
@@ -64,12 +67,30 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Agency not found' }, { status: 400 })
       }
     }
+
+    // Calculate revenue
+    let totalRevenue = validatedData.totalRevenue || 0
+
+    // If quoteId provided, get revenue from quote
+    if (validatedData.quoteId) {
+      const quote = await prisma.quote.findUnique({
+        where: { id: validatedData.quoteId },
+      })
+      if (quote) {
+        // Use the quote's total amount as the event revenue
+        totalRevenue = quote.totalAmount
+      }
+    }
     
     const event = await prisma.event.create({
-      data: validatedData,
+      data: {
+        ...validatedData,
+        totalRevenue,
+      },
       include: {
         client: true,
         rentals: true,
+        quote: true,
       },
     })
     
@@ -109,11 +130,21 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: 'Agency not found' }, { status: 400 })
       }
     }
-    
+
     // Handle null/undefined agencyId
     const dataToUpdate: any = { ...validatedData }
     if (validatedData.agencyId === '') {
       dataToUpdate.agencyId = null
+    }
+
+    // Calculate revenue if quoteId is being updated
+    if (validatedData.quoteId) {
+      const quote = await prisma.quote.findUnique({
+        where: { id: validatedData.quoteId },
+      })
+      if (quote) {
+        dataToUpdate.totalRevenue = quote.totalAmount
+      }
     }
     
     const event = await prisma.event.update({
@@ -122,6 +153,7 @@ export async function PUT(request: NextRequest) {
       include: {
         client: true,
         rentals: true,
+        quote: true,
       },
     })
     

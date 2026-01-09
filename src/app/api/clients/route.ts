@@ -22,6 +22,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    console.log('[API] GET /api/clients - Fetching all clients from database')
+    
     const clients = await prisma.client.findMany({
       include: {
         events: true,
@@ -36,9 +38,10 @@ export async function GET(request: NextRequest) {
       orderBy: { name: 'asc' },
     })
     
+    console.log('[API] GET /api/clients - Found clients:', clients.length)
     return NextResponse.json(clients)
   } catch (error) {
-    console.error('Error fetching clients:', error)
+    console.error('[API] GET /api/clients - ERROR:', error)
     return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 })
   }
 }
@@ -52,20 +55,27 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
+    console.log('[API] POST /api/clients - Request body:', JSON.stringify(body, null, 2))
+    
     const validatedData = ClientSchema.parse(body)
+    console.log('[API] POST /api/clients - Validated data:', JSON.stringify(validatedData, null, 2))
     
     // Handle partnerId
     let partnerId: string | undefined = undefined
     if (validatedData.partnerId && validatedData.partnerId !== 'none') {
+      console.log('[API] POST /api/clients - Verifying partner:', validatedData.partnerId)
       // Verify the partner exists
       const partnerExists = await prisma.partner.findUnique({
         where: { id: validatedData.partnerId },
       })
       if (!partnerExists) {
+        console.log('[API] POST /api/clients - Partner not found:', validatedData.partnerId)
         return NextResponse.json({ error: 'The specified partner does not exist' }, { status: 400 })
       }
       partnerId = validatedData.partnerId
     }
+    
+    console.log('[API] POST /api/clients - Creating client in database:', { name: validatedData.name, partnerId })
     
     const client = await prisma.client.create({
       data: {
@@ -79,10 +89,12 @@ export async function POST(request: NextRequest) {
       },
     })
     
+    console.log('[API] POST /api/clients - Client created successfully:', JSON.stringify(client, null, 2))
     return NextResponse.json(client, { status: 201 })
   } catch (error) {
-    console.error('Error creating client:', error)
+    console.error('[API] POST /api/clients - ERROR:', error)
     if (error instanceof z.ZodError) {
+      console.error('[API] POST /api/clients - Validation error:', error.errors)
       return NextResponse.json({ error: 'Invalid data', details: error.errors }, { status: 400 })
     }
     return NextResponse.json({ error: 'Failed to create client' }, { status: 500 })

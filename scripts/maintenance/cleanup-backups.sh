@@ -6,8 +6,8 @@
 
 set -e
 
-BACKUP_DIR="/mnt/server_data/backups/daily"
-BACKUP_LOGS="/mnt/server_data/backups/logs"
+BACKUP_DIR="/mnt/backup_drive/av-rentals/backups/daily"
+BACKUP_LOGS="/mnt/backup_drive/av-rentals/backups/logs"
 RETENTION_DAYS=5
 
 mkdir -p "$BACKUP_LOGS"

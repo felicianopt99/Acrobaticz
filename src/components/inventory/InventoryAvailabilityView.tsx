@@ -1,6 +1,3 @@
-
-"use client";
-
 import { useState, useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,6 +9,7 @@ import { format } from 'date-fns';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import type { QuantityByStatus } from '@/types';
 
 import { useTranslate } from '@/contexts/TranslationContext';
 export function InventoryAvailabilityView() {
@@ -78,10 +76,17 @@ export function InventoryAvailabilityView() {
       if (dateTo && new Date(event.endDate) > new Date(dateTo)) return null;
 
       const eq = equipment.find(e => e.id === selectedEquipment);
-      const isOverbooked = rental.quantityRented > (eq?.quantity || 0);
+      const qbs = (eq?.quantityByStatus || {
+        good: eq?.quantity || 0,
+        damaged: 0,
+        maintenance: 0,
+      }) as QuantityByStatus;
+      // Only use 'good' status units for availability
+      const availableQuantity = qbs.good;
+      const isOverbooked = rental.quantityRented > availableQuantity;
       return {
         id: rental.id,
-        title: `${event.name} (${rental.quantityRented})`,
+        title: `${event.name} (${rental.quantityRented}/${availableQuantity})`,
         start: event.startDate,
         end: event.endDate,
         backgroundColor: isOverbooked ? 'hsl(var(--destructive) / 0.6)' : 'hsl(var(--primary) / 0.4)',

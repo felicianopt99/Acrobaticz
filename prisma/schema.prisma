@@ -79,28 +79,31 @@ model Subcategory {
 }
 
 model EquipmentItem {
-  id              String           @id @default(cuid())
-  name            String
-  description     String
-  descriptionPt   String?
-  categoryId      String
-  subcategoryId   String?
-  quantity        Int
-  status          String
-  location        String
-  imageUrl        String?
-  dailyRate       Float            @default(0)
-  type            String
-  version         Int              @default(1)
-  createdBy       String?
-  updatedBy       String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  category        Category         @relation(fields: [categoryId], references: [id])
-  subcategory     Subcategory?     @relation(fields: [subcategoryId], references: [id])
-  maintenanceLogs MaintenanceLog[]
-  quoteItems      QuoteItem[]
-  rentals         Rental[]
+  id                String           @id @default(cuid())
+  name              String
+  description       String
+  descriptionPt     String?
+  categoryId        String
+  subcategoryId     String?
+  quantity          Int
+  status            String                 // DEPRECATED: Use quantityByStatus instead
+  quantityByStatus  Json                   @default("{\"good\": 0, \"damaged\": 0, \"maintenance\": 0}")  // Breakdown: {good: N, damaged: N, maintenance: N}
+  location          String
+  imageUrl          String?
+  imageData         String?          // Base64 encoded image
+  imageContentType  String?          // MIME type (e.g., image/jpeg)
+  dailyRate         Float            @default(0)
+  type              String
+  version           Int              @default(1)
+  createdBy         String?
+  updatedBy         String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  category          Category         @relation(fields: [categoryId], references: [id])
+  subcategory       Subcategory?     @relation(fields: [subcategoryId], references: [id])
+  maintenanceLogs   MaintenanceLog[]
+  quoteItems        QuoteItem[]
+  rentals           Rental[]
 
   @@index([categoryId])
   @@index([subcategoryId])
@@ -155,6 +158,8 @@ model Event {
   startDate     DateTime
   endDate       DateTime
   assignedTo    String?
+  quoteId       String?        // Optional: Link to the quote used to create this event
+  totalRevenue  Float          @default(0) // Total revenue for this event (from quote or auto-calculated)
   version       Int            @default(1)
   createdBy     String?
   updatedBy     String?
@@ -162,6 +167,7 @@ model Event {
   updatedAt     DateTime       @updatedAt
   client        Client         @relation(fields: [clientId], references: [id])
   agency        Partner?       @relation("EventAgency", fields: [agencyId], references: [id])
+  quote         Quote?         @relation(fields: [quoteId], references: [id])
   subClients    EventSubClient[] // Multiple sub-clients for this event
   rentals       Rental[]
   subrentals    Subrental[]
@@ -169,6 +175,7 @@ model Event {
 
   @@index([clientId])
   @@index([agencyId])
+  @@index([quoteId])
   @@index([startDate])
   @@index([endDate])
   @@index([assignedTo])
@@ -215,6 +222,7 @@ model Quote {
   client         Client?        @relation(fields: [clientId], references: [id])
   items          QuoteItem[]
   jobReferences  JobReference[]
+  events         Event[]        // Events created from this quote
 
   @@index([clientId])
   @@index([status])

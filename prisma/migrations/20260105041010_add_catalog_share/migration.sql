@@ -1,6 +1,3 @@
--- AlterTable
-ALTER TABLE "EventSubClient" ALTER COLUMN "createdAt" SET DATA TYPE TIMESTAMP(3);
-
 -- CreateTable
 CREATE TABLE "CatalogShare" (
     "id" TEXT NOT NULL,

@@ -21,10 +21,16 @@ vi.mock('next/navigation', () => ({
 // Mock Next.js image
 vi.mock('next/image', () => ({
   default: (props: any) => {
-    // eslint-disable-next-line jsx-a11y/alt-text
-    return <img {...props} />
+    // Return a simple object that acts like an img element
+    return Object.assign(Object.create(Object.prototype), {
+      ...props,
+      tagName: 'IMG'
+    })
   },
 }))
 
 // Mock environment variables
-process.env.NODE_ENV = 'test'
+Object.defineProperty(process.env, 'NODE_ENV', {
+  value: 'test',
+  configurable: true,
+})

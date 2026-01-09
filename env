@@ -1,9 +1,15 @@
 GEMINI_API_KEY=AIzaSyCT1u6CRPw3TVcOZmNfDzKD8D0WidGreis
 # Development Environment Configuration
-DOMAIN="acrobaticzrental.duckdns.org"
+DOMAIN="acrobaticz.duckdns.org"
 DATABASE_URL="postgresql://avrentals_user:avrentals_pass@postgres:5432/avrentals_db"
 JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
 
+# DuckDNS Configuration
+DUCKDNS_DOMAIN="acrobaticz"
+DUCKDNS_TOKEN="f0027691-1f98-4a3e-9f26-94020479451e"
+
+# Certbot Configuration
+CERTBOT_EMAIL="felizartpt@gmail.com"
 
 # Google AI API Keys (Optional)
 GOOGLE_GENERATIVE_AI_API_KEY="AIzaSyC6qWeqkyQLQLefQDkLffEt9OhQ24LEiuk"
@@ -20,6 +26,8 @@ EXTERNAL_STORAGE_TEMP="/mnt/backup_drive/av-rentals/cloud-storage/temp"
 STORAGE_CHECK_INTERVAL="300000"
 DEFAULT_STORAGE_QUOTA="53687091200"
 ENABLE_STORAGE_DISK_CHECK="true"
+APP_DATA_PATH="/mnt/backup_drive/av-rentals/app-data"
+BACKUP_PATH="/mnt/backup_drive/av-rentals/backups"
 
 # Environment
 NODE_ENV="development"

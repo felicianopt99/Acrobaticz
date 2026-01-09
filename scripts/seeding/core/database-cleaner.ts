@@ -120,7 +120,7 @@ export class DatabaseCleaner {
       counts.equipment = await this.prisma.equipmentItem.count()
       counts.rentals = await this.prisma.rental.count()
       
-      Logger.debug('Table counts:', counts)
+      Logger.debug(`Table counts: ${JSON.stringify(counts)}`)
     } catch (error) {
       Logger.error('Failed to get table counts', error as Error)
     }

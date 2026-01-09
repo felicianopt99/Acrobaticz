@@ -7,6 +7,13 @@ import { z } from 'zod'
 import fs from 'fs/promises'
 import path from 'path'
 import { requireReadAccess, requirePermission } from '@/lib/api-auth'
+import { initializeQuantityByStatus, ensureQuantityByStatus } from '@/lib/equipment-utils'
+
+const QuantityByStatusSchema = z.object({
+  good: z.number().min(0),
+  damaged: z.number().min(0),
+  maintenance: z.number().min(0),
+}).optional();
 
 const EquipmentSchema = z.object({
   name: z.string().min(1),
@@ -15,6 +22,7 @@ const EquipmentSchema = z.object({
   subcategoryId: z.string().optional(),
   quantity: z.number().min(0),
   status: z.enum(['good', 'damaged', 'maintenance']),
+  quantityByStatus: QuantityByStatusSchema,
   location: z.string().min(1),
   imageUrl: z.string().optional(),
   dailyRate: z.number().min(0),
@@ -22,8 +30,8 @@ const EquipmentSchema = z.object({
   version: z.number().optional(),
 })
 
-// Utility function to download and save image locally
-async function downloadImage(imageUrl: string): Promise<string> {
+// Utility function to fetch and encode image as base64
+async function encodeImageToBase64(imageUrl: string): Promise<{ data: string; contentType: string } | null> {
   try {
     const response = await fetch(imageUrl);
     if (!response.ok) {
@@ -36,18 +44,18 @@ async function downloadImage(imageUrl: string): Promise<string> {
     }
 
     const buffer = await response.arrayBuffer();
-    const extension = path.extname(new URL(imageUrl).pathname) || '.jpg';
-    const filename = `equipment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}${extension}`;
-    const filepath = path.join(process.cwd(), 'public', 'images', filename);
-
-    await fs.writeFile(filepath, Buffer.from(buffer));
-    return `/images/${filename}`;
+    const base64 = Buffer.from(buffer).toString('base64');
+    
+    return {
+      data: base64,
+      contentType: contentType,
+    };
   } catch (error) {
-    console.error('Failed to download image:', error);
-    // Return original URL as fallback
-    return imageUrl;
+    console.error('Failed to encode image:', error);
+    return null;
   }
 }
+
 
 // Utility function to translate equipment description to Portuguese
 async function translateEquipmentDescription(description: string): Promise<string | null> {
@@ -161,9 +169,24 @@ export async function POST(request: NextRequest) {
       validatedData.subcategoryId = undefined
     }
 
-    // Download image if external URL provided
+    // Initialize quantityByStatus if not provided
+    let quantityByStatus = validatedData.quantityByStatus 
+      ? ensureQuantityByStatus(validatedData.quantityByStatus)
+      : initializeQuantityByStatus(validatedData.quantity, validatedData.status);
+
+    // Encode image to base64 if external URL provided
+    let imageData: string | undefined = undefined;
+    let imageContentType: string | undefined = undefined;
     if (validatedData.imageUrl && validatedData.imageUrl.startsWith('http')) {
-      validatedData.imageUrl = await downloadImage(validatedData.imageUrl);
+      console.log('[POST /api/equipment] Encoding image from URL:', validatedData.imageUrl);
+      const encoded = await encodeImageToBase64(validatedData.imageUrl);
+      if (encoded) {
+        imageData = encoded.data;
+        imageContentType = encoded.contentType;
+        console.log('[POST /api/equipment] Image encoded successfully. Size:', imageData.length, 'bytes. Type:', imageContentType);
+      } else {
+        console.log('[POST /api/equipment] Failed to encode image from URL');
+      }
     }
 
     // Translate description to Portuguese in parallel
@@ -180,8 +203,11 @@ export async function POST(request: NextRequest) {
       const newEquipment = await tx.equipmentItem.create({
         data: {
           ...validatedData,
+          quantityByStatus: quantityByStatus as any,
           descriptionPt: descriptionPt || undefined,
           imageUrl: validatedData.imageUrl || 'https://placehold.co/600x400.png',
+          imageData: imageData,
+          imageContentType: imageContentType,
           createdBy: user.userId,
           updatedBy: user.userId,
         },
@@ -232,9 +258,15 @@ export async function PUT(request: NextRequest) {
       validatedData.subcategoryId = undefined
     }
 
-    // Download image if external URL provided
+    // Encode image to base64 if external URL provided
+    let imageData: string | undefined = undefined;
+    let imageContentType: string | undefined = undefined;
     if (validatedData.imageUrl && validatedData.imageUrl.startsWith('http')) {
-      validatedData.imageUrl = await downloadImage(validatedData.imageUrl);
+      const encoded = await encodeImageToBase64(validatedData.imageUrl);
+      if (encoded) {
+        imageData = encoded.data;
+        imageContentType = encoded.contentType;
+      }
     }
 
     // Translate description to Portuguese if it was updated
@@ -248,10 +280,10 @@ export async function PUT(request: NextRequest) {
     }
     
     try {
-      // Get current version and status first
+      // Get current version and data first
       const currentItem = await prisma.equipmentItem.findUnique({
         where: { id },
-        select: { version: true, status: true }
+        select: { version: true, status: true, quantityByStatus: true }
       })
 
       if (!currentItem) {
@@ -266,11 +298,19 @@ export async function PUT(request: NextRequest) {
         }, { status: 409 })
       }
 
+      // Ensure quantityByStatus is valid if provided
+      let quantityByStatus = validatedData.quantityByStatus
+        ? ensureQuantityByStatus(validatedData.quantityByStatus)
+        : undefined;
+
       const equipment = await prisma.equipmentItem.update({
         where: { id },
         data: {
           ...validatedData,
+          imageData: imageData,
+          imageContentType: imageContentType,
           ...(descriptionPt !== undefined ? { descriptionPt } : {}),
+          ...(quantityByStatus ? { quantityByStatus: quantityByStatus as any } : {}),
           updatedBy: user.userId,
           version: currentItem.version + 1,
         },
@@ -291,7 +331,9 @@ export async function PUT(request: NextRequest) {
       if (validatedData.status && currentItem.status && validatedData.status !== currentItem.status) {
         try {
           if (currentItem.status === 'maintenance' && validatedData.status === 'good') {
-            await createEquipmentAvailableNotification(id, equipment.name)
+            // Get the updated equipment with quantityByStatus
+            const updatedQbs = quantityByStatus || ensureQuantityByStatus(currentItem.quantityByStatus);
+            await createEquipmentAvailableNotification(id, equipment.name, updatedQbs)
           }
         } catch (e) {
           console.error('Error sending equipment available notification:', e)

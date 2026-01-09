@@ -302,7 +302,7 @@ export default function CloudBackupManagement() {
               <li>• Backups run automatically every day at 2:00 AM</li>
               <li>• Only the last {data.retentionDays} days of backups are kept</li>
               <li>• Total size: {parseFloat(data.totalSize).toFixed(2)} GB</li>
-              <li>• Storage location: /mnt/server_data/backups/daily/</li>
+              <li>• Storage location: /mnt/backup_drive/av-rentals/backups/</li>
             </ul>
           </div>
         </div>

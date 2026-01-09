@@ -12,6 +12,7 @@ interface CustomizationSettings {
   secondaryColor?: string;
   accentColor?: string;
   darkMode?: boolean;
+  themePreset?: string;
 }
 
 async function fetchCustomizationSettings(): Promise<CustomizationSettings> {

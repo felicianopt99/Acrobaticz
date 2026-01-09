@@ -40,6 +40,7 @@ services:
       - /app/.next
       - ./dev-storage:/app/dev-storage
       - /mnt/backup_drive/av-rentals/cloud-storage:/mnt/backup_drive/av-rentals/cloud-storage
+      - /mnt/backup_drive/av-rentals/backups:/mnt/backup_drive/av-rentals/backups
     ports:
       - "3000:3000"
     deploy:

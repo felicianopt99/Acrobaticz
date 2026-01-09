@@ -22,16 +22,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import type { EquipmentItem, EquipmentStatus } from "@/types";
+import type { EquipmentItem, EquipmentStatus, QuantityByStatus } from "@/types";
 import { EQUIPMENT_STATUSES } from '@/lib/constants';
 import { useAppDispatch } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
+import { getStatusBreakdownString, updateQuantityByStatus } from "@/lib/equipment-utils";
 
 const logSchema = z.object({
   date: z.date({ required_error: "Date is required." }),
   description: z.string().min(5, "Description must be at least 5 characters."),
   cost: z.coerce.number().min(0, "Cost cannot be negative.").optional(),
   updateStatus: z.string().optional(),
+  quantityAffected: z.coerce.number().min(1, "At least 1 unit must be affected.").optional(),
 });
 
 type LogFormValues = z.infer<typeof logSchema>;
@@ -53,8 +55,21 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
       description: "",
       cost: 0,
       updateStatus: "no-change",
+      quantityAffected: 1,
     },
   });
+
+  const updateStatus = form.watch("updateStatus");
+  const quantityAffected = form.watch("quantityAffected") || 1;
+  
+  // Get current status breakdown
+  const qbs = (equipmentItem.quantityByStatus || {
+    good: equipmentItem.quantity || 0,
+    damaged: 0,
+    maintenance: 0,
+  }) as QuantityByStatus;
+  
+  const statusBreakdown = getStatusBreakdownString(qbs);
 
   function onSubmit(data: LogFormValues) {
     try {
@@ -65,8 +80,14 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
         cost: data.cost,
       });
 
+      // Update quantityByStatus if status change is requested
       if (data.updateStatus && data.updateStatus !== "no-change" && data.updateStatus !== equipmentItem.status) {
-        updateEquipmentItem({ ...equipmentItem, status: data.updateStatus as EquipmentStatus });
+        const newQbs = updateQuantityByStatus(qbs, data.updateStatus as EquipmentStatus, quantityAffected);
+        updateEquipmentItem({ 
+          ...equipmentItem, 
+          status: data.updateStatus as EquipmentStatus,
+          quantityByStatus: newQbs,
+        });
       }
 
       toast({ title: "Maintenance Log Added", description: `Log added for ${equipmentItem.name}.` });
@@ -84,6 +105,9 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
           <DialogTitle>Add Maintenance Log for "{equipmentItem.name}"</DialogTitle>
           <DialogDescription>
             Record a maintenance or repair activity. You can also update the item's status.
+            <div className="mt-2 text-xs text-muted-foreground">
+              Current Status: {statusBreakdown}
+            </div>
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -140,29 +164,56 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
               )}
             />
             
-             <FormField
+            <FormField
+              control={form.control}
+              name="updateStatus"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Update Status (Optional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="No Change" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="no-change">No Change</SelectItem>
+                      {EQUIPMENT_STATUSES.map(status => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Quantity field - only show if status is being changed */}
+            {updateStatus && updateStatus !== "no-change" && (
+              <FormField
                 control={form.control}
-                name="updateStatus"
+                name="quantityAffected"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Update Status (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="No Change" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="no-change">No Change</SelectItem>
-                        {EQUIPMENT_STATUSES.map(status => (
-                            <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>
+                      Number of Units to {updateStatus === 'good' ? 'Repair' : updateStatus === 'maintenance' ? 'Move to Maintenance' : 'Mark as Damaged'} (1-{equipmentItem.quantity})
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="1" 
+                        min="1"
+                        max={equipmentItem.quantity}
+                        {...field}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            )}
 
             <DialogFooter className="pt-4">
               <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
@@ -174,5 +225,3 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
     </Dialog>
   );
 }
-
-    

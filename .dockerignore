@@ -69,6 +69,10 @@ jest.config.js
 .gitlab-ci.yml
 .circleci/
 
+# SSL certificates and secrets (will be mounted at runtime)
+certbot/
+secrets/
+
 # Ensure critical directories ARE included
 !prisma/
 !public/

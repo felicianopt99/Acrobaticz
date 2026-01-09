@@ -56,12 +56,21 @@ export function EquipmentCard({ item, category, subcategory, onEdit, onDelete, o
         <CardHeader className="p-0">
           <div className="relative w-full aspect-[16/10] overflow-hidden">
             <Image
-              src={item.imageUrl || `https://placehold.co/600x400.png`}
+              src={
+                item.imageData && item.imageContentType
+                  ? `data:${item.imageContentType};base64,${item.imageData}`
+                  : (item.imageUrl && !item.imageUrl.startsWith('http') ? item.imageUrl : (item.imageUrl || `https://placehold.co/600x400.png`))
+              }
               alt={item.name}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-contain"
+              className="object-cover"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                img.src = 'https://placehold.co/600x400.png';
+              }}
               data-ai-hint="equipment audiovisual"
+              priority={false}
             />
             {/* top overlay for status */}
             <div className="absolute left-2 top-2">

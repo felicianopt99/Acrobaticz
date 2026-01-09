@@ -83,12 +83,29 @@ export type EquipmentStatus = 'good' | 'damaged' | 'maintenance';
 // New type to distinguish between standard equipment and consumables
 export type EquipmentType = 'equipment' | 'consumable';
 
+// Quantity breakdown by status
+export interface QuantityByStatus {
+  good: number;
+  damaged: number;
+  maintenance: number;
+}
+
 export interface MaintenanceLog {
   id: string;
   equipmentId: string;
   date: Date;
   description: string;
+  workStatus?: 'pending' | 'in-progress' | 'completed';
   cost?: number;
+  hoursSpent?: number;
+  technician?: string;
+  tags?: string[];
+  notes?: string;
+  isOutsideRepair?: boolean;
+  vendorName?: string;
+  expectedReturnDate?: Date;
+  repairStatus?: 'sent' | 'in-progress' | 'ready-for-pickup' | 'returned';
+  referenceNumber?: string;
 }
 
 export interface EquipmentItem {
@@ -98,9 +115,12 @@ export interface EquipmentItem {
   categoryId: string;
   subcategoryId?: string;
   quantity: number;
-  status: EquipmentStatus;
+  status: EquipmentStatus; // DEPRECATED: Use quantityByStatus instead
+  quantityByStatus: QuantityByStatus; // New field: breakdown by status
   location: string; // Physical location
   imageUrl?: string;
+  imageData?: string; // Base64 encoded image
+  imageContentType?: string; // MIME type (e.g., image/jpeg)
   dailyRate: number; // Will be 0 for consumables
   maintenanceHistory?: MaintenanceLog[]; 
   type: EquipmentType; // Added type field
@@ -130,6 +150,8 @@ export interface Event {
   endDate: Date;
   assignedTo?: string;
   date: Date; // Added date property for event filtering
+  quoteId?: string; // Optional: Link to the quote used to create this event
+  totalRevenue?: number; // Total revenue for this event (from quote or auto-calculated)
   subClients?: EventSubClient[]; // Multiple sub-clients for this event
 }
 

@@ -15,7 +15,7 @@ function verifyAuth(request: NextRequest) {
   }
 }
 
-const BACKUP_DIR = '/mnt/server_data/backups/daily';
+const BACKUP_DIR = '/mnt/backup_drive/av-rentals/backups';
 
 // GET: List all backups
 export async function GET(request: NextRequest) {
