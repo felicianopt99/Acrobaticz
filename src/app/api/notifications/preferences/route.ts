@@ -47,6 +47,29 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Verify user exists before querying preferences
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      // Return default preferences if user doesn't exist
+      return NextResponse.json({
+        userId: decoded.userId,
+        conflictAlerts: true,
+        statusChanges: true,
+        eventReminders: true,
+        overdueAlerts: true,
+        criticalAlerts: true,
+        stockAlerts: true,
+        equipmentAvailable: true,
+        monthlySummary: true,
+        toastCritical: true,
+        toastHigh: true,
+      });
+    }
+
     // @ts-ignore - notificationPreference model exists
     let preferences = await prisma.notificationPreference.findUnique({
       where: { userId: decoded.userId },
@@ -54,10 +77,30 @@ export async function GET(request: NextRequest) {
 
     // Create default preferences if they don't exist
     if (!preferences) {
-      // @ts-ignore - notificationPreference model exists
-      preferences = await prisma.notificationPreference.create({
-        data: { userId: decoded.userId },
-      });
+      try {
+        // @ts-ignore - notificationPreference model exists
+        preferences = await prisma.notificationPreference.create({
+          data: { userId: decoded.userId },
+        });
+      } catch (createError) {
+        // If creation fails (e.g., FK constraint), return defaults
+        console.warn('Could not create notification preferences, returning defaults:', createError);
+        return NextResponse.json({
+          id: `temp-${decoded.userId}`,
+          userId: decoded.userId,
+          conflictAlerts: true,
+          statusChanges: true,
+          eventReminders: true,
+          overdueAlerts: true,
+          criticalAlerts: true,
+          stockAlerts: true,
+          equipmentAvailable: true,
+          monthlySummary: true,
+          toastCritical: true,
+          toastHigh: true,
+          updatedAt: new Date(),
+        });
+      }
     }
 
     return NextResponse.json(preferences);
@@ -81,6 +124,16 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
 
+    // Verify user exists before updating preferences
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     // Ensure preferences exist
     // @ts-ignore - notificationPreference model exists
     let preferences = await prisma.notificationPreference.findUnique({
@@ -88,10 +141,16 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!preferences) {
-      // @ts-ignore - notificationPreference model exists
-      preferences = await prisma.notificationPreference.create({
-        data: { userId: decoded.userId },
-      });
+      try {
+        // @ts-ignore - notificationPreference model exists
+        preferences = await prisma.notificationPreference.create({
+          data: { userId: decoded.userId },
+        });
+      } catch (createError) {
+        // If creation fails, return error
+        console.error('Could not create notification preferences:', createError);
+        return NextResponse.json({ error: 'Failed to create preferences' }, { status: 500 });
+      }
     }
 
     // Update only the allowed fields

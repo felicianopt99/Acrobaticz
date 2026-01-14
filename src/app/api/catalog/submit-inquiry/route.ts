@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { CatalogShareRepository } from '@/lib/repositories';
 import { prisma } from '@/lib/db';
 
 interface InquiryItem {
@@ -41,11 +42,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the catalog share exists
-    const catalogShare = await prisma.catalogShare.findUnique({
-      where: { token },
-      include: { partner: true },
-    });
+    // Verify the catalog share exists and validate equipment authorization
+    const catalogShare = await CatalogShareRepository.findByToken(token);
 
     if (!catalogShare) {
       return NextResponse.json(
@@ -54,26 +52,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check expiration
-    if (catalogShare.expiresAt && new Date(catalogShare.expiresAt) < new Date()) {
-      return NextResponse.json(
-        { error: 'Catalog share has expired' },
-        { status: 410 }
-      );
-    }
-
     // Verify equipment exists and belongs to this catalog
     const equipmentIds = cartItems.map((item: InquiryItem) => item.equipmentId);
-    const equipment = await prisma.equipmentItem.findMany({
-      where: { id: { in: equipmentIds } },
-      select: { id: true, name: true },
-    });
-
-    if (equipment.length !== equipmentIds.length) {
-      return NextResponse.json(
-        { error: 'Some equipment items are no longer available' },
-        { status: 400 }
+    
+    // Check authorization for each equipment
+    for (const equipmentId of equipmentIds) {
+      const isAuthorized = await CatalogShareRepository.verifyEquipmentAuthorization(
+        token,
+        equipmentId
       );
+      
+      if (!isAuthorized) {
+        return NextResponse.json(
+          { error: 'Some equipment items are no longer available' },
+          { status: 400 }
+        );
+      }
     }
 
     // TODO: Create inquiry record when catalogShareInquiry model is added

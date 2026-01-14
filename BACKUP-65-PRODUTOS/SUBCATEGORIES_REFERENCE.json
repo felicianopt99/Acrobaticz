@@ -1,0 +1,289 @@
+{
+  "metadata": {
+    "timestamp": "2026-01-08T00:39:12Z",
+    "version": "1.0",
+    "total_categories": 6,
+    "total_subcategories": 21,
+    "total_equipment": 65
+  },
+  "categories": [
+    {
+      "id": "cmk1e0n230003tb4gtbayc9jd",
+      "name": "Lighting",
+      "icon": "Lightbulb",
+      "createdAt": "2026-01-06T16:55:54.000Z",
+      "subcategories": 8
+    },
+    {
+      "id": "cmk1e0n260004tb4g37154d95",
+      "name": "Audio and Sound",
+      "icon": "Speaker",
+      "createdAt": "2026-01-06T16:55:54.000Z",
+      "subcategories": 7
+    },
+    {
+      "id": "cmk2xt5s50023cw5g2242d74c",
+      "name": "Power",
+      "icon": "Settings",
+      "createdAt": "2026-01-06T18:42:57.000Z",
+      "subcategories": 2
+    },
+    {
+      "id": "cmk2u2ind000ccw5gwp8sjln3",
+      "name": "Video",
+      "icon": "Projector",
+      "createdAt": "2026-01-06T16:58:15.000Z",
+      "subcategories": 1
+    },
+    {
+      "id": "cmk2yg76g002xcw5gs5phwj4g",
+      "name": "Staging and Structures",
+      "icon": "Cuboid",
+      "createdAt": "2026-01-06T19:00:51.000Z",
+      "subcategories": 2
+    },
+    {
+      "id": "cmk2yahn1002mcw5gvbcgkszj",
+      "name": "Others",
+      "icon": "Layers",
+      "createdAt": "2026-01-06T18:56:25.000Z",
+      "subcategories": 1
+    }
+  ],
+  "subcategories": [
+    {
+      "id": "cmk1e0n3f000mtb4g4wo3p1kw",
+      "name": "Battery",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd",
+      "parentName": "Lighting",
+      "equipmentCount": 4,
+      "createdAt": "2026-01-06T16:55:54.000Z"
+    },
+    {
+      "id": "cmk1e0n44000stb4gyw8a3jx9",
+      "name": "Decorative Lighting",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd",
+      "parentName": "Lighting",
+      "equipmentCount": 2,
+      "createdAt": "2026-01-06T16:55:54.000Z"
+    },
+    {
+      "id": "cmk1ra3xh000qtjeh69nb1iod",
+      "name": "Effects",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd",
+      "parentName": "Lighting",
+      "equipmentCount": 4,
+      "createdAt": "2026-01-06T16:55:54.000Z"
+    },
+    {
+      "id": "cmk1e0n2w000etb4gowy0l9bi",
+      "name": "LED Par",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd",
+      "parentName": "Lighting",
+      "equipmentCount": 8,
+      "createdAt": "2026-01-06T16:55:54.000Z"
+    },
+    {
+      "id": "cmk1e0n2a0006tb4gfvum37v3",
+      "name": "Moving Head",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd",
+      "parentName": "Lighting",
+      "equipmentCount": 8,
+      "createdAt": "2026-01-06T16:55:54.000Z"
+    },
+    {
+      "id": "cmk2xpun6001ycw5gbbd6i2bz",
+      "name": "Follow Spots",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd",
+      "parentName": "Lighting",
+      "equipmentCount": 1,
+      "createdAt": "2026-01-06T18:40:22.000Z"
+    },
+    {
+      "id": "cmk2yguod002zcw5gazl94gfi",
+      "name": "Stage Platforms & Risers",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd",
+      "parentName": "Lighting",
+      "equipmentCount": 12,
+      "createdAt": "2026-01-06T19:01:22.000Z"
+    },
+    {
+      "id": "cmk2zfbje0047cw5gihy6kc4h",
+      "name": "Lighting Control",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd",
+      "parentName": "Lighting",
+      "equipmentCount": 2,
+      "createdAt": "2026-01-06T19:28:10.000Z"
+    },
+    {
+      "id": "cmk1e0n5m001etb4gstw7s39f",
+      "name": "Battery Speakers",
+      "parentId": "cmk1e0n260004tb4g37154d95",
+      "parentName": "Audio and Sound",
+      "equipmentCount": 2,
+      "createdAt": "2026-01-06T16:55:54.000Z"
+    },
+    {
+      "id": "cmk1e0n5v001itb4g5o2ie47u",
+      "name": "Microphones",
+      "parentId": "cmk1e0n260004tb4g37154d95",
+      "parentName": "Audio and Sound",
+      "equipmentCount": 12,
+      "createdAt": "2026-01-06T16:55:54.000Z"
+    },
+    {
+      "id": "cmk1e0n4j000ytb4gz5y21ntw",
+      "name": "Speakers",
+      "parentId": "cmk1e0n260004tb4g37154d95",
+      "parentName": "Audio and Sound",
+      "equipmentCount": 10,
+      "createdAt": "2026-01-06T16:55:54.000Z"
+    },
+    {
+      "id": "cmk2ubkmf000pcw5g90hz31lj",
+      "name": "Stage & Touring Gear",
+      "parentId": "cmk1e0n260004tb4g37154d95",
+      "parentName": "Audio and Sound",
+      "equipmentCount": 9,
+      "createdAt": "2026-01-06T17:05:17.000Z"
+    },
+    {
+      "id": "cmk2wxsub001fcw5gcpkpmxpz",
+      "name": "Mixing Consoles",
+      "parentId": "cmk1e0n260004tb4g37154d95",
+      "parentName": "Audio and Sound",
+      "equipmentCount": 5,
+      "createdAt": "2026-01-06T18:18:33.000Z"
+    },
+    {
+      "id": "cmk2yn0840039cw5gavgf2wsn",
+      "name": "DJ Equipment",
+      "parentId": "cmk1e0n260004tb4g37154d95",
+      "parentName": "Audio and Sound",
+      "equipmentCount": 7,
+      "createdAt": "2026-01-06T19:06:09.000Z"
+    },
+    {
+      "id": "cmk2zsbnb004rcw5gpo2fybt8",
+      "name": "Audio Recorder and Player",
+      "parentId": "cmk1e0n260004tb4g37154d95",
+      "parentName": "Audio and Sound",
+      "equipmentCount": 1,
+      "createdAt": "2026-01-06T19:38:17.000Z"
+    },
+    {
+      "id": "cmk2xxaci0025cw5gl37pa6cl",
+      "name": "Cabling & Distribution",
+      "parentId": "cmk2xt5s50023cw5g2242d74c",
+      "parentName": "Power",
+      "equipmentCount": 2,
+      "createdAt": "2026-01-06T18:46:09.000Z"
+    },
+    {
+      "id": "cmk3062bl005fcw5g359snsxf",
+      "name": "Power Distribution",
+      "parentId": "cmk2xt5s50023cw5g2242d74c",
+      "parentName": "Power",
+      "equipmentCount": 3,
+      "createdAt": "2026-01-06T19:48:58.000Z"
+    },
+    {
+      "id": "cmk2u2qjj000ecw5gonqu3cu9",
+      "name": "Projector",
+      "parentId": "cmk2u2ind000ccw5gwp8sjln3",
+      "parentName": "Video",
+      "equipmentCount": 1,
+      "createdAt": "2026-01-06T16:58:25.000Z"
+    },
+    {
+      "id": "cmk2zm9g4004hcw5g0hmjrt3d",
+      "name": "Cable Management & Safety",
+      "parentId": "cmk2yg76g002xcw5gs5phwj4g",
+      "parentName": "Staging and Structures",
+      "equipmentCount": 12,
+      "createdAt": "2026-01-06T19:33:34.000Z"
+    },
+    {
+      "id": "cmk2zuebl004xcw5gs501q7p4",
+      "name": "Trussing and Support",
+      "parentId": "cmk2yg76g002xcw5gs5phwj4g",
+      "parentName": "Staging and Structures",
+      "equipmentCount": 8,
+      "createdAt": "2026-01-06T19:39:53.000Z"
+    },
+    {
+      "id": "cmk2yav4d002ocw5g7jyebitz",
+      "name": "Fans and ventilation",
+      "parentId": "cmk2yahn1002mcw5gvbcgkszj",
+      "parentName": "Others",
+      "equipmentCount": 1,
+      "createdAt": "2026-01-06T18:56:43.000Z"
+    }
+  ],
+  "summary": {
+    "lighting": {
+      "category": "Lighting",
+      "icon": "Lightbulb",
+      "subcategories": [
+        "Battery (4)",
+        "Decorative Lighting (2)",
+        "Effects (4)",
+        "LED Par (8)",
+        "Moving Head (8)",
+        "Follow Spots (1)",
+        "Stage Platforms & Risers (12)",
+        "Lighting Control (2)"
+      ],
+      "total": 41
+    },
+    "audio": {
+      "category": "Audio and Sound",
+      "icon": "Speaker",
+      "subcategories": [
+        "Battery Speakers (2)",
+        "Microphones (12)",
+        "Speakers (10)",
+        "Stage & Touring Gear (9)",
+        "Mixing Consoles (5)",
+        "DJ Equipment (7)",
+        "Audio Recorder and Player (1)"
+      ],
+      "total": 46
+    },
+    "power": {
+      "category": "Power",
+      "icon": "Settings",
+      "subcategories": [
+        "Cabling & Distribution (2)",
+        "Power Distribution (3)"
+      ],
+      "total": 5
+    },
+    "video": {
+      "category": "Video",
+      "icon": "Projector",
+      "subcategories": [
+        "Projector (1)"
+      ],
+      "total": 1
+    },
+    "staging": {
+      "category": "Staging and Structures",
+      "icon": "Cuboid",
+      "subcategories": [
+        "Cable Management & Safety (12)",
+        "Trussing and Support (8)"
+      ],
+      "total": 20
+    },
+    "others": {
+      "category": "Others",
+      "icon": "Layers",
+      "subcategories": [
+        "Fans and ventilation (1)"
+      ],
+      "total": 1
+    }
+  },
+  "notes": "⚠️ IMPORTANTE: Total de equipamentos no backup aparenta ser ~114 (41+46+5+1+20+1). Discrepância com '65 produtos' mencionado. Verificar EquipmentItem COPY para confirmar contagem exata."
+}

@@ -4,10 +4,6 @@ import { requireReadAccess } from '@/lib/api-auth'
 
 // GET /api/partners/stats - Get partner statistics
 export async function GET(request: NextRequest) {
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const [

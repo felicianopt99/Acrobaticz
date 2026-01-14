@@ -1,0 +1,18 @@
+
+\033[1;37mUso: bash install.sh [opções]\033[0m
+
+\033[1;37mOpções:\033[0m
+  -m, --mode MODE        Modo de instalação: production, development, custom
+  --skip-docker          Pular setup de Docker
+  --skip-database        Pular setup de banco de dados
+  -y, --yes              Responder sim a todas as perguntas
+  -v, --verbose          Modo verbose (mais detalhes)
+  --dry-run              Mostrar o que seria feito, sem fazer
+  --help                 Mostrar esta mensagem de ajuda
+
+\033[1;37mExemplos:\033[0m
+  bash install.sh                           # Setup interativo
+  bash install.sh -m production             # Produção direta
+  bash install.sh -m development --skip-docker
+  bash install.sh -y -v                     # Verbose, sem perguntas
+

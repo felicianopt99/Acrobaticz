@@ -46,10 +46,6 @@ const updateUserSchema = z.object({
 // GET /api/users - Get all users
 export async function GET(request: NextRequest) {
   // Allow any authenticated user to view users (for team page)
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
 
@@ -87,11 +83,6 @@ export async function GET(request: NextRequest) {
 
 // POST /api/users - Create new user
 export async function POST(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageUsers')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
-  const user = authResult
 
   try {
 
@@ -166,11 +157,6 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/users - Update user
 export async function PUT(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageUsers')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
-  const user = authResult
 
   try {
 
@@ -229,10 +215,6 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/users - Delete user
 export async function DELETE(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageUsers')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
 

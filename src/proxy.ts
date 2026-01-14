@@ -19,9 +19,17 @@ const protectedRoutes = [
 // Routes that should redirect to dashboard if already authenticated
 const authRoutes = ['/login'];
 
+// Installation routes (public, no auth required)
+const installRoutes = ['/install', '/api/install'];
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('auth-token')?.value;
+
+  // Allow installation routes without authentication
+  if (pathname === '/install' || pathname.startsWith('/api/install/')) {
+    return NextResponse.next();
+  }
 
   // Check if the route is protected
   const isProtectedRoute = protectedRoutes.some(route => 

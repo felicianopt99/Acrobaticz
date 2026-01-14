@@ -1,0 +1,24 @@
+[
+  {
+    "id": "cmk1e0n1r0002tb4gjb98wkjn",
+    "name": "Rey Davis",
+    "contactPerson": "Rey Davis Team",
+    "email": "hello@vrd.productions",
+    "phone": "351969774999",
+    "address": "VRD Production",
+    "notes": "Professional Audio Visual Equipment Rental Provider",
+    "taxId": null,
+    "partnerId": "cmk1e0n150000tb4g9cktv4bk",
+    "version": 1,
+    "createdBy": null,
+    "updatedBy": null,
+    "createdAt": "2026-01-14T20:19:05.802Z",
+    "updatedAt": "2026-01-14T20:19:05.802Z",
+    "quotes": [],
+    "events": [],
+    "agency": {
+      "id": "cmk1e0n150000tb4g9cktv4bk",
+      "name": "Rey Davis"
+    }
+  }
+]

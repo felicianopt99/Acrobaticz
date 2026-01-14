@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { CategoryRepository } from '@/lib/repositories'
+import { triggerCategoryTranslation } from '@/lib/translation-integration'
 import { z } from 'zod'
 import { requireReadAccess, requirePermission } from '@/lib/api-auth'
 
@@ -10,25 +12,17 @@ const CategorySchema = z.object({
 
 // GET /api/categories - Get all categories with subcategories
 export async function GET(request: NextRequest) {
-  // Allow any authenticated user to view categories
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
-
   try {
-    const categories = await prisma.category.findMany({
-      include: {
-        subcategories: true,
-        _count: {
-          select: { equipment: true }
-        }
-      },
-      orderBy: { name: 'asc' },
-    })
+    // Allow any authenticated user to view categories
+    await requireReadAccess(request)
+
+    const categories = await CategoryRepository.findAll()
     
     return NextResponse.json(categories)
   } catch (error) {
+    if ((error as Error).message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     console.error('Error fetching categories:', error)
     return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 })
   }
@@ -37,10 +31,6 @@ export async function GET(request: NextRequest) {
 // POST /api/categories - Create new category
 export async function POST(request: NextRequest) {
   // Categories are part of equipment management
-  const authResult = requirePermission(request, 'canManageEquipment')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -52,6 +42,14 @@ export async function POST(request: NextRequest) {
         subcategories: true,
       },
     })
+    
+    // Trigger automatic translation for the new category (non-blocking)
+    triggerCategoryTranslation(
+      category.id,
+      category.name,
+      category.description,
+      ['pt']
+    ).catch(err => console.error('Failed to trigger category translation:', err));
     
     return NextResponse.json(category, { status: 201 })
   } catch (error) {
@@ -66,10 +64,6 @@ export async function POST(request: NextRequest) {
 // PUT /api/categories - Update category
 export async function PUT(request: NextRequest) {
   // Categories are part of equipment management
-  const authResult = requirePermission(request, 'canManageEquipment')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -77,6 +71,15 @@ export async function PUT(request: NextRequest) {
     
     if (!id) {
       return NextResponse.json({ error: 'Category ID is required' }, { status: 400 })
+    }
+    
+    // Get existing category for comparison
+    const existingCategory = await prisma.category.findUnique({
+      where: { id },
+    })
+
+    if (!existingCategory) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
     }
     
     const validatedData = CategorySchema.partial().parse(updateData)
@@ -89,6 +92,19 @@ export async function PUT(request: NextRequest) {
       },
     })
     
+    // Trigger retranslation if name or description changed
+    if (
+      (updateData.name && updateData.name !== existingCategory.name) ||
+      (updateData.description && updateData.description !== existingCategory.description)
+    ) {
+      triggerCategoryTranslation(
+        category.id,
+        category.name,
+        category.description,
+        ['pt']
+      ).catch(err => console.error('Failed to trigger category retranslation:', err));
+    }
+    
     return NextResponse.json(category)
   } catch (error) {
     console.error('Error updating category:', error)
@@ -99,10 +115,6 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/categories - Delete category
 export async function DELETE(request: NextRequest) {
   // Categories are part of equipment management
-  const authResult = requirePermission(request, 'canManageEquipment')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)

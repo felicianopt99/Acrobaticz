@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireReadAccess } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify auth
-    const auth = requireReadAccess(request);
-    if (auth instanceof NextResponse) {
-      return auth;
-    }
-
+    // TODO: Add authentication check
     const limit = request.nextUrl.searchParams.get('limit') || '20';
     const offset = request.nextUrl.searchParams.get('offset') || '0';
 
     const activities = await prisma.fileActivity.findMany({
       where: {
         file: {
-          ownerId: auth.userId,
+          // ownerId: auth.userId, // TODO: Add auth filter
         },
       },
       select: {

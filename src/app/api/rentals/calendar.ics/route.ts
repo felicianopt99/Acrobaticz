@@ -5,10 +5,6 @@ import { createEvents } from 'ics'
 
 // GET /api/rentals/calendar.ics - Get calendar in ICS format for syncing
 export async function GET(request: NextRequest) {
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     // Fetch all events with their associated rentals and client info

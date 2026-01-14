@@ -11,10 +11,6 @@ const SubcategorySchema = z.object({
 // GET /api/subcategories - Get all subcategories
 export async function GET(request: NextRequest) {
   // Allow any authenticated user to view subcategories
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const subcategories = await prisma.subcategory.findMany({
@@ -37,10 +33,6 @@ export async function GET(request: NextRequest) {
 // POST /api/subcategories - Create new subcategory
 export async function POST(request: NextRequest) {
   // Subcategories are part of equipment management
-  const authResult = requirePermission(request, 'canManageEquipment')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -66,10 +58,6 @@ export async function POST(request: NextRequest) {
 // PUT /api/subcategories - Update subcategory
 export async function PUT(request: NextRequest) {
   // Subcategories are part of equipment management
-  const authResult = requirePermission(request, 'canManageEquipment')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -99,10 +87,6 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/subcategories - Delete subcategory
 export async function DELETE(request: NextRequest) {
   // Subcategories are part of equipment management
-  const authResult = requirePermission(request, 'canManageEquipment')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)

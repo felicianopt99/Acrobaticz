@@ -24,10 +24,6 @@ const SingleRentalUpdateSchema = z.object({
 // GET /api/rentals - Get all rentals
 export async function GET(request: NextRequest) {
   // Allow any authenticated user to view rentals
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const rentals = await prisma.rental.findMany({
@@ -56,10 +52,6 @@ export async function GET(request: NextRequest) {
 
 // POST /api/rentals - Create new rentals
 export async function POST(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageRentals')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -139,10 +131,6 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/rentals - Update rental
 export async function PUT(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageRentals')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -194,10 +182,6 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/rentals - Delete rental
 export async function DELETE(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageRentals')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)

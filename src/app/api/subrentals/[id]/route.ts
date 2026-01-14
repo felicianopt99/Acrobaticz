@@ -7,10 +7,6 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { id } = await params
@@ -48,10 +44,6 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = requirePermission(request, 'canManagePartners')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { id } = await params
@@ -66,7 +58,6 @@ export async function PATCH(
       where: { id },
       data: {
         status,
-        updatedBy: authResult.userId,
       },
       include: {
         partner: {

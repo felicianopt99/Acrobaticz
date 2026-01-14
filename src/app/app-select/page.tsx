@@ -36,13 +36,19 @@ export default function AppSelectPage() {
     checkAuth();
   }, [router]);
 
-  const handleNavigation = (choice: 'dashboard' | 'cloud') => {
+  const handleNavigation = async (choice: 'dashboard' | 'cloud') => {
     setLoading(true);
     setSelectedApp(choice);
 
-    // Navigate using window.location - this will send cookies automatically
     const destination = choice === 'dashboard' ? '/dashboard' : '/drive';
-    window.location.href = destination;
+    
+    // Use router.push for smoother navigation
+    router.push(destination);
+    
+    // Refresh to ensure server components and auth are synced
+    setTimeout(() => {
+      router.refresh();
+    }, 100);
   };
 
   if (!isAuthenticated) {

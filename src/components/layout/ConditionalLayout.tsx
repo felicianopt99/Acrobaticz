@@ -18,7 +18,9 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   // - /login: auth page
   // - /drive: cloud platform (has its own layout)
   // - /app-select: platform selector
-  const noLayoutRoutes = ['/login', '/drive', '/app-select'];
+  // - /install: installation wizard (standalone setup)
+  // - /catalog/share: public client-facing catalog (standalone storefront)
+  const noLayoutRoutes = ['/login', '/drive', '/app-select', '/install', '/catalog/share'];
   
   const shouldShowLayout = !noLayoutRoutes.some(route => 
     pathname.startsWith(route)

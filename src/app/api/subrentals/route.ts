@@ -20,10 +20,6 @@ const SubrentalSchema = z.object({
 
 // GET /api/subrentals - Get all subrentals
 export async function GET(request: NextRequest) {
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)
@@ -75,10 +71,6 @@ export async function GET(request: NextRequest) {
 
 // POST /api/subrentals - Create new subrental
 export async function POST(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManagePartners')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -90,7 +82,6 @@ export async function POST(request: NextRequest) {
         eventId: validatedData.eventId || undefined,
         startDate: new Date(validatedData.startDate),
         endDate: new Date(validatedData.endDate),
-        createdBy: authResult.userId,
       },
       include: {
         partner: {
@@ -121,10 +112,6 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/subrentals - Update subrental
 export async function PUT(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManagePartners')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -143,7 +130,6 @@ export async function PUT(request: NextRequest) {
         eventId: validatedData.eventId || undefined,
         startDate: validatedData.startDate ? new Date(validatedData.startDate) : undefined,
         endDate: validatedData.endDate ? new Date(validatedData.endDate) : undefined,
-        updatedBy: authResult.userId,
       },
       include: {
         partner: {
@@ -174,10 +160,6 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/subrentals - Delete subrental
 export async function DELETE(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManagePartners')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)

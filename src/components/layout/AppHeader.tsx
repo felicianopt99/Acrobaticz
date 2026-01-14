@@ -69,7 +69,10 @@ export function AppHeader({ title, children, className }: AppHeaderProps) {
         title: 'Logged out',
         description: 'You have been successfully logged out.',
       });
-      window.location.href = '/login';
+      router.push('/login');
+      setTimeout(() => {
+        router.refresh();
+      }, 100);
     } catch (error) {
       console.error('Logout error:', error);
       toast({
@@ -221,7 +224,12 @@ export function AppHeader({ title, children, className }: AppHeaderProps) {
                 variant="ghost" 
                 size="icon" 
                 className="h-12 w-12 rounded-lg group"
-                onClick={() => window.location.href = '/drive'}
+                onClick={() => {
+                  router.push('/drive');
+                  setTimeout(() => {
+                    router.refresh();
+                  }, 100);
+                }}
                 title="Open Cloud Storage"
               >
                 <Cloud className="h-6 w-6 text-gray-600 dark:text-gray-400 group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors" />

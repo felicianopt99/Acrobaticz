@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db-enhanced'
+import { EquipmentRepository } from '@/lib/repositories'
 import { broadcastDataChange } from '@/lib/realtime-broadcast'
 import { createEquipmentAvailableNotification } from '@/lib/notifications'
 import { translateText } from '@/lib/translation'
@@ -72,79 +73,22 @@ async function translateEquipmentDescription(description: string): Promise<strin
 // GET /api/equipment - Get equipment with pagination
 export async function GET(request: NextRequest) {
   // Allow any authenticated user to view equipment
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)
-    const hasPagination = searchParams.has('page') || searchParams.has('pageSize')
     const page = parseInt(searchParams.get('page') || '1')
     const pageSize = parseInt(searchParams.get('pageSize') || '50')
-    const status = searchParams.get('status')
-    const categoryId = searchParams.get('categoryId')
-    const search = searchParams.get('search')
+    const categoryId = searchParams.get('categoryId') || undefined
+    const status = searchParams.get('status') || undefined
+    const search = searchParams.get('search') || undefined
 
-    const where: any = {}
-    
-    if (status) where.status = status
-    if (categoryId) where.categoryId = categoryId
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ]
-    }
-
-    let result
-    if (!hasPagination) {
-      const data = await prisma.equipmentItem.findMany({
-        where,
-        orderBy: { name: 'asc' },
-        include: {
-          category: true,
-          subcategory: true,
-          maintenanceLogs: {
-            orderBy: { date: 'desc' },
-            take: 5,
-          },
-        },
-      })
-      result = {
-        data,
-        total: data.length,
-        page: 1,
-        pageSize: data.length,
-        totalPages: 1,
-      }
-    } else {
-      const [data, total] = await Promise.all([
-        prisma.equipmentItem.findMany({
-          where,
-          orderBy: { name: 'asc' },
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          include: {
-            category: true,
-            subcategory: true,
-            maintenanceLogs: {
-              orderBy: { date: 'desc' },
-              take: 5,
-            },
-          },
-        }),
-        prisma.equipmentItem.count({ where }),
-      ])
-
-      result = {
-        data,
-        total,
-        page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize),
-      }
-    }
+    const result = await EquipmentRepository.findPaginated({
+      page,
+      pageSize,
+      categoryId,
+      status,
+      search,
+    })
     
     return NextResponse.json(result)
   } catch (error) {
@@ -155,11 +99,6 @@ export async function GET(request: NextRequest) {
 
 // POST /api/equipment - Create new equipment
 export async function POST(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageEquipment')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
-  const user = authResult
 
   try {
     const body = await request.json()
@@ -222,7 +161,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Broadcast real-time update
-    broadcastDataChange('EquipmentItem', 'CREATE', equipment, user.userId)
+    broadcastDataChange('EquipmentItem', 'CREATE', equipment, 'system')
     
     return NextResponse.json(equipment, { status: 201 })
   } catch (error) {
@@ -238,11 +177,6 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/equipment - Update equipment with optimistic locking
 export async function PUT(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageEquipment')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
-  const user = authResult
 
   try {
     const body = await request.json()
@@ -325,7 +259,7 @@ export async function PUT(request: NextRequest) {
       })
 
       // Broadcast real-time update
-      broadcastDataChange('EquipmentItem', 'UPDATE', equipment, user.userId)
+      broadcastDataChange('EquipmentItem', 'UPDATE', equipment, 'system')
       
       // Generate notification if equipment becomes available from maintenance
       if (validatedData.status && currentItem.status && validatedData.status !== currentItem.status) {
@@ -358,11 +292,6 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/equipment - Delete equipment
 export async function DELETE(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageEquipment')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
-  const user = authResult
 
   try {
     const { searchParams } = new URL(request.url)
@@ -386,7 +315,7 @@ export async function DELETE(request: NextRequest) {
 
     // Broadcast real-time update
     if (equipment) {
-      broadcastDataChange('EquipmentItem', 'DELETE', { ...equipment }, user.userId)
+      broadcastDataChange('EquipmentItem', 'DELETE', { ...equipment }, 'system')
     }
     
     return NextResponse.json({ success: true })

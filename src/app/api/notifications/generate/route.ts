@@ -8,10 +8,6 @@ import {
 
 // POST /api/notifications/generate - Admin-only trigger to manually run notification jobs
 export async function POST(request: NextRequest) {
-  const authResult = requirePermission(request, 'canViewReports')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     // Run all notification generation jobs

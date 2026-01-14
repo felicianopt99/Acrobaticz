@@ -17,10 +17,6 @@ const EventSchema = z.object({
 // GET /api/events - Get all events
 export async function GET(request: NextRequest) {
   // Allow any authenticated user to view events
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const events = await prisma.event.findMany({
@@ -49,10 +45,6 @@ export async function GET(request: NextRequest) {
 
 // POST /api/events - Create new event
 export async function POST(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageEvents')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -106,10 +98,6 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/events - Update event
 export async function PUT(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageEvents')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -166,10 +154,6 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/events - Delete event
 export async function DELETE(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageEvents')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)

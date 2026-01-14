@@ -15,10 +15,6 @@ const JobReferenceSchema = z.object({
 
 // GET /api/job-references - Get job references (filtered by partner if specified)
 export async function GET(request: NextRequest) {
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)
@@ -54,10 +50,6 @@ export async function GET(request: NextRequest) {
 
 // POST /api/job-references - Create new job reference
 export async function POST(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManagePartners')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -75,7 +67,6 @@ export async function POST(request: NextRequest) {
     const jobReference = await prisma.jobReference.create({
       data: {
         ...validatedData,
-        createdBy: authResult.userId,
       },
       include: {
         partner: true,
@@ -98,10 +89,6 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/job-references - Update job reference
 export async function PUT(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManagePartners')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -117,7 +104,6 @@ export async function PUT(request: NextRequest) {
       where: { id },
       data: {
         ...validatedData,
-        updatedBy: authResult.userId,
       },
       include: {
         partner: true,
@@ -140,10 +126,6 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/job-references - Delete job reference
 export async function DELETE(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManagePartners')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)

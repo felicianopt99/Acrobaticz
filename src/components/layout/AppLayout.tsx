@@ -2,6 +2,7 @@
 "use client";
 import type React from 'react';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   SidebarProvider, 
   Sidebar, 
@@ -48,7 +49,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         title: loggedOutTitle,
         description: loggedOutDesc,
       });
-      window.location.href = '/login';
+      router.push('/login');
+      setTimeout(() => {
+        router.refresh();
+      }, 100);
     } catch (error) {
       console.error('Logout error:', error);
       toast({

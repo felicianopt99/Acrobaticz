@@ -21,10 +21,6 @@ const PartnerSchema = z.object({
 
 // GET /api/partners - Get all partners
 export async function GET(request: NextRequest) {
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)
@@ -59,10 +55,6 @@ export async function GET(request: NextRequest) {
 
 // POST /api/partners - Create new partner
 export async function POST(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManagePartners')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -97,7 +89,6 @@ export async function POST(request: NextRequest) {
       partnerType: validatedData.partnerType || 'provider',
       commission: validatedData.commission,
       isActive: validatedData.isActive !== undefined ? validatedData.isActive : true,
-      createdBy: authResult.userId,
     }
     
     const partner = await prisma.partner.create({
@@ -141,10 +132,6 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/partners - Update partner
 export async function PUT(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManagePartners')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -212,7 +199,6 @@ export async function PUT(request: NextRequest) {
       updatePayload.contactPerson = validatedData.contactPerson && validatedData.contactPerson.trim() ? validatedData.contactPerson : undefined
     }
     
-    updatePayload.updatedBy = authResult.userId
     
     const partner = await prisma.partner.update({
       where: { id },
@@ -262,10 +248,6 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/partners - Delete partner
 export async function DELETE(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManagePartners')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)

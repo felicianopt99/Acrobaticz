@@ -1,5 +1,9 @@
-import { batchTranslateWithDeepL, translateTextWithDeepL } from './deepl';
-import pRetry from 'p-retry';
+/**
+ * Legacy translation wrapper - maintained for backward compatibility
+ * Use src/lib/deepl.service.ts for new code
+ */
+
+import { deeplTranslateText, batchTranslate } from './deepl.service';
 import { loadTranslationRules } from './translation-rules';
 import { prisma } from '@/lib/db';
 
@@ -240,29 +244,47 @@ async function batchTranslateWithAI(
   _maxChunkSize: number = 10,
   _rules?: Record<string, string>
 ): Promise<Map<string, string>> {
-  // Retry DeepL batch with exponential backoff
+  // Use new DeepL service for batch translation
   try {
-    const result = await pRetry(() => batchTranslateWithDeepL(texts, targetLang), {
-      retries: 3,
-      minTimeout: 500,
-      maxTimeout: 3000,
-      factor: 2,
+    const result = await batchTranslate({
+      sourceText: texts[0],
+      targetLanguages: [targetLang],
     });
     
-    return result;
+    const out = new Map<string, string>();
+    if (result.status === 'success' && result.data?.results) {
+      result.data.results.forEach(r => {
+        out.set(r.sourceText, r.translatedText);
+      });
+    }
+    
+    // For multiple texts, translate individually
+    for (const t of texts.slice(1)) {
+      try {
+        const translated = await deeplTranslateText(t, targetLang, 'general');
+        if (translated.status === 'success' && translated.data?.translatedText) {
+          out.set(t, translated.data.translatedText);
+        } else {
+          out.set(t, t);
+        }
+      } catch {
+        out.set(t, t);
+      }
+    }
+    
+    return out;
   } catch (e) {
-    // Failover: translate individually (best-effort) to salvage partial results
+    // Failover: translate individually
     const out = new Map<string, string>();
     for (const t of texts) {
       try {
-        const translated = await pRetry(() => translateTextWithDeepL(t, targetLang), {
-          retries: 2,
-          minTimeout: 400,
-          maxTimeout: 2000,
-        });
-        out.set(t, translated);
+        const translated = await deeplTranslateText(t, targetLang, 'general');
+        if (translated.status === 'success' && translated.data?.translatedText) {
+          out.set(t, translated.data.translatedText);
+        } else {
+          out.set(t, t);
+        }
       } catch {
-        // Final fallback: use original text
         out.set(t, t);
       }
     }
@@ -363,119 +385,47 @@ export async function translateText(
     return text;
   }
 
-  const cacheKey = getCacheKey(text, targetLang);
-  
-  // 1. Check in-memory cache first (fastest - no I/O)
-  const cached = translationCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  // 1a. Check translation rules for override - ONLY for exact matches on simple terms
-  const rules = loadTranslationRules();
-  // Only apply rules if the text is EXACTLY a rule key (no extra words)
-  const trimmedText = text.trim();
-  for (const [sourcePattern, replacement] of Object.entries(rules)) {
-    if (trimmedText.toLowerCase() === sourcePattern.toLowerCase()) {
-      // Exact match! Preserve case and return
-      let result = replacement;
-      if (trimmedText === trimmedText.toUpperCase() && trimmedText.length > 1) {
-        result = replacement.toUpperCase();
-      } else if (trimmedText[0] === trimmedText[0].toUpperCase()) {
-        result = replacement.charAt(0).toUpperCase() + replacement.slice(1).toLowerCase();
-      } else {
-        result = replacement.toLowerCase();
+  try {
+    // Check translation rules for override - ONLY for exact matches on simple terms
+    const rules = loadTranslationRules();
+    const trimmedText = text.trim();
+    
+    for (const [sourcePattern, replacement] of Object.entries(rules)) {
+      if (trimmedText.toLowerCase() === sourcePattern.toLowerCase()) {
+        // Exact match! Preserve case and return
+        let result = replacement;
+        if (trimmedText === trimmedText.toUpperCase() && trimmedText.length > 1) {
+          result = replacement.toUpperCase();
+        } else if (trimmedText[0] === trimmedText[0].toUpperCase()) {
+          result = replacement.charAt(0).toUpperCase() + replacement.slice(1).toLowerCase();
+        } else {
+          result = replacement.toLowerCase();
+        }
+        return result;
       }
-      return result;
     }
-  }
 
-  // 2. Check if translation is already in progress (deduplicate)
-  const pending = pendingTranslations.get(cacheKey);
-  if (pending) {
-    return pending;
-  }
-
-  // 3. Create promise for this translation
-  const translationPromise = (async () => {
-    try {
-      // 4. Check database for existing translation
-      const existing = await prisma.translation.findUnique({
-        where: {
-          sourceText_targetLang: {
-            sourceText: text,
-            targetLang: targetLang,
-          },
-        },
-      });
-
-      if (existing) {
-        // Found in database, cache it and return
-        translationCache.set(cacheKey, existing.translatedText);
-        // fire-and-forget usage update
-        touchUsage(text, targetLang).catch(() => {});
-        return existing.translatedText;
-      }
-
-      // 5. Not in database, translate with DeepL (with retry/backoff)
-      console.log(`🔄 Translating "${text}" with DeepL...`);
+    // Use new DeepL service (handles cache, retry, etc.)
+    const result = await deeplTranslateText(text, targetLang, 'general');
+    
+    if (result.status === 'success' && result.data?.translatedText) {
+      let translated = result.data.translatedText;
       
-      let translated = await pRetry(() => translateTextWithDeepL(text, targetLang), {
-        retries: 3,
-        minTimeout: 500,
-        maxTimeout: 3000,
-        factor: 2,
-      });
-      
-      // Apply post-translation word replacements for override rules
+      // Apply post-translation word replacements
       translated = applyPostTranslationRules(translated, text, rules);
       
       // Apply glossary overrides
       translated = applyGlossary(translated, targetLang);
-      console.log(`✅ DeepL result: "${text}" → "${translated}"`);
-
-      // 6. Save to database permanently (await for reliability)
-      try {
-        console.log(`💾 Saving translation to database: "${text}" → "${translated}"`);
-        await prisma.translation.create({
-          data: {
-            sourceText: text,
-            targetLang: targetLang,
-            translatedText: translated,
-            model: "deepl",
-          },
-        });
-        console.log(`✅ Successfully saved translation to database`);
-      } catch (error: any) {
-        // Ignore duplicate key errors (race condition)
-        if (!error.code || error.code !== 'P2002') {
-          console.error('Failed to save translation:', error);
-        } else {
-          console.log(`ℹ️  Translation already exists in database: "${text}"`);
-        }
-      }
-
-      // 7. Cache in memory for fast access
-      translationCache.set(cacheKey, translated);
-
-      // Record usage for the new translation
-      touchUsage(text, targetLang).catch(() => {});
-
+      
       return translated;
-    } catch (error: any) {
-      console.error('Translation error:', error);
-      // Fallback to original text on error
-      return text;
-    } finally {
-      // Remove from pending
-      pendingTranslations.delete(cacheKey);
     }
-  })();
-
-  // Store pending promise
-  pendingTranslations.set(cacheKey, translationPromise);
-  
-  return translationPromise;
+    
+    // Fallback to original text on error
+    return text;
+  } catch (error) {
+    console.error('Translation error:', error);
+    return text;
+  }
 }
 
 /**

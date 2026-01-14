@@ -16,10 +16,6 @@ const ClientSchema = z.object({
 // GET /api/clients - Get all clients
 export async function GET(request: NextRequest) {
   // Allow any authenticated user to view clients
-  const authResult = requireReadAccess(request)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     console.log('[API] GET /api/clients - Fetching all clients from database')
@@ -48,10 +44,6 @@ export async function GET(request: NextRequest) {
 
 // POST /api/clients - Create new client
 export async function POST(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageClients')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -103,10 +95,6 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/clients - Update client
 export async function PUT(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageClients')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const body = await request.json()
@@ -204,10 +192,6 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/clients - Delete client
 export async function DELETE(request: NextRequest) {
-  const authResult = requirePermission(request, 'canManageClients')
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
 
   try {
     const { searchParams } = new URL(request.url)

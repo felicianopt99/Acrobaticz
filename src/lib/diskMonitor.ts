@@ -1,5 +1,6 @@
 import { checkDiskHealth, DiskHealth } from './storage';
 import { prisma } from './db';
+import { configService } from './config-service';
 
 interface DiskAlertConfig {
   lowSpacePercent: number; // Alert when disk usage exceeds this percent
@@ -9,7 +10,7 @@ interface DiskAlertConfig {
 
 const DEFAULT_CONFIG: DiskAlertConfig = {
   lowSpacePercent: 90, // Alert when 90% full
-  checkIntervalMs: parseInt(process.env.STORAGE_CHECK_INTERVAL || '300000', 10),
+  checkIntervalMs: 300000, // 5 minutes - will be overridden by config
   adminRoleFilter: ['Admin', 'Manager'],
 };
 

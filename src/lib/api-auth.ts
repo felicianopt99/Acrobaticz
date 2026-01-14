@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import { hasPermission } from '@/lib/permissions'
+import { configService } from '@/lib/config-service'
 import type { UserRole } from '@/types'
 
 export interface AuthUser {
@@ -12,12 +13,18 @@ export interface AuthUser {
 /**
  * Extracts user information from JWT token in request cookies
  */
-export function getUserFromRequest(request: NextRequest): AuthUser | null {
+export async function getUserFromRequest(request: NextRequest): Promise<AuthUser | null> {
   try {
     const token = request.cookies.get('auth-token')?.value
     if (!token) return null
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
+    const jwtSecret = await configService.get('Auth', 'JWT_SECRET')
+    if (!jwtSecret) {
+      console.error('JWT_SECRET not configured')
+      return null
+    }
+
+    const decoded = jwt.verify(token, jwtSecret) as any
     return {
       userId: decoded.userId,
       username: decoded.username,
@@ -30,34 +37,31 @@ export function getUserFromRequest(request: NextRequest): AuthUser | null {
 
 /**
  * Requires authentication for an API route
- * Returns the authenticated user or a 401 response
+ * Throws 401 if not authenticated
  */
-export function requireAuth(request: NextRequest): AuthUser | NextResponse {
-  const user = getUserFromRequest(request)
+export async function requireAuth(request: NextRequest): Promise<AuthUser> {
+  const user = await getUserFromRequest(request)
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    throw new Error('Unauthorized')
   }
   return user
 }
 
 /**
  * Requires a specific permission for an API route
- * Returns the authenticated user or an error response (401/403)
+ * Throws 403 if insufficient permissions
  */
-export function requirePermission(
+export async function requirePermission(
   request: NextRequest,
   permission: keyof import('@/types').RolePermissions
-): AuthUser | NextResponse {
-  const user = getUserFromRequest(request)
+): Promise<AuthUser> {
+  const user = await getUserFromRequest(request)
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    throw new Error('Unauthorized')
   }
 
   if (!hasPermission(user.role, permission)) {
-    return NextResponse.json(
-      { error: 'Forbidden', message: 'Insufficient permissions' },
-      { status: 403 }
-    )
+    throw new Error('Forbidden')
   }
 
   return user
@@ -67,7 +71,7 @@ export function requirePermission(
  * Checks if the request has read access (any authenticated user can read)
  * For write operations, use requirePermission instead
  */
-export function requireReadAccess(request: NextRequest): AuthUser | NextResponse {
-  return requireAuth(request)
+export async function requireReadAccess(request: NextRequest): Promise<AuthUser> {
+  return await requireAuth(request)
 }
 
