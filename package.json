@@ -126,7 +126,6 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@vitest/ui": "^4.0.16",
-    "baseline-browser-mapping": "latest",
     "happy-dom": "^20.0.11",
     "jsdom": "^27.4.0",
     "lucide-react": "^0.553.0",
