@@ -1,3 +1,8 @@
+# ============================================================
+# .dockerignore - Files to exclude from Docker build context
+# Reduces build time and final image size
+# ============================================================
+
 # Dependencies (prevents massive node_modules copy)
 node_modules
 
@@ -6,6 +11,7 @@ node_modules
 out
 dist
 build
+.turbo
 
 # Logs
 logs
@@ -18,6 +24,76 @@ lerna-debug.log*
 # Git & version control
 .git
 .gitignore
+.gitattributes
+.github
+
+# Development files
+.vscode
+.idea
+*.swp
+*.swo
+*.vim
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage
+.nyc_output
+.test-cache
+
+# IDE
+jsconfig.json
+.prettierrc*
+.eslintrc*
+.eslintcache
+
+# Documentation
+docs/
+README.md
+CHANGELOG.md
+LICENSE
+*.md
+
+# Development scripts
+scripts/
+Dockerfile.dev
+docker-compose.dev.yml
+
+# Configuration files (dev)
+vitest.config.ts
+tailwind.config.ts
+postcss.config.mjs
+tsconfig.json
+
+# Backups
+*.tar.gz
+backups/
+migrations_backup*
+
+# Temporary
+tmp/
+temp/
+.tmp
+.restore
+.installation-logs
+
+# Cache
+.cache
+.eslintcache
+
+# CI/CD
+.circleci
+.gitlab-ci.yml
+
+# Misc
+*.pem
+*.p12
+.env.*.enc
 .gitattributes
 
 # Environment variables (secrets)

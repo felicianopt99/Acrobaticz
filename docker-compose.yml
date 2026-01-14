@@ -1,28 +1,43 @@
-# Docker Compose for AV-Rentals Production Stack
-# Includes: PostgreSQL, Next.js App, Nginx Reverse Proxy, Certbot SSL
+# ============================================================
+# Docker Compose - Acrobaticz Production Stack
+# Simple, production-ready configuration for end customers
+# 
+# Usage:
+#   docker-compose up -d
+# ============================================================
+
+version: '3.9'
 
 services:
+  # ============================================================
+  # PostgreSQL Database
+  # ============================================================
   postgres:
     image: postgres:16-alpine
-    container_name: av-postgres
+    container_name: acrobaticz-postgres
     restart: unless-stopped
+    
     environment:
-      - POSTGRES_DB_FILE=/run/secrets/db_name
-      - POSTGRES_USER_FILE=/run/secrets/db_user
-      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      POSTGRES_DB: acrobaticz
+      POSTGRES_USER: acrobaticz_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+    
+    # Persistent data volume
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    secrets:
-      - db_user
-      - db_password
-      - db_name
+    
+    # Health check
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$(cat /run/secrets/db_user) -d $$(cat /run/secrets/db_name)"]
+      test: ["CMD-SHELL", "pg_isready -U acrobaticz_user -d acrobaticz"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    
     networks:
-      - av-network
+      - acrobaticz-network
+    
+    # Resource limits (adjust based on your server)
     deploy:
       resources:
         limits:
@@ -30,47 +45,58 @@ services:
         reservations:
           memory: 256M
 
+  # ============================================================
+  # Acrobaticz Application (Next.js 15)
+  # ============================================================
   app:
-    # Use pre-built image from GitHub Container Registry (GHCR)
-    # To use local build instead, uncomment 'build' section below
-    # image: ghcr.io/felicianopt99/av-rentals:latest
-    # Alternative: Build locally
     build:
       context: .
       dockerfile: Dockerfile
       cache_from:
-        - av-rentals:latest
-    image: av-rentals:latest
+        - acrobaticz:latest
     
-    container_name: av-rentals
+    image: acrobaticz:latest
+    container_name: acrobaticz-app
     restart: unless-stopped
-    env_file:
-      - ./env
+    
+    # Environment configuration
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - HOSTNAME=0.0.0.0
-      - PRISMA_MIGRATIONS=skip
-    secrets:
-      - db_user
-      - db_password
-      - db_name
-      - jwt_secret
-      - deepl_api_key
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      NEXT_TELEMETRY_DISABLED: 1
+      
+      # Database URL
+      DATABASE_URL: postgresql://acrobaticz_user:${DB_PASSWORD:-change_me_in_production}@postgres:5432/acrobaticz?schema=public
+      
+      # JWT Secret (MUST change in production!)
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this}
+      
+      # Optional: DeepL API Key for translations
+      DEEPL_API_KEY: ${DEEPL_API_KEY:-}
+    
+    # Volumes for persistent data
     volumes:
-      - /mnt/backup_drive/av-rentals/cloud-storage:/mnt/backup_drive/av-rentals/cloud-storage
-      - /mnt/backup_drive/av-rentals/backups:/mnt/backup_drive/av-rentals/backups
+      # Cloud storage (optional)
+      - app_storage:/app/public/uploads
+    
+    # Wait for database to be healthy
     depends_on:
       postgres:
         condition: service_healthy
+    
+    # Health check
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    
     networks:
-      - av-network
+      - acrobaticz-network
+    
+    # Resource limits (adjust based on your server)
     deploy:
       resources:
         limits:
@@ -78,33 +104,32 @@ services:
         reservations:
           memory: 512M
 
+  # ============================================================
+  # Nginx Reverse Proxy (Optional - for SSL/TLS)
+  # ============================================================
   nginx:
     image: nginx:alpine
-    container_name: av-nginx
+    container_name: acrobaticz-nginx
     restart: unless-stopped
+    
     ports:
       - "80:80"
       - "443:443"
+    
     volumes:
-      - ./nginx/app.conf.template:/etc/nginx/templates/default.conf.template:ro
-      - ./certbot/conf:/etc/letsencrypt:rw
-      - ./certbot/www:/var/www/certbot:rw
-      - ./public:/var/www/public:ro
-      - ./scripts/deployment/nginx-entrypoint.sh:/usr/local/bin/nginx-entrypoint.sh:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - nginx_certs:/etc/nginx/certs:ro
+      - ./public:/usr/share/nginx/html/static:ro
+    
     environment:
-      - DOMAIN=${DOMAIN:-acrobaticz.duckdns.org}
-    entrypoint: /bin/sh -c "apk add --no-cache openssl && /usr/local/bin/nginx-entrypoint.sh nginx -g 'daemon off;'"
+      - DOMAIN=${DOMAIN:-localhost}
+    
     depends_on:
-      app:
-        condition: service_healthy
+      - app
+    
     networks:
-      - av-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--no-check-certificate", "-O", "/dev/null", "https://localhost:443"]
-      interval: 10s
-      timeout: 5s
-      retries: 2
-      start_period: 5s
+      - acrobaticz-network
+    
     deploy:
       resources:
         limits:
@@ -112,58 +137,24 @@ services:
         reservations:
           memory: 64M
 
-  certbot:
-    image: certbot/certbot:latest
-    container_name: av-certbot
-    restart: unless-stopped
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-      - ./scripts/deployment/certbot-entrypoint.sh:/usr/local/bin/certbot-entrypoint.sh:ro
-    entrypoint: /usr/local/bin/certbot-entrypoint.sh
-    environment:
-      - DOMAIN=${DOMAIN:-acrobaticz.duckdns.org}
-      - CERTBOT_EMAIL=${CERTBOT_EMAIL:-felizartpt@gmail.com}
-    networks:
-      - av-network
-    depends_on:
-      nginx:
-        condition: service_healthy
-
-  duckdns:
-    image: alpine:latest
-    container_name: av-duckdns
-    restart: unless-stopped
-    volumes:
-      - ./scripts/deployment/duckdns-update.sh:/usr/local/bin/duckdns-update.sh:ro
-    environment:
-      - DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN:-acrobaticz}
-      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-f0027691-1f98-4a3e-9f26-94020479451e}
-    entrypoint: /bin/sh -c "apk add --no-cache curl && while :; do sh /usr/local/bin/duckdns-update.sh; sleep 1800; done;"
-    networks:
-      - av-network
-    deploy:
-      resources:
-        limits:
-          memory: 64M
-        reservations:
-          memory: 32M
-
+# ============================================================
+# Volumes (Persistent Data Storage)
+# ============================================================
 volumes:
   postgres_data:
+    driver: local
+  
+  app_storage:
+    driver: local
+  
+  nginx_certs:
+    driver: local
 
+# ============================================================
+# Networks
+# ============================================================
 networks:
-  av-network:
+  acrobaticz-network:
     driver: bridge
-
-secrets:
-  db_user:
-    file: ./secrets/db_user
-  db_password:
-    file: ./secrets/db_password
-  db_name:
-    file: ./secrets/db_name
-  jwt_secret:
-    file: ./secrets/jwt_secret
-  deepl_api_key:
-    file: ./secrets/deepl_api_key
+    driver_opts:
+      com.docker.network.bridge.name: br-acrobaticz
