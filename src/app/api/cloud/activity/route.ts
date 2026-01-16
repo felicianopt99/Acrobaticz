@@ -9,14 +9,14 @@ export async function GET(request: NextRequest) {
 
     const activities = await prisma.fileActivity.findMany({
       where: {
-        file: {
+        CloudFile: {
           // ownerId: auth.userId, // TODO: Add auth filter
         },
       },
       select: {
         id: true,
         fileId: true,
-        file: { select: { name: true } },
+        CloudFile: { select: { name: true } },
         action: true,
         createdAt: true,
         details: true,
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       activities: activities.map(a => ({
         id: a.id,
         fileId: a.fileId,
-        fileName: a.file?.name || 'Unknown',
+        fileName: a.CloudFile?.name || 'Unknown',
         action: a.action,
         createdAt: a.createdAt,
         details: a.details,

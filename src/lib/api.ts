@@ -76,7 +76,8 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 // Equipment API
 export const equipmentAPI = {
   getAll: async () => {
-    const response = await fetchAPI<{data: any[], total: number, page: number, pageSize: number, totalPages: number}>('/equipment');
+    // Fetch ALL equipment without pagination limit (fetchAll=true)
+    const response = await fetchAPI<{data: any[], total: number, page: number, pageSize: number, totalPages: number}>('/equipment?fetchAll=true');
     return response.data; // Return just the data array for backward compatibility
   },
   getPaginated: (page?: number, pageSize?: number, filters?: any) => {

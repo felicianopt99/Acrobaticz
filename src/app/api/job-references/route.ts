@@ -32,11 +32,11 @@ export async function GET(request: NextRequest) {
     const jobReferences = await prisma.jobReference.findMany({
       where,
       include: {
-        partner: true,
-        event: {
-          include: { client: true }
+        Partner: true,
+        Event: {
+          include: { Client: true }
         },
-        quote: true,
+        Quote: true,
       },
       orderBy: { referralDate: 'desc' },
     })
@@ -66,14 +66,16 @@ export async function POST(request: NextRequest) {
 
     const jobReference = await prisma.jobReference.create({
       data: {
+        id: crypto.randomUUID(),
         ...validatedData,
+        updatedAt: new Date(),
       },
       include: {
-        partner: true,
-        event: {
-          include: { client: true }
+        Partner: true,
+        Event: {
+          include: { Client: true }
         },
-        quote: true,
+        Quote: true,
       },
     })
 
@@ -106,11 +108,11 @@ export async function PUT(request: NextRequest) {
         ...validatedData,
       },
       include: {
-        partner: true,
-        event: {
-          include: { client: true }
+        Partner: true,
+        Event: {
+          include: { Client: true }
         },
-        quote: true,
+        Quote: true,
       },
     })
 

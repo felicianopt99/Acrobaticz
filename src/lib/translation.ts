@@ -246,10 +246,10 @@ async function batchTranslateWithAI(
 ): Promise<Map<string, string>> {
   // Use new DeepL service for batch translation
   try {
-    const result = await batchTranslate({
+    const result = await batchTranslate([{
       sourceText: texts[0],
       targetLanguages: [targetLang],
-    });
+    }]);
     
     const out = new Map<string, string>();
     if (result.status === 'success' && result.data?.results) {
@@ -261,7 +261,7 @@ async function batchTranslateWithAI(
     // For multiple texts, translate individually
     for (const t of texts.slice(1)) {
       try {
-        const translated = await deeplTranslateText(t, targetLang, 'general');
+        const translated = await deeplTranslateText(t, targetLang);
         if (translated.status === 'success' && translated.data?.translatedText) {
           out.set(t, translated.data.translatedText);
         } else {
@@ -278,7 +278,7 @@ async function batchTranslateWithAI(
     const out = new Map<string, string>();
     for (const t of texts) {
       try {
-        const translated = await deeplTranslateText(t, targetLang, 'general');
+        const translated = await deeplTranslateText(t, targetLang);
         if (translated.status === 'success' && translated.data?.translatedText) {
           out.set(t, translated.data.translatedText);
         } else {
@@ -406,7 +406,7 @@ export async function translateText(
     }
 
     // Use new DeepL service (handles cache, retry, etc.)
-    const result = await deeplTranslateText(text, targetLang, 'general');
+    const result = await deeplTranslateText(text, targetLang);
     
     if (result.status === 'success' && result.data?.translatedText) {
       let translated = result.data.translatedText;
@@ -537,10 +537,12 @@ export async function translateBatch(
     // 3b. Persist newly translated results to database (bulk insert, skip duplicates)
     try {
       const data = stillMissing.map((text) => ({
+        id: crypto.randomUUID(),
         sourceText: text,
         targetLang: targetLang,
         translatedText: applyGlossary(aiResults.get(text) || text, targetLang),
         model: 'deepl',
+        updatedAt: new Date(),
       }));
       if (data.length > 0) {
         await prisma.translation.createMany({ data, skipDuplicates: true });
@@ -604,10 +606,12 @@ async function translateBatchBackground(
       // Persist background translations as well (bulk insert, skip duplicates)
       try {
         const data = stillMissing.map((text) => ({
+          id: crypto.randomUUID(),
           sourceText: text,
           targetLang: targetLang,
           translatedText: applyGlossary(aiResults.get(text) || text, targetLang),
           model: 'deepl',
+          updatedAt: new Date(),
         }));
         if (data.length > 0) {
           await prisma.translation.createMany({ data, skipDuplicates: true });

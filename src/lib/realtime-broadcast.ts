@@ -112,6 +112,7 @@ async function logSyncEvent(
     
     await prisma.dataSyncEvent.create({
       data: {
+        id: crypto.randomUUID(),
         entityType,
         action,
         entityId: data?.id || 'unknown',

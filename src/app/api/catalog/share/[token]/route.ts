@@ -30,7 +30,7 @@ export async function GET(
     const catalogShare = await prisma.catalogShare.findUnique({
       where: { token },
       include: {
-        partner: {
+        Partner: {
           select: {
             id: true,
             name: true,
@@ -80,14 +80,14 @@ export async function GET(
         imageUrl: true,
         imageContentType: true,
         categoryId: true,
-        category: {
+        Category: {
           select: {
             id: true,
             name: true,
             icon: true,
           },
         },
-        subcategory: {
+        Subcategory: {
           select: {
             id: true,
             name: true,
@@ -99,14 +99,14 @@ export async function GET(
 
     // Sort by category name in application (much faster than DB-level join ordering)
     const sortedEquipment = equipment.sort((a, b) => {
-      const categoryCompare = (a.category?.name || '').localeCompare(b.category?.name || '');
+      const categoryCompare = (a.Category?.name || '').localeCompare(b.Category?.name || '');
       if (categoryCompare !== 0) return categoryCompare;
       return a.name.localeCompare(b.name);
     });
 
     const response = {
       success: true,
-      partner: catalogShare.partner,
+      partner: catalogShare.Partner,
       equipment: sortedEquipment,
       shareToken: token,
     };

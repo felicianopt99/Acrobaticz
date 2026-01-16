@@ -146,6 +146,7 @@ export async function PUT(request: NextRequest) {
     if (newQuotaBytes !== undefined) {
       await prisma.quotaChangeHistory.create({
         data: {
+          id: crypto.randomUUID(),
           userId,
           oldQuotaBytes: currentQuota.quotaBytes,
           newQuotaBytes: BigInt(newQuotaBytes),

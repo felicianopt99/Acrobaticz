@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 
 const EXTERNAL_STORAGE_PATH = process.env.EXTERNAL_STORAGE_PATH || '/mnt/backup_drive/av-rentals/cloud-storage';
 const EXTERNAL_STORAGE_TEMP = process.env.EXTERNAL_STORAGE_TEMP || '/mnt/backup_drive/av-rentals/cloud-storage/temp';
+export const CLOUD_STORAGE_PATH = EXTERNAL_STORAGE_PATH;
 
 export interface DiskHealth {
   isAccessible: boolean;

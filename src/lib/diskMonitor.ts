@@ -127,6 +127,7 @@ async function notifyAdmins(
 
     // Create notification for each admin
     const notifications = admins.map((admin) => ({
+      id: crypto.randomUUID(),
       userId: admin.id,
       type: 'disk-alert',
       title,
@@ -135,6 +136,7 @@ async function notifyAdmins(
       isRead: false,
       entityType: 'storage',
       actionUrl: '/admin/storage',
+      updatedAt: new Date(),
     }));
 
     // Bulk insert notifications

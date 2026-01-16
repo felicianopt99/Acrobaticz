@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
     // Fetch company settings for location/currency context
     let companySettings = null;
     try {
-      companySettings = await prisma.customizationSettings.findFirst({
+      companySettings = await prisma.customization_settings.findFirst({
         select: {
           companyName: true,
           currency: true,
@@ -378,8 +378,10 @@ export async function POST(request: NextRequest) {
           if (createMissingCategory) {
             existingCategory = await prisma.category.create({
               data: {
+                id: crypto.randomUUID(),
                 name: validatedData.category,
-                icon: getCategoryIcon(validatedData.category)
+                icon: getCategoryIcon(validatedData.category),
+                updatedAt: new Date(),
               }
             });
             createdCategory = true;
@@ -408,8 +410,10 @@ export async function POST(request: NextRequest) {
               if (createMissingSubcategory) {
                 existingSubcategory = await prisma.subcategory.create({
                   data: {
+                    id: crypto.randomUUID(),
                     name: validatedData.subcategory,
-                    parentId: existingCategory.id
+                    parentId: existingCategory.id,
+                    updatedAt: new Date(),
                   }
                 });
                 createdSubcategory = true;

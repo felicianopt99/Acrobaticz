@@ -55,13 +55,20 @@ interface PublicCatalogContentProps {
 
 // Converter Equipment para ProductWithRelations
 function equipmentToProduct(equipment: Equipment): ProductWithRelations {
+  const imageUrl = equipment.imageUrl || ''
+  const images = equipment.images?.map((img, idx) => ({
+    id: `${equipment.id}-img-${idx}`,
+    url: img.url,
+    productId: equipment.id,
+  })) || [{ id: `${equipment.id}-img-0`, url: imageUrl, productId: equipment.id }]
+  
   return {
     id: equipment.id,
     name: equipment.name,
     description: equipment.description,
     price: equipment.dailyRate,
     stock: equipment.quantity,
-    images: equipment.images || [{ id: '', url: equipment.imageUrl || '', productId: equipment.id }],
+    images,
     category: equipment.category as any,
     supplier: null,
     createdAt: new Date(),
@@ -117,7 +124,7 @@ export function PublicCatalogContent({ token }: PublicCatalogContentProps) {
             { id: eq.category.id, name: eq.category.name },
           ])
         ).values()
-      )
+      ) as { id: string; name: string }[]
       setCategories(uniqueCategories)
     } catch (err) {
       console.error('Error loading catalog:', err)

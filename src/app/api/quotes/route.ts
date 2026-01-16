@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
   try {
     const quotes = await prisma.quote.findMany({
       include: {
-        client: true,
-        items: {
+        Client: true,
+        QuoteItem: {
           include: {
-            equipment: true,
+            EquipmentItem: true,
           }
         },
       },
@@ -120,9 +120,11 @@ export async function POST(request: NextRequest) {
 
     // Normalize optional fields
     const dataToCreate: any = {
+      id: crypto.randomUUID(),
       ...validatedBase,
       quoteNumber,
       clientEmail: validatedBase.clientEmail || undefined,
+      updatedAt: new Date(),
     }
     if (draft && validatedBase.startDate instanceof Date === false && typeof validatedBase.startDate === 'string') {
       dataToCreate.startDate = new Date(validatedBase.startDate)
@@ -131,14 +133,40 @@ export async function POST(request: NextRequest) {
       dataToCreate.endDate = new Date(validatedBase.endDate)
     }
 
+    // Helper function to map item fields to valid QuoteItem schema fields
+    const mapItemToQuoteItem = (item: any) => {
+      // Only include fields that exist in QuoteItem schema
+      const validFields: any = {
+        id: crypto.randomUUID(),
+        type: String(item.type || 'equipment'),
+        equipmentId: item.equipmentId || undefined,
+        equipmentName: item.equipmentName || undefined,
+        serviceId: item.serviceId || undefined,
+        serviceName: item.serviceName || undefined,
+        feeId: item.feeId || undefined,
+        feeName: item.feeName || undefined,
+        amount: item.amount !== undefined && item.amount !== null ? Number(item.amount) : undefined,
+        feeType: item.feeType || undefined,
+        quantity: item.quantity !== undefined && item.quantity !== null ? Number(item.quantity) : undefined,
+        unitPrice: item.unitPrice !== undefined && item.unitPrice !== null ? Number(item.unitPrice) : undefined,
+        days: item.days !== undefined && item.days !== null ? Number(item.days) : undefined,
+        lineTotal: item.lineTotal !== undefined && item.lineTotal !== null ? Number(item.lineTotal) : 0,
+        updatedAt: new Date(),
+      }
+      // Remove undefined values to let database defaults handle them
+      return Object.fromEntries(Object.entries(validFields).filter(([, v]) => v !== undefined))
+    }
+
     const quote = await prisma.quote.create({
       data: {
         ...dataToCreate,
-        items: validatedItems && validatedItems.length ? { create: validatedItems } : undefined,
+        QuoteItem: validatedItems && validatedItems.length > 0 ? { 
+          create: validatedItems.map(mapItemToQuoteItem)
+        } : undefined,
       },
       include: {
-        client: true,
-        items: { include: { equipment: true } },
+        Client: true,
+        QuoteItem: { include: { EquipmentItem: true } },
       },
     })
 
@@ -175,19 +203,37 @@ export async function PUT(request: NextRequest) {
       throw e
     }
 
+    // Helper function to map item fields to valid QuoteItem schema fields
+    const mapItemToQuoteItem = (item: any) => {
+      // Only include fields that exist in QuoteItem schema
+      const validFields: any = {
+        id: item.id || crypto.randomUUID(),
+        type: String(item.type || 'equipment'),
+        equipmentId: item.equipmentId || undefined,
+        equipmentName: item.equipmentName || undefined,
+        serviceId: item.serviceId || undefined,
+        serviceName: item.serviceName || undefined,
+        feeId: item.feeId || undefined,
+        feeName: item.feeName || undefined,
+        amount: item.amount !== undefined && item.amount !== null ? Number(item.amount) : undefined,
+        feeType: item.feeType || undefined,
+        quantity: item.quantity !== undefined && item.quantity !== null ? Number(item.quantity) : undefined,
+        unitPrice: item.unitPrice !== undefined && item.unitPrice !== null ? Number(item.unitPrice) : undefined,
+        days: item.days !== undefined && item.days !== null ? Number(item.days) : undefined,
+        lineTotal: item.lineTotal !== undefined && item.lineTotal !== null ? Number(item.lineTotal) : 0,
+        updatedAt: new Date(),
+      }
+      // Remove undefined values to let database defaults handle them
+      return Object.fromEntries(Object.entries(validFields).filter(([, v]) => v !== undefined))
+    }
+
     // If items provided, just clean them for Prisma without strict validation
     let validatedItems: any[] | undefined = undefined
     if (Array.isArray(items) && items.length > 0) {
       try {
         console.log('Items being processed for update:', JSON.stringify(items.slice(0, 1), null, 2), `... (${items.length} total)`)
-        // Don't validate during updates, just clean the data
-        // Remove database-generated and relation fields that shouldn't be included in create operations
-        validatedItems = items.map(({ id, quoteId, createdAt, updatedAt, equipment, ...item }: any) => ({
-          ...item,
-          // Ensure required fields have proper types
-          type: String(item.type),
-          lineTotal: typeof item.lineTotal === 'number' ? item.lineTotal : 0,
-        }))
+        // Map items to valid QuoteItem fields
+        validatedItems = items.map((item: any) => mapItemToQuoteItem(item))
       } catch (e) {
         console.error('Error processing items:', e)
         return NextResponse.json({ error: 'Failed to process items', details: String(e) }, { status: 400 })
@@ -214,7 +260,7 @@ export async function PUT(request: NextRequest) {
           where: { id },
           data: {
             ...updatePayload,
-            items: { create: validatedItems },
+            QuoteItem: { create: validatedItems },
           },
         })
       } else {
@@ -227,8 +273,8 @@ export async function PUT(request: NextRequest) {
       const updated = await tx.quote.findUnique({
         where: { id },
         include: {
-          client: true,
-          items: { include: { equipment: true } },
+          Client: true,
+          QuoteItem: { include: { EquipmentItem: true } },
         },
       })
       if (!updated) throw new Error('Updated quote not found')

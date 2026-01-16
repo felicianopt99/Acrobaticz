@@ -14,12 +14,14 @@ export async function POST(request: NextRequest) {
 
     // Prepare createMany payload
     const data = texts.map((t: string) => ({
+      id: crypto.randomUUID(),
       sourceText: t,
       translatedText: t, // seed with original text; can be edited later
       targetLang,
       category,
       model: 'seed',
       status: 'draft',
+      updatedAt: new Date(),
     }));
 
     const result = await prisma.translation.createMany({ data, skipDuplicates: true });

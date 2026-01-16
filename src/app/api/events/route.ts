@@ -21,16 +21,16 @@ export async function GET(request: NextRequest) {
   try {
     const events = await prisma.event.findMany({
       include: {
-        client: true,
-        agency: true,
-        quote: true,
-        rentals: {
+        Client: true,
+        Partner: true,
+        Quote: true,
+        Rental: {
           include: {
-            equipment: true,
+            EquipmentItem: true,
           }
         },
         _count: {
-          select: { rentals: true }
+          select: { Rental: true }
         }
       },
       orderBy: { startDate: 'desc' },
@@ -76,13 +76,15 @@ export async function POST(request: NextRequest) {
     
     const event = await prisma.event.create({
       data: {
+        id: crypto.randomUUID(),
         ...validatedData,
         totalRevenue,
+        updatedAt: new Date(),
       },
       include: {
-        client: true,
-        rentals: true,
-        quote: true,
+        Client: true,
+        Rental: true,
+        Quote: true,
       },
     })
     
@@ -139,9 +141,9 @@ export async function PUT(request: NextRequest) {
       where: { id },
       data: dataToUpdate,
       include: {
-        client: true,
-        rentals: true,
-        quote: true,
+        Client: true,
+        Rental: true,
+        Quote: true,
       },
     })
     

@@ -32,12 +32,14 @@ export async function POST(request: NextRequest) {
 
     const service = await prisma.service.create({
       data: {
+        id: crypto.randomUUID(),
         name,
         description: description || null,
         unitPrice: Number(unitPrice),
         unit: unit || 'hour',
         category: category || null,
         isActive: isActive !== false, // Default to true
+        updatedAt: new Date(),
       },
     });
 

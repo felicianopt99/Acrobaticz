@@ -6,32 +6,121 @@ Complete guide to scripts in this repository.
 
 ```
 scripts/
-├── README.md                    (this file)
-├── seed.ts                      (main database seeding)
-├── seed.js                      (seed.ts JavaScript version)
-├── seed-complete.ts             (full dataset seed)
-├── seed-comprehensive.ts        (all features test seed)
-├── seed-from-json.ts            (load data from JSON)
-├── extract-seed-data.ts         (extract data for backup)
-├── seeding/                     (seeding core logic)
-│   ├── core/                    (orchestration & database helpers)
-│   ├── data-loaders/            (data loading by type)
-│   └── utils/                   (utilities: logger, validator, etc)
-├── deployment/                  (production deployment scripts)
-│   ├── docker-entrypoint.sh     (production container startup)
-│   ├── dev-entrypoint.sh        (development container startup)
-│   └── docker-redeploy.sh       (safe redeployment with migration handling)
-├── database/                    (database utilities)
-│   ├── run-seed.sh              (shell wrapper for seeding)
-│   ├── run_overnight.sh         (automated overnight seeding)
-│   └── setup_translation.sh     (translation system setup)
-├── maintenance/                 (maintenance scripts)
-│   ├── backup-daily.sh          (daily backup automation)
-│   ├── build-with-cache.sh      (optimized Docker builds)
-│   └── cleanup-backups.sh       (backup retention cleanup)
-└── archived/                    (old/deprecated scripts)
+├── README.md                                (this file)
+│
+├── 🎯 PHASE 3: Migration Consolidation Scripts
+├── consolidate-migrations.sh                (automated migration squash)
+├── test-consolidation.sh                    (validation suite)
+├── phase3-status.sh                         (status dashboard)
+│
+├── seed.ts                                  (main database seeding)
+├── seed.js                                  (seed.ts JavaScript version)
+├── seed-complete.ts                         (full dataset seed)
+├── seed-comprehensive.ts                    (all features test seed)
+├── seed-from-json.ts                        (load data from JSON)
+├── extract-seed-data.ts                     (extract data for backup)
+├── seeding/                                 (seeding core logic)
+│   ├── core/                                (orchestration & database helpers)
+│   ├── data-loaders/                        (data loading by type)
+│   └── utils/                               (utilities: logger, validator, etc)
+├── deployment/                              (production deployment scripts)
+│   ├── docker-entrypoint.sh                 (production container startup)
+│   ├── dev-entrypoint.sh                    (development container startup)
+│   └── docker-redeploy.sh                   (safe redeployment with migration handling)
+├── database/                                (database utilities)
+│   ├── run-seed.sh                          (shell wrapper for seeding)
+│   ├── run_overnight.sh                     (automated overnight seeding)
+│   └── setup_translation.sh                 (translation system setup)
+├── maintenance/                             (maintenance scripts)
+│   ├── backup-daily.sh                      (daily backup automation)
+│   ├── build-with-cache.sh                  (optimized Docker builds)
+│   └── cleanup-backups.sh                   (backup retention cleanup)
+└── archived/                                (old/deprecated scripts)
     └── (various old scripts)
+
+## 🎯 PHASE 3: Migration Consolidation Scripts
+
+### consolidate-migrations.sh
+**Purpose:** Consolidate 29 Prisma migrations into 1 baseline migration
+
+**Features:**
+- ✅ Pre-flight checks (git, npm, docker, structure)
+- ✅ Automatic backups (migrations, schema.prisma, package.json, database.sql)
+- ✅ Schema extraction from running PostgreSQL
+- ✅ Prisma metadata cleanup
+- ✅ New migration creation (20260114000000_01_init/)
+- ✅ Archive old migrations (migrations.archive.TIMESTAMP/)
+- ✅ Git commit automation
+- ✅ Detailed logging
+
+**Usage:**
+```bash
+# Standard execution
+bash scripts/consolidate-migrations.sh
+
+# Simulate without making changes
+bash scripts/consolidate-migrations.sh --dry-run
+
+# Skip automatic backups (if done manually)
+bash scripts/consolidate-migrations.sh --no-backup
 ```
+
+**Result:**
+- 29 migrations → 1 baseline migration (20260114000000_01_init)
+- All 48+ tables in single migration.sql (~1611 lines)
+- Automatic git commit
+- Full backups for rollback
+
+**Time:** ~90 minutes total (15 min backup + 20 min SQL + 25 min test + 20 min validate + 10 min cleanup)
+
+### test-consolidation.sh
+**Purpose:** Validate migration consolidation
+
+**Features:**
+- ✅ File structure validation
+- ✅ SQL content validation
+- ✅ Git integration checks
+- ✅ Docker integration tests (optional with --full)
+
+**Usage:**
+```bash
+# Quick tests (1 minute)
+bash scripts/test-consolidation.sh
+
+# Full tests including Docker (5 minutes)
+bash scripts/test-consolidation.sh --full
+```
+
+**Validates:**
+- Migration directory exists
+- migration.sql has ~1611 lines
+- migration_lock.toml exists
+- Old migrations archived
+- Backups created
+- CREATE TABLE statements (~48)
+- CREATE INDEX statements (~50)
+- Prisma metadata removed
+- Git commit present
+- Docker tables created (~48)
+
+### phase3-status.sh
+**Purpose:** Dashboard showing Phase 3 consolidation status
+
+**Usage:**
+```bash
+bash scripts/phase3-status.sh
+```
+
+**Shows:**
+- Current consolidation status
+- Migration info (lines, size, tables, indexes)
+- Backup status
+- Git status
+- Validation checklist
+- Quick commands
+- Timeline and next steps
+
+---
 
 ## Seeding Scripts
 

@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
     // Create batch operation record
     const batchOperation = await prisma.batchOperation.create({
       data: {
+        id: crypto.randomUUID(),
         operationType: 'move',
         status: 'processing',
         fileCount: fileIds.length,

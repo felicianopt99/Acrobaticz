@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
 
     const fee = await prisma.fee.create({
       data: {
+        id: crypto.randomUUID(),
         name,
         description: description || null,
         amount: Number(amount),
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
         category: category || null,
         isActive: isActive !== false, // Default to true
         isRequired: isRequired === true, // Default to false
+        updatedAt: new Date(),
       },
     });
 

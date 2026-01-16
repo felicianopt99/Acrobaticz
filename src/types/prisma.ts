@@ -1,65 +1,32 @@
-import { Prisma } from '@prisma/client'
-
 /**
- * Tipos expandidos do Prisma para uso em todo o app
+ * Tipos para compatibilidade com catálogo público
+ * Baseados no modelo EquipmentItem do Prisma
  */
 
-export type ProductWithRelations = Prisma.ProductGetPayload<{
-  include: {
-    category: true
-    images: true
-    supplier: true
-  }
-}>
+export interface ProductImage {
+  id: string
+  url: string
+  productId: string
+}
 
-export type CategoryWithProducts = Prisma.CategoryGetPayload<{
-  include: {
-    products: {
-      include: {
-        images: true
-        supplier: true
-      }
-    }
-  }
-}>
+export interface ProductCategory {
+  id: string
+  name: string
+  icon?: string | null
+  description?: string | null
+}
 
-export type ClientWithRelations = Prisma.ClientGetPayload<{
-  include: {
-    catalogs: {
-      include: {
-        products: {
-          include: {
-            category: true
-            images: true
-          }
-        }
-      }
-    }
-    orders: true
-  }
-}>
-
-export type CatalogWithProducts = Prisma.CatalogGetPayload<{
-  include: {
-    client: true
-    products: {
-      include: {
-        category: true
-        images: true
-        supplier: true
-      }
-    }
-  }
-}>
-
-export type ImageWithProduct = Prisma.ImageGetPayload<{
-  include: {
-    product: true
-  }
-}>
-
-export type SupplierWithProducts = Prisma.SupplierGetPayload<{
-  include: {
-    products: true
-  }
-}>
+export interface ProductWithRelations {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  stock: number
+  images: ProductImage[]
+  category: ProductCategory | null
+  supplier: null
+  createdAt: Date
+  updatedAt: Date
+  categoryId: string
+  supplierId: string | null
+}

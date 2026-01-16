@@ -17,10 +17,7 @@ import { requirePermission } from '@/lib/api-auth'
 export async function GET(request: NextRequest) {
   try {
     // Require admin permission (canManageEquipment)
-    const authResult = requirePermission(request, 'canManageEquipment')
-    if (authResult instanceof NextResponse) {
-      return authResult
-    }
+    const authResult = await requirePermission(request, 'canManageEquipment')
 
     const stats = await DatabaseCleanup.getCleanupStats()
 
@@ -55,10 +52,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Require admin permission (canManageEquipment)
-    const authResult = requirePermission(request, 'canManageEquipment')
-    if (authResult instanceof NextResponse) {
-      return authResult
-    }
+    const authResult = await requirePermission(request, 'canManageEquipment')
 
     const body = await request.json()
     const {

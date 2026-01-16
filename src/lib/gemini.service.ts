@@ -34,11 +34,11 @@ async function getGeminiApiKey(): Promise<string | null> {
 
   try {
     // Try to get from database first
-    cachedGeminiApiKey = await getAPIKey('gemini');
+    cachedGeminiApiKey = await getAPIKey('gemini') ?? null;
     
     // Fall back to config service if not in database
     if (!cachedGeminiApiKey) {
-      cachedGeminiApiKey = await configService.get('Gemini', 'GEMINI_API_KEY');
+      cachedGeminiApiKey = (await configService.get('Gemini', 'GEMINI_API_KEY')) ?? null;
     }
     
     // Set cache expiry to 5 minutes from now

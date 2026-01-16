@@ -62,6 +62,7 @@ export default async function CloudLayout({
       if (!quota) {
         await prisma.storageQuota.create({
           data: {
+            id: crypto.randomUUID(),
             userId: user.id,
             usedBytes: BigInt(0),
             quotaBytes: BigInt(process.env.DEFAULT_STORAGE_QUOTA || '53687091200'),

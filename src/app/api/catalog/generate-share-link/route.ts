@@ -87,10 +87,12 @@ export async function POST(request: NextRequest) {
     // Create catalog share record
     const catalogShare = await prisma.catalogShare.create({
       data: {
+        id: crypto.randomUUID(),
         token: shareToken,
         partnerId: partnerId,
         selectedEquipmentIds: selectedEquipmentIds,
         expiresAt: null, // No expiration by default
+        updatedAt: new Date(),
       },
     });
 

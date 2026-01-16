@@ -87,17 +87,17 @@ export async function overdueReturnsCheckJob() {
     const overdueRentals = await prisma.rental.findMany({
       where: {
         prepStatus: { not: 'checked-in' },
-        event: {
+        Event: {
           endDate: { lt: now },
         },
       },
       include: {
-        event: true,
+        Event: true,
       },
     });
 
     for (const rental of overdueRentals) {
-      const daysOverdue = Math.floor((now.getTime() - rental.event.endDate.getTime()) / (1000 * 60 * 60 * 24));
+      const daysOverdue = Math.floor((now.getTime() - rental.Event.endDate.getTime()) / (1000 * 60 * 60 * 24));
 
       // Only notify if overdue by at least 1 day
       if (daysOverdue >= 1) {
@@ -141,13 +141,13 @@ export async function criticalEventDayJob() {
         },
       },
       include: {
-        rentals: true,
+        Rental: true,
       },
     });
 
     for (const event of upcomingEvents) {
       // Check if any equipment is checked out
-      const checkedOutRentals = event.rentals.filter((r) => r.prepStatus === 'checked-out');
+      const checkedOutRentals = event.Rental.filter((r: { prepStatus: string | null }) => r.prepStatus === 'checked-out');
 
       if (checkedOutRentals.length > 0) {
         // Check if we already sent this critical alert (to avoid spamming)
@@ -191,12 +191,12 @@ export async function monthlySummaryJob() {
         },
       },
       include: {
-        rentals: {
+        Rental: {
           include: {
-            equipment: true,
+            EquipmentItem: true,
           },
         },
-        client: true,
+        Client: true,
       },
     });
 
@@ -205,13 +205,13 @@ export async function monthlySummaryJob() {
     const clientRevenue: Record<string, number> = {};
 
     for (const event of events) {
-      for (const rental of event.rentals) {
+      for (const rental of event.Rental) {
         const days = Math.ceil((event.endDate.getTime() - event.startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const revenue = rental.equipment.dailyRate * days * rental.quantityRented;
+        const revenue = rental.EquipmentItem.dailyRate * days * rental.quantityRented;
         totalRevenue += revenue;
 
-        if (event.client) {
-          clientRevenue[event.client.name] = (clientRevenue[event.client.name] || 0) + revenue;
+        if (event.Client) {
+          clientRevenue[event.Client.name] = (clientRevenue[event.Client.name] || 0) + revenue;
         }
       }
     }

@@ -46,6 +46,14 @@ export function InventoryGridView() {
   const { toast } = useToast();
   const router = useRouter();
 
+  // 🔍 DEBUG LOGGING
+  console.log('🖼️  InventoryGridView Render:', {
+    equipmentCount: equipment.length,
+    categoriesCount: categories.length,
+    isDataLoaded,
+    firstItem: equipment[0] ? { id: equipment[0].id, name: equipment[0].name, categoryId: equipment[0].categoryId } : 'NONE'
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
@@ -104,26 +112,45 @@ export function InventoryGridView() {
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description.toLowerCase().includes(searchTerm.toLowerCase())
       )
-      .filter(item => selectedCategory ? item.categoryId === selectedCategory : true)
-      .filter(item => selectedSubcategory ? item.subcategoryId === selectedSubcategory : true)
-      .filter(item => selectedStatus ? item.status === selectedStatus : true)
-      .filter(item => selectedLocation ? item.location === selectedLocation : true)
-      .filter(item => selectedType ? item.type === selectedType : true)
+      .filter(item => !selectedCategory || item.categoryId === selectedCategory)
+      .filter(item => !selectedSubcategory || item.subcategoryId === selectedSubcategory)
+      .filter(item => !selectedStatus || item.status === selectedStatus)
+      .filter(item => !selectedLocation || item.location === selectedLocation)
+      .filter(item => !selectedType || (item.type?.toLowerCase() || 'equipment') === selectedType.toLowerCase())
       .filter(item => {
         if (selectedAvailability === 'all') return true;
         const rented = isCurrentlyRented(item.id);
         return selectedAvailability === 'rented' ? rented : !rented;
       });
 
+    // 🔍 DEBUG LOGGING
+    console.log('🔍 Inventory Filter Debug:', {
+      originalCount: equipment.length,
+      filteredCount: filtered.length,
+      equipmentType: filtered.filter(i => (i.type?.toLowerCase() || 'equipment') === 'equipment').length,
+      consumableType: filtered.filter(i => (i.type?.toLowerCase() || 'equipment') === 'consumable').length,
+      filters: {
+        searchTerm: searchTerm || '(none)',
+        selectedCategory: selectedCategory || '(all)',
+        selectedSubcategory: selectedSubcategory || '(all)',
+        selectedStatus: selectedStatus || '(all)',
+        selectedLocation: selectedLocation || '(all)',
+        selectedType: selectedType || '(all)',
+        selectedAvailability
+      },
+      firstItem: filtered[0] ? { id: filtered[0].id, name: filtered[0].name, type: filtered[0].type, categoryId: filtered[0].categoryId } : 'NONE'
+    });
+
     return {
-      regularEquipment: filtered.filter(item => item.type === 'equipment'),
-      consumableItems: filtered.filter(item => item.type === 'consumable')
+      regularEquipment: filtered.filter(item => (item.type?.toLowerCase() || 'equipment') === 'equipment'),
+      consumableItems: filtered.filter(item => (item.type?.toLowerCase() || 'equipment') === 'consumable')
     };
   }, [equipment, searchTerm, selectedCategory, selectedSubcategory, selectedStatus, selectedLocation, selectedType, selectedAvailability, isCurrentlyRented]);
 
   const paginatedRegular = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return regularEquipment.slice(start, start + itemsPerPage);
+    const paginated = regularEquipment.slice(start, start + itemsPerPage);
+    return paginated;
   }, [regularEquipment, currentPage]);
 
   const groupedEquipment = useMemo(() => {
@@ -136,7 +163,10 @@ export function InventoryGridView() {
       }
       groups[categoryName].push(item);
     });
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+    
+    const result = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+    
+    return result;
   }, [paginatedRegular, categories]);
 
   const totalPages = Math.ceil(regularEquipment.length / itemsPerPage);
@@ -172,6 +202,15 @@ export function InventoryGridView() {
   }
 
   const noItemsFound = regularEquipment.length === 0 && consumableItems.length === 0;
+  
+  // ⚠️ WARNING: Equipment disappeared after filtering
+  if (equipment.length > 0 && regularEquipment.length === 0 && consumableItems.length === 0 && !noItemsFound) {
+    console.error('🚨 CRITICAL: Equipment loaded but disappeared after type filter!', {
+      totalEquipment: equipment.length,
+      afterType: regularEquipment.length,
+      types: [...new Set(equipment.map(e => e.type))]
+    });
+  }
 
   return (
     <>
@@ -218,7 +257,16 @@ export function InventoryGridView() {
         </div>
       </div>
 
-      {noItemsFound ? (
+      {equipment.length > 0 && regularEquipment.length === 0 && consumableItems.length === 0 && (
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg">
+          <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2">⚠️ Equipment Data Filtering Issue</p>
+          <p className="text-xs text-red-600 dark:text-red-300">
+            {equipment.length} equipment loaded but 0 items showing. This is a developer issue - check console for details.
+          </p>
+        </div>
+      )}
+
+      {noItemsFound && equipment.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground flex flex-col items-center">
           <SearchSlash className="w-16 h-16 mb-4 text-primary/50" />
           <p className="text-xl mb-1">No items found.</p>

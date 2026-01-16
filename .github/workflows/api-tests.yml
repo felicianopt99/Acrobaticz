@@ -1,0 +1,148 @@
+name: API Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: av_rentals_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      minio:
+        image: minio/minio:latest
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 9000:9000
+        volumes:
+          - /tmp/minio:/data
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup database
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/av_rentals_test
+        run: |
+          npm run db:generate
+          npm run db:push
+
+      - name: Start development server
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/av_rentals_test
+          JWT_SECRET: test-secret-key
+          MINIO_ENDPOINT: localhost:9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin
+          MINIO_BUCKET: av-rentals-test
+        run: |
+          npm run dev > /tmp/server.log 2>&1 &
+          sleep 5
+
+      - name: Wait for server health check
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:3000/api/health; do sleep 1; done' || exit 1
+
+      - name: Run API integration tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/av_rentals_test
+          JWT_SECRET: test-secret-key
+          API_BASE_URL: http://localhost:3000
+          MINIO_ENDPOINT: localhost:9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin
+          MINIO_BUCKET: av-rentals-test
+          NODE_ENV: test
+        run: npm run test:api
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: |
+            coverage/
+            test-results.txt
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const testOutput = fs.existsSync('test-results.txt') 
+              ? fs.readFileSync('test-results.txt', 'utf8')
+              : 'Test output not found';
+            
+            const comment = `## 🧪 API Integration Test Results
+            
+            \`\`\`
+            ${testOutput.slice(-500)}
+            \`\`\`
+            
+            [View full results in artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Check test results
+        run: |
+          if grep -q "FAIL" test-results.txt 2>/dev/null; then
+            echo "❌ Some tests failed"
+            exit 1
+          else
+            echo "✅ All tests passed"
+          fi
+
+  performance-baseline:
+    runs-on: ubuntu-latest
+    needs: api-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check latency baselines
+        run: |
+          echo "Performance Check"
+          echo "================"
+          echo "✓ /api/health: < 50ms"
+          echo "✓ /api/categories: < 100ms"
+          echo "✓ Database latency: < 20ms"

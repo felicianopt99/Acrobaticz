@@ -1,0 +1,194 @@
+/**
+ * Exemplo de API Route para Sync em Batch
+ * Arquivo: src/app/api/rentals/scan-batch/route.ts
+ *
+ * Este é um exemplo de como implementar a sincronização
+ * dos scans acumulados no frontend com o backend
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { requirePermission } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
+
+interface BatchScanRequest {
+  scans: Array<{
+    equipmentId: string;
+    scanType: 'checkout' | 'checkin';
+    eventId: string;
+    timestamp: number;
+  }>;
+}
+
+interface BatchScanResponse {
+  success: boolean;
+  processed: number;
+  errors: Array<{
+    equipmentId: string;
+    error: string;
+  }>;
+}
+
+/**
+ * POST /api/rentals/scan-batch
+ *
+ * Processa múltiplos scans de uma vez
+ * Usado pelo ScanQueueManager para sincronizar a fila local
+ */
+export async function POST(req: NextRequest): Promise<NextResponse<BatchScanResponse>> {
+  try {
+    // 1. Verificar autenticação
+    const user = await requirePermission(req, 'canManageEquipment');
+
+    // 2. Parser request
+    const body: BatchScanRequest = await req.json();
+    if (!body.scans || !Array.isArray(body.scans)) {
+      return NextResponse.json(
+        { success: false, processed: 0, errors: [] },
+        { status: 400 }
+      );
+    }
+
+    // 3. Processar cada scan
+    const response: BatchScanResponse = {
+      success: true,
+      processed: 0,
+      errors: []
+    };
+
+    for (const scan of body.scans) {
+      try {
+        // Validar entrada
+        if (!scan.equipmentId || !scan.scanType || !scan.eventId) {
+          throw new Error('Missing required fields');
+        }
+
+        // Buscar rental
+        const rental = await prisma.rental.findFirst({
+          where: {
+            equipmentId: scan.equipmentId,
+            eventId: scan.eventId
+          },
+          include: { EquipmentItem: true }
+        });
+
+        if (!rental) {
+          throw new Error('Equipment not in this event');
+        }
+
+        // Validar quantidade
+        if (scan.scanType === 'checkout') {
+          if (rental.scannedOut >= rental.quantityRented) {
+            throw new Error('Already fully checked out');
+          }
+        } else {
+          if (rental.scannedIn >= rental.quantityRented) {
+            throw new Error('Already fully checked in');
+          }
+        }
+
+        // Atualizar (com transação para garantir integridade)
+        await prisma.$transaction(async (tx) => {
+          // Atualizar rental
+          await tx.rental.update({
+            where: { id: rental.id },
+            data: {
+              [scan.scanType === 'checkout' ? 'scannedOut' : 'scannedIn']:
+                scan.scanType === 'checkout' ? rental.scannedOut + 1 : rental.scannedIn + 1,
+              updatedAt: new Date()
+            }
+          });
+
+          // Log opcional (se tiver tabela de auditoria)
+          // await tx.equipmentScanLog.create({
+          //   data: {
+          //     equipmentId: scan.equipmentId,
+          //     userId: user.userId,
+          //     eventId: scan.eventId,
+          //     scanType: scan.scanType,
+          //     status: 'success',
+          //     timestamp: new Date(scan.timestamp),
+          //     ipAddress: req.headers.get('x-forwarded-for')
+          //   }
+          // });
+        });
+
+        response.processed++;
+        console.log(`[ScanBatch] Processed: ${scan.equipmentId} (${scan.scanType})`);
+      } catch (error) {
+        response.success = false;
+        response.errors.push({
+          equipmentId: scan.equipmentId,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        console.warn(`[ScanBatch] Error: ${scan.equipmentId}`, error);
+      }
+    }
+
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error('[ScanBatch] Request error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        processed: 0,
+        errors: [
+          {
+            equipmentId: 'N/A',
+            error: 'Server error'
+          }
+        ]
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * ═════════════════════════════════════════════════════════════════
+ * EXEMPLO DE USO NO FRONTEND
+ * ═════════════════════════════════════════════════════════════════
+ *
+ * // 1. Usar o ScanQueueManager para acumular scans
+ * import { ScanQueueManager } from '@/lib/scanQueueManager';
+ *
+ * ScanQueueManager.addScan('eq-123', 'checkout');
+ * ScanQueueManager.addScan('eq-456', 'checkout');
+ * ScanQueueManager.addScan('eq-789', 'checkout');
+ *
+ * // 2. Sincronizar com o servidor
+ * const result = await ScanQueueManager.sync(
+ *   '/api/rentals/scan-batch',
+ *   eventId
+ * );
+ *
+ * // Resultado:
+ * // {
+ * //   success: true,
+ * //   synced: 3,
+ * //   failed: 0,
+ * //   errors: []
+ * // }
+ */
+
+/**
+ * ═════════════════════════════════════════════════════════════════
+ * ESTRUTURA DO PRISMA (se não tiver EquipmentScanLog)
+ * ═════════════════════════════════════════════════════════════════
+ *
+ * model Rental {
+ *   id             String        @id
+ *   eventId        String
+ *   equipmentId    String
+ *   quantityRented Int
+ *   scannedOut     Int           @default(0)  // ← ADICIONAR
+ *   scannedIn      Int           @default(0)  // ← ADICIONAR
+ *   prepStatus     String?
+ *   createdAt      DateTime      @default(now())
+ *   updatedAt      DateTime      @updatedAt
+ *
+ *   EquipmentItem  EquipmentItem @relation(fields: [equipmentId], references: [id])
+ *   Event          Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+ *
+ *   @@index([eventId, equipmentId])
+ * }
+ */

@@ -272,6 +272,7 @@ model EquipmentItem {
   updatedBy        String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime
+  deletedAt        DateTime?
   descriptionPt    String?
   imageData        String?
   imageContentType String?          @db.VarChar(50)
@@ -281,12 +282,14 @@ model EquipmentItem {
   MaintenanceLog   MaintenanceLog[]
   QuoteItem        QuoteItem[]
   Rental           Rental[]
+  EquipmentScanLog EquipmentScanLog[]
 
   @@index([categoryId])
   @@index([name])
   @@index([status])
   @@index([subcategoryId])
   @@index([type])
+  @@index([deletedAt])
   @@index([categoryId], map: "idx_equipment_category_id")
   @@index([categoryId, name], map: "idx_equipment_category_name")
   @@index([createdAt(sort: Desc)], map: "idx_equipment_createdat")
@@ -319,6 +322,7 @@ model Event {
   JobReference   JobReference[]
   Rental         Rental[]
   Subrental      Subrental[]
+  EquipmentScanLog EquipmentScanLog[]
 
   @@index([agencyId])
   @@index([assignedTo])
@@ -652,15 +656,53 @@ model QuoteItem {
 }
 
 model Rental {
-  id             String        @id
+  id             String                @id
   eventId        String
   equipmentId    String
   quantityRented Int
+  
+  // Bulk Scan Support (OCC - Optimistic Concurrency Control)
+  scannedOut     Int                  @default(0)
+  scannedIn      Int                  @default(0)
+  version        Int                  @default(1)
+  
   prepStatus     String?
-  createdAt      DateTime      @default(now())
+  createdAt      DateTime             @default(now())
   updatedAt      DateTime
-  EquipmentItem  EquipmentItem @relation(fields: [equipmentId], references: [id])
-  Event          Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  EquipmentItem  EquipmentItem        @relation(fields: [equipmentId], references: [id])
+  Event          Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  EquipmentScanLog EquipmentScanLog[]
+  
+  @@index([eventId, equipmentId])
+  @@index([prepStatus])
+  @@index([version])
+}
+
+// Equipment Scan Audit Log - Rastreabilidade Total
+model EquipmentScanLog {
+  id              String        @id @default(cuid())
+  rentalId        String
+  equipmentId     String
+  userId          String?
+  eventId         String
+  scanType        String        // 'checkout' | 'checkin'
+  status          String        // 'success' | 'error' | 'conflict'
+  timestamp       DateTime      @default(now())
+  ipAddress       String?
+  deviceInfo      String?
+  conflictVersion Int?          // Versão conflituosa se houver
+  
+  Rental          Rental        @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  EquipmentItem   EquipmentItem @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  Event           Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  @@index([rentalId])
+  @@index([equipmentId])
+  @@index([eventId])
+  @@index([timestamp])
+  @@index([scanType])
+  @@index([status])
 }
 
 model Service {

@@ -70,27 +70,58 @@ async function translateEquipmentDescription(description: string): Promise<strin
 }
 
 
-// GET /api/equipment - Get equipment with pagination
+// GET /api/equipment - Get equipment with pagination or fetch all
 export async function GET(request: NextRequest) {
   // Allow any authenticated user to view equipment
 
   try {
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const pageSize = parseInt(searchParams.get('pageSize') || '50')
+    const page = searchParams.get('page')
+    const pageSize = searchParams.get('pageSize')
     const categoryId = searchParams.get('categoryId') || undefined
     const status = searchParams.get('status') || undefined
     const search = searchParams.get('search') || undefined
+    const fetchAll = searchParams.get('fetchAll') === 'true'
+
+    // If fetchAll=true or no pagination params provided, fetch all equipment
+    if (fetchAll || (!page && !pageSize)) {
+      const data = await EquipmentRepository.findAll({
+        categoryId,
+        status,
+        search,
+      })
+      
+      return NextResponse.json({
+        data: data,
+        total: data.length,
+        page: 1,
+        pageSize: data.length,
+        totalPages: 1,
+      })
+    }
+
+    // Otherwise, use paginated fetch
+    const pageNum = parseInt(page || '1')
+    const pageSizeNum = parseInt(pageSize || '50')
 
     const result = await EquipmentRepository.findPaginated({
-      page,
-      pageSize,
+      page: pageNum,
+      pageSize: pageSizeNum,
       categoryId,
       status,
       search,
     })
     
-    return NextResponse.json(result)
+    // Transform the result to match the expected format from frontend API
+    // Repository returns {data, pagination: {page, pageSize, total, totalPages}}
+    // Frontend expects {data, total, page, pageSize, totalPages}
+    return NextResponse.json({
+      data: result.data,
+      total: result.pagination.total,
+      page: result.pagination.page,
+      pageSize: result.pagination.pageSize,
+      totalPages: result.pagination.totalPages,
+    })
   } catch (error) {
     console.error('Error fetching equipment:', error)
     return NextResponse.json({ error: 'Failed to fetch equipment' }, { status: 500 })
@@ -99,6 +130,14 @@ export async function GET(request: NextRequest) {
 
 // POST /api/equipment - Create new equipment
 export async function POST(request: NextRequest) {
+  // Require authentication and permission to manage equipment
+  let user;
+  try {
+    user = await requirePermission(request, 'canManageEquipment');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unauthorized';
+    return NextResponse.json({ error: message }, { status: message === 'Forbidden' ? 403 : 401 });
+  }
 
   try {
     const body = await request.json()
@@ -128,32 +167,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Translate description to Portuguese in parallel
-    let descriptionPt: string | null = null;
-    if (validatedData.description) {
-      try {
-        descriptionPt = await translateEquipmentDescription(validatedData.description);
-      } catch (error) {
-        console.error('Translation skipped for new equipment:', error);
-      }
-    }
+    // Generate equipment ID upfront for background translation
+    const equipmentId = crypto.randomUUID();
 
     const equipment = await prisma.$transaction(async (tx) => {
       const newEquipment = await tx.equipmentItem.create({
         data: {
+          id: equipmentId,
           ...validatedData,
           quantityByStatus: quantityByStatus as any,
-          descriptionPt: descriptionPt || undefined,
+          descriptionPt: undefined, // Will be updated asynchronously
           imageUrl: validatedData.imageUrl || 'https://placehold.co/600x400.png',
           imageData: imageData,
           imageContentType: imageContentType,
-          createdBy: user.userId,
-          updatedBy: user.userId,
+          updatedAt: new Date(),
         },
         include: {
-          category: true,
-          subcategory: true,
-          maintenanceLogs: true,
+          Category: true,
+          Subcategory: true,
+          MaintenanceLog: true,
         },
       })
 
@@ -162,6 +194,28 @@ export async function POST(request: NextRequest) {
 
     // Broadcast real-time update
     broadcastDataChange('EquipmentItem', 'CREATE', equipment, 'system')
+
+    // Fire-and-forget: Translate description in background (non-blocking)
+    // This ensures the UI response is immediate while translation happens asynchronously
+    if (validatedData.description) {
+      translateEquipmentDescription(validatedData.description)
+        .then(async (translatedDescription) => {
+          if (translatedDescription) {
+            try {
+              await prisma.equipmentItem.update({
+                where: { id: equipmentId },
+                data: { descriptionPt: translatedDescription },
+              });
+              console.log(`[Background] Translation completed for equipment ${equipmentId}`);
+            } catch (updateError) {
+              console.error(`[Background] Failed to save translation for ${equipmentId}:`, updateError);
+            }
+          }
+        })
+        .catch((error) => {
+          console.error(`[Background] Translation failed for ${equipmentId}:`, error);
+        });
+    }
     
     return NextResponse.json(equipment, { status: 201 })
   } catch (error) {
@@ -177,6 +231,14 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/equipment - Update equipment with optimistic locking
 export async function PUT(request: NextRequest) {
+  // Require authentication and permission to manage equipment
+  let user;
+  try {
+    user = await requirePermission(request, 'canManageEquipment');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unauthorized';
+    return NextResponse.json({ error: message }, { status: message === 'Forbidden' ? 403 : 401 });
+  }
 
   try {
     const body = await request.json()
@@ -249,9 +311,9 @@ export async function PUT(request: NextRequest) {
           version: currentItem.version + 1,
         },
         include: {
-          category: true,
-          subcategory: true,
-          maintenanceLogs: {
+          Category: true,
+          Subcategory: true,
+          MaintenanceLog: {
             orderBy: { date: 'desc' },
             take: 5,
           },
@@ -292,6 +354,13 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/equipment - Delete equipment
 export async function DELETE(request: NextRequest) {
+  // Require authentication and permission to manage equipment
+  try {
+    await requirePermission(request, 'canManageEquipment');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unauthorized';
+    return NextResponse.json({ error: message }, { status: message === 'Forbidden' ? 403 : 401 });
+  }
 
   try {
     const { searchParams } = new URL(request.url)
@@ -304,7 +373,7 @@ export async function DELETE(request: NextRequest) {
     // Get the equipment before deletion for real-time sync
     const equipment = await prisma.equipmentItem.findUnique({
       where: { id },
-      include: { category: true, subcategory: true }
+      include: { Category: true, Subcategory: true }
     })
     
     await prisma.$transaction(async (tx) => {

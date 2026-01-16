@@ -1,0 +1,171 @@
+{
+  "users": [
+    {
+      "id": "user_001_admin",
+      "name": "Feliciano",
+      "username": "feliciano",
+      "role": "admin",
+      "status": "active",
+      "email": "feliciano@acrobaticz.pt",
+      "phone": null,
+      "photoUrl": null,
+      "createdAt": "2026-01-06",
+      "permissions": [
+        "manage_users",
+        "full_inventory_access",
+        "create_categories",
+        "generate_reports",
+        "system_configuration",
+        "manage_backups",
+        "manage_partners"
+      ]
+    },
+    {
+      "id": "user_002_tech",
+      "name": "João",
+      "username": "joao",
+      "role": "technician",
+      "status": "active",
+      "email": "joao@acrobaticz.pt",
+      "phone": "+351 900 000 003",
+      "photoUrl": null,
+      "createdAt": "2026-01-06",
+      "permissions": [
+        "view_catalog",
+        "manage_equipment_status",
+        "register_maintenance",
+        "report_damage",
+        "communicate_with_clients"
+      ]
+    },
+    {
+      "id": "user_003_manager",
+      "name": "Lourenço",
+      "username": "lourenco",
+      "role": "manager",
+      "status": "active",
+      "email": "lourenco@acrobaticz.pt",
+      "phone": null,
+      "photoUrl": null,
+      "createdAt": "2026-01-06",
+      "permissions": [
+        "manage_inventory",
+        "process_requests",
+        "generate_proposals",
+        "communicate_with_clients",
+        "track_deliveries",
+        "generate_basic_reports"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "id": "client_001_rey_davis",
+      "name": "Rey Davis",
+      "company": "VRD Production",
+      "type": "agency",
+      "status": "active",
+      "email": "hello@vrd.productions",
+      "phone": "+351 969 774 999",
+      "website": "https://vrd.productions",
+      "logoUrl": "/logos/partners/rey-davis.png",
+      "location": "Lisboa, Portugal",
+      "specialties": [
+        "eventos corporativos",
+        "produções audiovisuais",
+        "festivais",
+        "conferências",
+        "casamentos e eventos sociais"
+      ],
+      "productsAccess": 65,
+      "productAccessPercentage": 100,
+      "createdAt": "2026-01-06",
+      "lastActivity": "2026-01-10"
+    }
+  ],
+  "partners": [
+    {
+      "id": "partner_001_vrd",
+      "name": "VRD Production",
+      "type": "event_agency",
+      "contact": "hello@vrd.productions",
+      "phone": "+351 969 774 999",
+      "status": "active",
+      "commissionPercentage": null,
+      "referralCount": 0,
+      "createdAt": "2026-01-06"
+    }
+  ],
+  "logos": {
+    "platform": {
+      "favicon": {
+        "file": "/logos/platform/favicon.ico",
+        "size": "15 KB",
+        "format": "ICO",
+        "usage": "Browser tabs, favorites"
+      },
+      "icon_192": {
+        "file": "/logos/platform/icon-192.png",
+        "size": "192 bytes",
+        "format": "PNG",
+        "resolution": "192x192px",
+        "usage": "Mobile shortcuts, Android tiles"
+      },
+      "icon_512": {
+        "file": "/logos/platform/icon-512.png",
+        "size": "847 bytes",
+        "format": "PNG",
+        "resolution": "512x512px",
+        "usage": "Splash screen, App store"
+      }
+    },
+    "partners": {
+      "rey_davis": {
+        "file": "/logos/partners/rey-davis.png",
+        "status": "awaiting_upload",
+        "notes": "Logo da VRD Production a ser obtido"
+      }
+    },
+    "color_palette": {
+      "primary": "#667eea",
+      "secondary": "#764ba2",
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444",
+      "neutral": "#6B7280"
+    }
+  },
+  "permissions_matrix": {
+    "admin": [
+      "manage_users",
+      "full_inventory_access",
+      "create_categories",
+      "generate_reports",
+      "system_configuration",
+      "manage_backups",
+      "manage_partners"
+    ],
+    "manager": [
+      "manage_inventory",
+      "process_requests",
+      "generate_proposals",
+      "communicate_with_clients",
+      "track_deliveries",
+      "generate_basic_reports"
+    ],
+    "technician": [
+      "view_catalog",
+      "manage_equipment_status",
+      "register_maintenance",
+      "report_damage",
+      "communicate_with_clients"
+    ],
+    "partner": [
+      "view_full_catalog",
+      "make_requests",
+      "view_quotations",
+      "track_orders",
+      "access_portal"
+    ]
+  }
+}

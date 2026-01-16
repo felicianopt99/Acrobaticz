@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       const defaultQuota = BigInt(process.env.DEFAULT_STORAGE_QUOTA || '53687091200');
       const newQuota = await prisma.storageQuota.create({
         data: {
+          id: crypto.randomUUID(),
           userId: auth.userId,
           usedBytes: BigInt(0),
           quotaBytes: defaultQuota,

@@ -3,9 +3,83 @@ import { Prisma } from '@prisma/client'
 
 export class EquipmentRepository {
   /**
+   * Buscar TODOS os equipamentos sem limite de paginação
+   * - Para carregamento inicial completo do AppContext
+   * - Retorna array completo do inventário
+   * - Sem paginação
+   */
+  static async findAll(filters?: {
+    categoryId?: string
+    status?: string
+    search?: string
+  }) {
+    // Construir where com filtros opcionais
+    const where: Prisma.EquipmentItemWhereInput = {}
+
+    if (filters?.categoryId) where.categoryId = filters.categoryId
+    if (filters?.status) where.status = filters.status
+    if (filters?.search) {
+      where.OR = [
+        { name: { contains: filters.search, mode: 'insensitive' } },
+        { description: { contains: filters.search, mode: 'insensitive' } },
+      ]
+    }
+
+    // Select otimizado
+    const select = {
+      id: true,
+      name: true,
+      description: true,
+      categoryId: true,
+      subcategoryId: true,
+      quantity: true,
+      status: true,
+      quantityByStatus: true,
+      location: true,
+      imageUrl: true,
+      imageContentType: true,
+      dailyRate: true,
+      type: true,
+      createdAt: true,
+      updatedAt: true,
+      Category: {
+        select: {
+          id: true,
+          name: true,
+          icon: true,
+        },
+      },
+      Subcategory: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      MaintenanceLog: {
+        select: {
+          id: true,
+          date: true,
+          description: true,
+          cost: true,
+        },
+        orderBy: { date: 'desc' as const },
+        take: 5,
+      },
+    } as const
+
+    // Executar query SEM LIMITE
+    return await prisma.equipmentItem.findMany({
+      where,
+      select,
+      orderBy: { name: 'asc' },
+    })
+  }
+
+  /**
    * Buscar equipamentos com paginação e otimização
    * - Usa select para reduzir payload
    * - Máximo 200 items por página
+   * - Padrão: 50 items por página
    * - Índice em categoryId para filtros rápidos
    */
   static async findPaginated(params: {
@@ -17,7 +91,7 @@ export class EquipmentRepository {
   }) {
     const { page = 1, pageSize = 50, categoryId, status, search } = params
 
-    // Validar pageSize
+    // Validar pageSize (máximo 200, mínimo 1)
     const validPageSize = Math.min(Math.max(pageSize, 1), 200)
 
     // Construir where
@@ -49,20 +123,20 @@ export class EquipmentRepository {
       type: true,
       createdAt: true,
       updatedAt: true,
-      category: {
+      Category: {
         select: {
           id: true,
           name: true,
           icon: true,
         },
       },
-      subcategory: {
+      Subcategory: {
         select: {
           id: true,
           name: true,
         },
       },
-      maintenanceLogs: {
+      MaintenanceLog: {
         select: {
           id: true,
           date: true,
@@ -104,20 +178,20 @@ export class EquipmentRepository {
     return prisma.equipmentItem.findUnique({
       where: { id },
       include: {
-        category: {
+        Category: {
           select: {
             id: true,
             name: true,
             icon: true,
           },
         },
-        subcategory: {
+        Subcategory: {
           select: {
             id: true,
             name: true,
           },
         },
-        maintenanceLogs: {
+        MaintenanceLog: {
           orderBy: { date: 'desc' },
           select: {
             id: true,
@@ -126,14 +200,14 @@ export class EquipmentRepository {
             cost: true,
           },
         },
-        quoteItems: {
+        QuoteItem: {
           select: {
             id: true,
             quoteId: true,
           },
           take: 10,
         },
-        rentals: {
+        Rental: {
           select: {
             id: true,
             eventId: true,
@@ -232,7 +306,7 @@ export class EquipmentRepository {
         id: true,
         name: true,
         categoryId: true,
-        category: {
+        Category: {
           select: {
             id: true,
             name: true,
@@ -248,7 +322,7 @@ export class EquipmentRepository {
     // Agrupar em memória
     const grouped = equipment.reduce(
       (acc, item) => {
-        const catName = item.category.name
+        const catName = item.Category.name
         if (!acc[catName]) {
           acc[catName] = []
         }

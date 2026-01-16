@@ -377,7 +377,7 @@ export function TranslationCacheStats({ onRefresh }: CacheStatsProps) {
                       <span className="text-gray-700">
                         {lang === 'pt' ? 'Portuguese' : 'English'}
                       </span>
-                      <span className="font-medium text-gray-900">{count}</span>
+                      <span className="font-medium text-gray-900">{String(count)}</span>
                     </div>
                   ))}
                 </div>

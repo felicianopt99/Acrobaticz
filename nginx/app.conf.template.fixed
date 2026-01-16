@@ -1,0 +1,234 @@
+# Nginx Configuration - Production Ready (Fixed)
+# Replace current nginx/app.conf.template with this version
+
+# Gzip compression settings
+gzip on;
+gzip_vary on;
+gzip_proxied any;
+gzip_comp_level 6;
+gzip_types text/plain text/css text/xml application/json application/javascript application/rss+xml application/atom+xml image/svg+xml;
+
+# Upstream app server
+upstream app_backend {
+  server app:3000;
+  keepalive 32;
+}
+
+# HTTP server - primary application server (dev mode without SSL)
+server {
+  listen 80 default_server;
+  listen [::]:80 default_server;
+  server_name _;
+
+  # Security headers
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-XSS-Protection "1; mode=block" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+  # Main application proxy - PRODUCTION READY
+  location / {
+    proxy_pass http://app_backend;
+    proxy_http_version 1.1;
+    
+    # === HEADERS PASSTHROUGH ===
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+    
+    # === WEBSOCKET SUPPORT ===
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    
+    # === CRITICAL TIMEOUTS ===
+    # proxy_connect_timeout: Time to establish connection to upstream
+    #   Default: 60s - can cause 504 if app is slow to respond
+    #   Fix: 10s for local Docker, 30s for remote
+    proxy_connect_timeout 10s;
+    
+    # proxy_send_timeout: Time to send request to upstream
+    #   Default: 60s
+    proxy_send_timeout 30s;
+    
+    # proxy_read_timeout: Time to read response from upstream
+    #   Default: 60s - we use 300s (5 min) for long operations like setup/complete
+    proxy_read_timeout 300s;
+    
+    # === BUFFERING: OFF for streaming & big payloads ===
+    # Default: ON - can cause memory issues with large responses
+    # OFF: Stream directly from upstream to client
+    proxy_buffering off;
+    proxy_request_buffering off;
+    
+    # === COOKIES: CRITICAL FOR app_installed ===
+    # proxy_cookie_path: Rewrite Set-Cookie path
+    proxy_cookie_path / /;
+    
+    # proxy_cookie_domain: Rewrite Set-Cookie domain
+    #   Default: No rewrite - causes cookie domain=app (Docker container)
+    #   This breaks cookie storage in browser
+    #   Pattern: ~ ^(.*)$ matches any domain
+    #   Replacement: ~$host rewrites to current host (localhost:3000)
+    proxy_cookie_domain ~ ^(.*)$ "~$host";
+    
+    # proxy_cookie_flags: Add security flags to Set-Cookie
+    #   httponly: Prevent JavaScript access (security)
+    #   samesite=lax: CSRF protection
+    #   secure: Force HTTPS (only in production!)
+    proxy_cookie_flags ~ secure httponly samesite=lax;
+    
+    # === KEEPALIVE ===
+    proxy_set_header Connection "";
+  }
+
+  # Cache static assets with long expiration
+  location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2)$ {
+    proxy_pass http://app_backend;
+    proxy_http_version 1.1;
+    
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    
+    # === SHORTER TIMEOUTS FOR STATIC ASSETS ===
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 10s;
+    proxy_read_timeout 30s;
+    
+    # === CACHE ===
+    expires 30d;
+    add_header Cache-Control "public, immutable" always;
+    add_header X-Cache-Status "HIT" always;
+  }
+
+  # === API ENDPOINTS: More aggressive timeouts ===
+  # POST endpoints like /api/setup/complete can take time
+  location /api/ {
+    proxy_pass http://app_backend;
+    proxy_http_version 1.1;
+    
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+    
+    # === WEBSOCKET ===
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    
+    # === LONGER TIMEOUTS FOR HEAVY OPERATIONS ===
+    # setup/complete: ~500ms-1s expected, max 5s
+    # test-storage: ~50-500ms expected, max 10s
+    # health: ~10-50ms expected, max 5s
+    proxy_connect_timeout 15s;   # Longer for establishing connection
+    proxy_send_timeout 60s;      # Longer for uploading POST data
+    proxy_read_timeout 120s;     # Longer for reading response
+    
+    # === BUFFERING ===
+    proxy_buffering off;
+    proxy_request_buffering off;
+    
+    # === COOKIES ===
+    proxy_cookie_path / /;
+    proxy_cookie_domain ~ ^(.*)$ "~$host";
+    proxy_cookie_flags ~ secure httponly samesite=lax;
+    
+    # === NO CACHE FOR API (except specific endpoints) ===
+    expires off;
+    add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+  }
+
+  # === SPECIFIC: Health check with cache ===
+  location = /api/health {
+    proxy_pass http://app_backend;
+    proxy_http_version 1.1;
+    
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    
+    # === SHORTER TIMEOUTS FOR HEALTH CHECK ===
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 10s;
+    proxy_read_timeout 10s;
+    
+    # === CACHE RESPONSE (10 seconds) ===
+    # This reduces load if health check is called frequently
+    # Uncomment if using proxy_cache (requires upstream definition)
+    # proxy_cache_valid 200 10s;
+    # proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+    # add_header X-Cache-Status $upstream_cache_status;
+  }
+
+  # === SETUP ENDPOINTS: Very aggressive timeouts ===
+  location ~ ^/api/setup/ {
+    proxy_pass http://app_backend;
+    proxy_http_version 1.1;
+    
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    
+    # === LONGEST TIMEOUTS: Setup can take 2-3 seconds ===
+    proxy_connect_timeout 20s;   # Setup might need time to connect to DB
+    proxy_send_timeout 90s;      # Sending large POST payload
+    proxy_read_timeout 180s;     # Reading large response + processing time
+    
+    # === DISABLE BUFFERING FOR STREAMING ===
+    proxy_buffering off;
+    proxy_request_buffering off;
+    
+    # === COOKIES: CRITICAL ===
+    proxy_cookie_path / /;
+    proxy_cookie_domain ~ ^(.*)$ "~$host";
+    proxy_cookie_flags ~ secure httponly samesite=lax;
+    
+    # === NO CACHE ===
+    expires off;
+    add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+  }
+
+  # === ERROR PAGES ===
+  error_page 502 503 504 /50x.html;
+  location = /50x.html {
+    internal;
+    default_type text/html;
+    return 200 '{
+      "error": "Upstream service error",
+      "status": 502,
+      "message": "O servidor está indisponível. Por favor tente novamente em alguns segundos."
+    }';
+  }
+}
+
+# === HTTPS SERVER (Production only) ===
+# Uncomment and configure for production deployment
+# server {
+#   listen 443 ssl http2 default_server;
+#   listen [::]:443 ssl http2 default_server;
+#   server_name _;
+#   
+#   ssl_certificate /etc/nginx/ssl/cert.pem;
+#   ssl_certificate_key /etc/nginx/ssl/key.pem;
+#   
+#   ssl_protocols TLSv1.2 TLSv1.3;
+#   ssl_ciphers HIGH:!aNULL:!MD5;
+#   ssl_prefer_server_ciphers on;
+#   
+#   # ... rest of configuration same as above ...
+# }
+#
+# # Redirect HTTP to HTTPS
+# server {
+#   listen 80;
+#   listen [::]:80;
+#   server_name _;
+#   return 301 https://$host$request_uri;
+# }

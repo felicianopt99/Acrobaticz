@@ -80,7 +80,11 @@ export async function GET(request: NextRequest) {
       try {
         // @ts-ignore - notificationPreference model exists
         preferences = await prisma.notificationPreference.create({
-          data: { userId: decoded.userId },
+          data: { 
+            id: crypto.randomUUID(),
+            userId: decoded.userId,
+            updatedAt: new Date(),
+          },
         });
       } catch (createError) {
         // If creation fails (e.g., FK constraint), return defaults
@@ -144,7 +148,11 @@ export async function PUT(request: NextRequest) {
       try {
         // @ts-ignore - notificationPreference model exists
         preferences = await prisma.notificationPreference.create({
-          data: { userId: decoded.userId },
+          data: { 
+            id: crypto.randomUUID(),
+            userId: decoded.userId,
+            updatedAt: new Date(),
+          },
         });
       } catch (createError) {
         // If creation fails, return error

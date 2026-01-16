@@ -40,13 +40,13 @@ export async function GET(
     const files = await prisma.fileTag.findMany({
       where: {
         tagId,
-        file: {
+        CloudFile: {
           ownerId: auth.userId,
           isTrashed: false,
         },
       },
       select: {
-        file: {
+        CloudFile: {
           select: {
             id: true,
             name: true,
@@ -66,13 +66,13 @@ export async function GET(
     const folders = await prisma.folderTag.findMany({
       where: {
         tagId,
-        folder: {
+        CloudFolder: {
           ownerId: auth.userId,
           isTrashed: false,
         },
       },
       select: {
-        folder: {
+        CloudFolder: {
           select: {
             id: true,
             name: true,
@@ -93,10 +93,10 @@ export async function GET(
         description: tag.description,
       },
       files: files.map((f) => ({
-        ...f.file,
-        size: f.file.size.toString(),
+        ...f.CloudFile,
+        size: f.CloudFile.size.toString(),
       })),
-      folders: folders.map((f) => f.folder),
+      folders: folders.map((f) => f.CloudFolder),
       count: {
         files: files.length,
         folders: folders.length,

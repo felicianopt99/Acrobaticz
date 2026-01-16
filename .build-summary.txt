@@ -1,0 +1,10 @@
+Dockerfile Analysis:
+  Lines: 113
+  Node: node:22-alpine
+
+Dockerignore Analysis:
+  File size: 1896 bytes
+
+Dependency Analysis:
+  package.json valid: true
+

@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
         // Create file record in database
         const cloudFile = await prisma.cloudFile.create({
           data: {
+            id: crypto.randomUUID(),
             name: file.name,
             originalName: file.name,
             mimeType: file.type,
@@ -140,6 +141,7 @@ export async function POST(request: NextRequest) {
             folderId: folderId || null,
             ownerId: auth.userId,
             version: 1,
+            updatedAt: new Date(),
           },
           select: {
             id: true,
@@ -164,6 +166,7 @@ export async function POST(request: NextRequest) {
         // Log activity
         await prisma.fileActivity.create({
           data: {
+            id: crypto.randomUUID(),
             fileId: cloudFile.id,
             userId: auth.userId,
             action: 'uploaded',
@@ -191,6 +194,7 @@ export async function POST(request: NextRequest) {
       await prisma.storageQuota.upsert({
         where: { userId: auth.userId },
         create: {
+          id: crypto.randomUUID(),
           userId: auth.userId,
           usedBytes: userDiskUsage,
           quotaBytes,

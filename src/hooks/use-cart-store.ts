@@ -80,13 +80,12 @@ export const useCartStore = create<CartStore>((set) => ({
 
   updateQuantity: (productId: string, quantity: number) =>
     set((state) => {
-      if (quantity <= 0) {
-        return state.removeItem(productId)
-      }
-
-      const items = state.cart.items.map((item) =>
-        item.productId === productId ? { ...item, quantity } : item
-      )
+      // If quantity is 0 or less, remove the item
+      const items = quantity <= 0
+        ? state.cart.items.filter((item) => item.productId !== productId)
+        : state.cart.items.map((item) =>
+            item.productId === productId ? { ...item, quantity } : item
+          )
       const total = items.reduce(
         (sum, item) => sum + item.price * item.quantity,
         0

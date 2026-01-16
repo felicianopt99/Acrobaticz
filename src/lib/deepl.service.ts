@@ -47,7 +47,7 @@ async function getDeeplApiKey(): Promise<string | null> {
     
     // Fall back to config service if not in database
     if (!cachedDeeplApiKey) {
-      cachedDeeplApiKey = await configService.get('DeepL', 'DEEPL_API_KEY');
+      cachedDeeplApiKey = (await configService.get('DeepL', 'DEEPL_API_KEY')) ?? null;
     }
     
     // Set cache expiry to 5 minutes from now
@@ -171,7 +171,6 @@ export async function deeplTranslateText(
           sourceText,
           translatedText,
           targetLanguage,
-          model: 'deepl',
           usedCache: false,
           timestamp: new Date().toISOString(),
         };
@@ -212,19 +211,29 @@ export async function batchTranslate(
   const errors: string[] = [];
 
   for (const request of requests) {
-    const result = await deeplTranslateText(request.text, request.targetLang);
-    if (result.status === 'success' && result.data) {
-      results.push(result.data);
-    } else {
-      errors.push(`Failed to translate: ${request.text}`);
+    // Translate to each target language
+    for (const targetLang of request.targetLanguages) {
+      const result = await deeplTranslateText(request.sourceText, targetLang);
+      if (result.status === 'success' && result.data) {
+        results.push(result.data);
+      } else {
+        errors.push(`Failed to translate: ${request.sourceText} to ${targetLang}`);
+      }
     }
   }
 
   return {
-    status: errors.length === 0 ? 'success' : 'partial',
+    status: errors.length === 0 ? 'success' : 'error',
     data: {
       results,
-      errors: errors.length > 0 ? errors : undefined,
+      totalRequests: requests.length,
+      cachedRequests: 0,
+      newTranslations: results.length,
+      errors: errors.length > 0 ? errors.map(e => ({
+        text: e,
+        language: 'en' as Language,
+        error: e,
+      })) : undefined,
     },
     timestamp: new Date().toISOString(),
   };
@@ -248,7 +257,7 @@ async function checkCache(
     }
 
     // Check if cache has expired
-    if (cached.expiresAt < new Date()) {
+    if (cached.expiresAt && cached.expiresAt < new Date()) {
       // Delete expired cache
       await prisma.translationCache.delete({
         where: { hash },
@@ -260,7 +269,6 @@ async function checkCache(
       sourceText: cached.sourceText,
       translatedText: cached.translatedText,
       targetLanguage: cached.targetLanguage as Language,
-      model: cached.model,
       usedCache: true,
       timestamp: new Date().toISOString(),
     };
@@ -288,13 +296,16 @@ async function saveToCache(
       update: {
         translatedText,
         expiresAt,
+        updatedAt: new Date(),
       },
       create: {
+        id: crypto.randomUUID(),
         hash,
         sourceText,
         translatedText,
         targetLanguage,
-        model: 'deepl',
+        contentType: 'general',
+        updatedAt: new Date(),
         expiresAt,
       },
     });

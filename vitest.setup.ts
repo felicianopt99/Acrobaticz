@@ -1,3 +1,4 @@
+// @ts-nocheck
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
@@ -29,8 +30,11 @@ vi.mock('next/image', () => ({
   },
 }))
 
-// Mock environment variables
-Object.defineProperty(process.env, 'NODE_ENV', {
-  value: 'test',
-  configurable: true,
-})
+// Set environment variables for testing
+process.env.NODE_ENV = 'test'
+process.env.API_BASE_URL = 'http://localhost:3000'
+process.env.DATABASE_URL = 'postgresql://acrobaticz_user:change_me_strong_password_123@localhost:5432/acrobaticz'
+process.env.JWT_SECRET = 'test-secret-key-1234567890abcdefghijklmnop'
+process.env.MINIO_ENDPOINT = 'http://localhost:9000'
+process.env.MINIO_ACCESS_KEY = 'minioadmin'
+process.env.MINIO_SECRET_KEY = 'minioadmin'

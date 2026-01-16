@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import { hasPermission } from '@/lib/permissions'
-import { configService } from '@/lib/config-service'
 import type { UserRole } from '@/types'
 
 export interface AuthUser {
   userId: string
   username: string
   role: UserRole
+}
+
+/**
+ * Gets JWT_SECRET from environment variables
+ * Falls back to a dev-only secret if not configured (for local development)
+ */
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.warn('[API Auth] JWT_SECRET not set in environment, using dev fallback');
+    return 'dev-secret-key-for-local-development-only';
+  }
+  return secret;
 }
 
 /**
@@ -18,11 +30,7 @@ export async function getUserFromRequest(request: NextRequest): Promise<AuthUser
     const token = request.cookies.get('auth-token')?.value
     if (!token) return null
 
-    const jwtSecret = await configService.get('Auth', 'JWT_SECRET')
-    if (!jwtSecret) {
-      console.error('JWT_SECRET not configured')
-      return null
-    }
+    const jwtSecret = getJwtSecret();
 
     const decoded = jwt.verify(token, jwtSecret) as any
     return {
@@ -30,7 +38,12 @@ export async function getUserFromRequest(request: NextRequest): Promise<AuthUser
       username: decoded.username,
       role: decoded.role as UserRole,
     }
-  } catch {
+  } catch (error) {
+    // Don't log expected errors (invalid/expired tokens)
+    if (error instanceof jwt.JsonWebTokenError) {
+      return null;
+    }
+    console.error('[API Auth] Unexpected error:', error);
     return null
   }
 }

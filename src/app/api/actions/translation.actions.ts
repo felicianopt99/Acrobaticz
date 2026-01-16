@@ -50,7 +50,7 @@ export async function translateProduct(
     // Translate name for each language
     for (const lang of targetLanguages) {
       try {
-        const nameResult = await deeplTranslateText(name, lang, 'product', productId);
+        const nameResult = await deeplTranslateText(name, lang);
 
         if (nameResult.status === 'success' && nameResult.data) {
           // Save to ProductTranslation table
@@ -62,18 +62,20 @@ export async function translateProduct(
               },
             },
             create: {
+              id: crypto.randomUUID(),
               productId,
               language: lang,
               name: nameResult.data.translatedText,
               description: description
-                ? (await deeplTranslateText(description, lang, 'product', productId)).data?.translatedText
+                ? (await deeplTranslateText(description, lang)).data?.translatedText
                 : undefined,
               isAutomatic: true,
+              updatedAt: new Date(),
             },
             update: {
               name: nameResult.data.translatedText,
               description: description
-                ? (await deeplTranslateText(description, lang, 'product', productId)).data?.translatedText
+                ? (await deeplTranslateText(description, lang)).data?.translatedText
                 : undefined,
               updatedAt: new Date(),
             },
@@ -162,7 +164,7 @@ export async function translateCategory(
 
     for (const lang of targetLanguages) {
       try {
-        const nameResult = await deeplTranslateText(name, lang, 'category', categoryId);
+        const nameResult = await deeplTranslateText(name, lang);
 
         if (nameResult.status === 'success' && nameResult.data) {
           await prisma.categoryTranslation.upsert({
@@ -173,18 +175,20 @@ export async function translateCategory(
               },
             },
             create: {
+              id: crypto.randomUUID(),
               categoryId,
               language: lang,
               name: nameResult.data.translatedText,
               description: description
-                ? (await deeplTranslateText(description, lang, 'category', categoryId)).data?.translatedText
+                ? (await deeplTranslateText(description, lang)).data?.translatedText
                 : undefined,
               isAutomatic: true,
+              updatedAt: new Date(),
             },
             update: {
               name: nameResult.data.translatedText,
               description: description
-                ? (await deeplTranslateText(description, lang, 'category', categoryId)).data?.translatedText
+                ? (await deeplTranslateText(description, lang)).data?.translatedText
                 : undefined,
               updatedAt: new Date(),
             },

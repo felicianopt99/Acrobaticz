@@ -22,7 +22,7 @@ export class CatalogShareRepository {
         expiresAt: true,
         createdAt: true,
         selectedEquipmentIds: true,
-        partner: {
+        Partner: {
           select: {
             id: true,
             name: true,
@@ -83,14 +83,14 @@ export class CatalogShareRepository {
         imageContentType: true,
         imageData: false, // Nunca enviar para cliente
       }),
-      category: {
+      Category: {
         select: {
           id: true,
           name: true,
           icon: true,
         },
       },
-      subcategory: {
+      Subcategory: {
         select: {
           id: true,
           name: true,
@@ -110,13 +110,13 @@ export class CatalogShareRepository {
 
     // Ordenar em memória (rápido para < 10k items)
     equipment = equipment.sort((a, b) => {
-      const catCompare = a.category.name.localeCompare(b.category.name)
+      const catCompare = a.Category.name.localeCompare(b.Category.name)
       if (catCompare !== 0) return catCompare
       return a.name.localeCompare(b.name)
     })
 
     return {
-      partner: catalogShare.partner,
+      partner: catalogShare.Partner,
       equipment,
       total: equipment.length,
       shareToken: token,
@@ -134,7 +134,11 @@ export class CatalogShareRepository {
     expiresAt?: Date
   }) {
     return prisma.catalogShare.create({
-      data,
+      data: {
+        id: crypto.randomUUID(),
+        ...data,
+        updatedAt: new Date(),
+      },
     })
   }
 
@@ -195,7 +199,7 @@ export class CatalogShareRepository {
         createdAt: true,
         expiresAt: true,
         selectedEquipmentIds: true,
-        partner: {
+        Partner: {
           select: {
             name: true,
           },

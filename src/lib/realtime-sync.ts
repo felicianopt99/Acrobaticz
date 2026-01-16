@@ -94,6 +94,7 @@ class RealTimeSync {
     try {
       await prisma.dataSyncEvent.create({
         data: {
+          id: crypto.randomUUID(),
           entityType,
           action,
           entityId: data.id || 'unknown',
@@ -129,6 +130,7 @@ export async function emitDataChange(
     try {
       await prisma.activityLog.create({
         data: {
+          id: crypto.randomUUID(),
           userId,
           action,
           entityType,

@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const subrentals = await prisma.subrental.findMany({
       where,
       include: {
-        partner: {
+        Partner: {
           select: {
             id: true,
             name: true,
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
             email: true,
           }
         },
-        event: {
+        Event: {
           select: {
             id: true,
             name: true,
@@ -78,20 +78,22 @@ export async function POST(request: NextRequest) {
     
     const subrental = await prisma.subrental.create({
       data: {
+        id: crypto.randomUUID(),
         ...validatedData,
         eventId: validatedData.eventId || undefined,
         startDate: new Date(validatedData.startDate),
         endDate: new Date(validatedData.endDate),
+        updatedAt: new Date(),
       },
       include: {
-        partner: {
+        Partner: {
           select: {
             id: true,
             name: true,
             companyName: true,
           }
         },
-        event: {
+        Event: {
           select: {
             id: true,
             name: true,
@@ -132,14 +134,14 @@ export async function PUT(request: NextRequest) {
         endDate: validatedData.endDate ? new Date(validatedData.endDate) : undefined,
       },
       include: {
-        partner: {
+        Partner: {
           select: {
             id: true,
             name: true,
             companyName: true,
           }
         },
-        event: {
+        Event: {
           select: {
             id: true,
             name: true,

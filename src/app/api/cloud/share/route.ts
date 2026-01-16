@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
 
     const share = await prisma.fileShare.create({
       data: {
+        id: crypto.randomUUID(),
         fileId,
         sharedWith: sharedWith || null,
         permission: permission || 'view',
@@ -124,10 +125,10 @@ export async function DELETE(request: NextRequest) {
 
     const share = await prisma.fileShare.findUnique({
       where: { id: shareId },
-      select: { file: { select: { ownerId: true } } },
+      select: { CloudFile: { select: { ownerId: true } } },
     });
 
-    if (!share || share.file.ownerId !== auth.userId) {
+    if (!share || share.CloudFile.ownerId !== auth.userId) {
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
     }
 

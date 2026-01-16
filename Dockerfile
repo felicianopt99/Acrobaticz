@@ -20,8 +20,10 @@ RUN apk add --no-cache openssl curl
 # Copy package manifests ONLY (for cache efficiency)
 COPY package.json package-lock.json ./
 
-# Clean install (reproducible builds)
-RUN npm ci --omit=dev --no-audit --no-fund --loglevel=error && \
+# Clean install with fallback for compatibility
+# Uses npm ci for reproducible builds, falls back to npm install if lock file issues
+RUN npm ci --omit=dev --no-audit --no-fund --loglevel=error || \
+    npm install --omit=dev --legacy-peer-deps --no-audit --no-fund --loglevel=error && \
     npm cache clean --force
 
 # ============================================================

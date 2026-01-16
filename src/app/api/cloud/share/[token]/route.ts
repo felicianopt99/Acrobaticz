@@ -9,7 +9,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const share = await prisma.fileShare.findUnique({
       where: { shareToken: token },
       include: {
-        file: true,
+        CloudFile: true,
       },
     });
 
@@ -29,11 +29,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json({
       file: {
-        id: share.file.id,
-        name: share.file.name,
-        mimeType: share.file.mimeType,
-        size: share.file.size.toString(),
-        storagePath: share.file.storagePath,
+        id: share.CloudFile.id,
+        name: share.CloudFile.name,
+        mimeType: share.CloudFile.mimeType,
+        size: share.CloudFile.size.toString(),
+        storagePath: share.CloudFile.storagePath,
       },
       share: {
         permission: share.permission,

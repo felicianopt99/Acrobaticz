@@ -14,10 +14,10 @@ export async function GET(
     const partner = await prisma.partner.findUnique({
       where: { id },
       include: {
-        subrentals: {
+        Subrental: {
           orderBy: { startDate: 'desc' },
           include: {
-            event: {
+            Event: {
               select: {
                 id: true,
                 name: true,
@@ -29,7 +29,7 @@ export async function GET(
           }
         },
         _count: {
-          select: { subrentals: true }
+          select: { Subrental: true }
         }
       },
     })

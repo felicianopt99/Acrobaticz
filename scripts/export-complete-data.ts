@@ -35,26 +35,10 @@ async function exportCompleteData() {
     console.log("📋 Exportando clientes...");
     const clients = await prisma.client.findMany({
       include: {
-        quotes: {
+        Quote: {
           select: {
             id: true,
-            quoteNumber: true,
-            totalAmount: true,
             status: true,
-          },
-        },
-        events: {
-          select: {
-            id: true,
-            name: true,
-            startDate: true,
-            endDate: true,
-          },
-        },
-        agency: {
-          select: {
-            id: true,
-            name: true,
           },
         },
       },
@@ -66,23 +50,15 @@ async function exportCompleteData() {
     console.log("🤝 Exportando partners...");
     const partners = await prisma.partner.findMany({
       include: {
-        associatedClients: {
+        Subrental: {
           select: {
             id: true,
-            name: true,
+            status: true,
           },
         },
-        subrentals: {
+        JobReference: {
           select: {
             id: true,
-            equipmentName: true,
-            totalCost: true,
-          },
-        },
-        jobReferences: {
-          select: {
-            id: true,
-            clientName: true,
             status: true,
           },
         },
@@ -95,7 +71,7 @@ async function exportCompleteData() {
     console.log("🏷️ Exportando categorias...");
     const categories = await prisma.category.findMany({
       include: {
-        subcategories: {
+        Subcategory: {
           select: {
             id: true,
             name: true,
@@ -110,7 +86,7 @@ async function exportCompleteData() {
     console.log("📂 Exportando subcategorias...");
     const subcategories = await prisma.subcategory.findMany({
       include: {
-        category: {
+        Category: {
           select: {
             id: true,
             name: true,
@@ -125,22 +101,23 @@ async function exportCompleteData() {
     console.log("📦 Exportando produtos...");
     const products = await prisma.equipmentItem.findMany({
       include: {
-        category: {
+        Category: {
           select: {
             id: true,
             name: true,
           },
         },
-        subcategory: {
+        Subcategory: {
           select: {
             id: true,
             name: true,
           },
         },
-        rentals: {
+        Rental: {
           select: {
             id: true,
             eventId: true,
+            quantityRented: true,
           },
         },
       },
@@ -164,7 +141,7 @@ async function exportCompleteData() {
 
     // 7. Exportar configurações de branding
     console.log("🎨 Exportando configurações de branding...");
-    const branding = await prisma.customizationSettings.findFirst();
+    const branding = await prisma.customization_settings.findFirst();
 
     const brandingData = branding
       ? {
@@ -257,7 +234,7 @@ async function exportCompleteData() {
       branding: brandingData,
       images: {
         products: productImages,
-        logos,
+        logos: logos as any,
       },
     };
 

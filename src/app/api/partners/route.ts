@@ -34,13 +34,13 @@ export async function GET(request: NextRequest) {
     const partners = await prisma.partner.findMany({
       where,
       include: {
-        client: true,
-        subrentals: {
+        Client_Partner_clientIdToClient: true,
+        Subrental: {
           orderBy: { startDate: 'desc' },
           take: 5,
         },
         _count: {
-          select: { subrentals: true }
+          select: { Subrental: true }
         }
       },
       orderBy: { name: 'asc' },
@@ -92,11 +92,15 @@ export async function POST(request: NextRequest) {
     }
     
     const partner = await prisma.partner.create({
-      data: createData,
+      data: {
+        id: crypto.randomUUID(),
+        ...createData,
+        updatedAt: new Date(),
+      },
       include: {
-        client: true,
+        Client_Partner_clientIdToClient: true,
         _count: {
-          select: { subrentals: true }
+          select: { Subrental: true }
         }
       }
     })
@@ -204,9 +208,9 @@ export async function PUT(request: NextRequest) {
       where: { id },
       data: updatePayload,
       include: {
-        client: true,
+        Client_Partner_clientIdToClient: true,
         _count: {
-          select: { subrentals: true }
+          select: { Subrental: true }
         }
       }
     })

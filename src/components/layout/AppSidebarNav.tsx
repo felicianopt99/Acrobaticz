@@ -22,7 +22,7 @@ function NavLabel({ text }: { text: string }) {
 
 export function AppSidebarNav() {
   const pathname = usePathname();
-  const { currentUser, isDataLoaded } = useAppContext();
+  const { currentUser, isDataLoaded, isAuthLoading } = useAppContext();
   const { state: sidebarState, isMobile, toggleSidebar } = useSidebar();
 
   // Preload all navigation translations
@@ -105,14 +105,21 @@ export function AppSidebarNav() {
   }, [isMobile, sidebarState, toggleSidebar]);
 
   // Use useMemo to prevent recalculation on every render
+  // Guard: If auth is still loading, show items that don't require admin role
   const visibleNavItems = useMemo(() => {
+    // While auth is loading, show nav items that don't require role restrictions
+    if (isAuthLoading || (!currentUser && !isDataLoaded)) {
+      // Show basic items while loading (items without requiredRole or with technician role)
+      return baseNavItems.filter(item => !item.requiredRole || (Array.isArray(item.requiredRole) && item.requiredRole.includes('technician')));
+    }
+    
     const items = baseNavItems.filter(item => hasRole(currentUser?.role, item.requiredRole));
     if (typeof window !== 'undefined') {
       // eslint-disable-next-line no-console
       console.log('[Sidebar Debug] visibleNavItems', items);
     }
     return items;
-  }, [currentUser?.role]);
+  }, [currentUser?.role, isAuthLoading, isDataLoaded]);
 
   // Auto-expand sections containing active sub-items
   useEffect(() => {

@@ -83,9 +83,16 @@ export async function GET(request: NextRequest) {
 
 // POST /api/users - Create new user
 export async function POST(request: NextRequest) {
+  // Require authentication and permission to manage users
+  let user;
+  try {
+    user = await requirePermission(request, 'canManageUsers');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unauthorized';
+    return NextResponse.json({ error: message }, { status: message === 'Forbidden' ? 403 : 401 });
+  }
 
   try {
-
     const body = await request.json()
     const { name, username, password, role, photoUrl, nif, iban, contactPhone, contactEmail, emergencyPhone } = createUserSchema.parse(body)
 
@@ -157,9 +164,16 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/users - Update user
 export async function PUT(request: NextRequest) {
+  // Require authentication and permission to manage users
+  let user;
+  try {
+    user = await requirePermission(request, 'canManageUsers');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unauthorized';
+    return NextResponse.json({ error: message }, { status: message === 'Forbidden' ? 403 : 401 });
+  }
 
   try {
-
     const body = await request.json()
     const { id, ...updateData } = body
 

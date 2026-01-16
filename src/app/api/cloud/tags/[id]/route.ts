@@ -40,7 +40,7 @@ export async function GET(
         fileId: id,
       },
       select: {
-        tag: {
+        TagDefinition: {
           select: {
             id: true,
             name: true,
@@ -52,7 +52,7 @@ export async function GET(
     });
 
     return NextResponse.json({
-      tags: tags.map((t) => t.tag),
+      tags: tags.map((t) => t.TagDefinition),
     });
   } catch (error) {
     console.error('Error fetching file tags:', error);
@@ -125,11 +125,12 @@ export async function POST(
 
     const fileTag = await prisma.fileTag.create({
       data: {
+        id: crypto.randomUUID(),
         fileId: id,
         tagId,
       },
       select: {
-        tag: {
+        TagDefinition: {
           select: {
             id: true,
             name: true,
@@ -139,7 +140,7 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ tag: fileTag.tag }, { status: 201 });
+    return NextResponse.json({ tag: fileTag.TagDefinition }, { status: 201 });
   } catch (error) {
     console.error('Error adding tag to file:', error);
     return NextResponse.json(

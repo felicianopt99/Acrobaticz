@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
         updatedAt: true,
         _count: {
           select: {
-            files: true,
-            children: true,
+            CloudFile: true,
+            other_CloudFolder: true,
           },
         },
       },
@@ -90,10 +90,12 @@ export async function POST(request: NextRequest) {
 
     const folder = await prisma.cloudFolder.create({
       data: {
+        id: crypto.randomUUID(),
         name: name.trim(),
         parentId: parentId || null,
         ownerId: auth.userId,
         color: color || '#1F2937',
+        updatedAt: new Date(),
       },
       select: {
         id: true,
@@ -104,8 +106,8 @@ export async function POST(request: NextRequest) {
         updatedAt: true,
         _count: {
           select: {
-            files: true,
-            children: true,
+            CloudFile: true,
+            other_CloudFolder: true,
           },
         },
       },
@@ -114,6 +116,7 @@ export async function POST(request: NextRequest) {
     // Log activity
     await prisma.fileActivity.create({
       data: {
+        id: crypto.randomUUID(),
         fileId: '', // This is a folder activity, we'll update schema later to support folder activities
         userId: auth.userId,
         action: 'created',

@@ -15,9 +15,9 @@ export async function GET(request: NextRequest) {
   try {
     const subcategories = await prisma.subcategory.findMany({
       include: {
-        category: true,
+        Category: true,
         _count: {
-          select: { equipment: true }
+          select: { EquipmentItem: true }
         }
       },
       orderBy: { name: 'asc' },
@@ -39,9 +39,13 @@ export async function POST(request: NextRequest) {
     const validatedData = SubcategorySchema.parse(body)
     
     const subcategory = await prisma.subcategory.create({
-      data: validatedData,
+      data: {
+        id: crypto.randomUUID(),
+        ...validatedData,
+        updatedAt: new Date(),
+      },
       include: {
-        category: true,
+        Category: true,
       },
     })
     
@@ -73,7 +77,7 @@ export async function PUT(request: NextRequest) {
       where: { id },
       data: validatedData,
       include: {
-        category: true,
+        Category: true,
       },
     })
     

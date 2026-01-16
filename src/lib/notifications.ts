@@ -34,6 +34,7 @@ export async function sendNotificationToUser(payload: NotificationPayload) {
   try {
     const notification = await prisma.notification.create({
       data: {
+        id: crypto.randomUUID(),
         userId: payload.userId,
         type: payload.type,
         title: payload.title,
@@ -44,6 +45,7 @@ export async function sendNotificationToUser(payload: NotificationPayload) {
         actionUrl: payload.actionUrl,
         groupKey: payload.groupKey,
         expiresAt: payload.expiresAt,
+        updatedAt: new Date(),
       },
     });
 
@@ -188,8 +190,8 @@ export async function createStatusChangeNotification(
     const rental = await prisma.rental.findUnique({
       where: { id: rentalId },
       include: {
-        event: true,
-        equipment: true,
+        Event: true,
+        EquipmentItem: true,
       },
     });
 
@@ -204,7 +206,7 @@ export async function createStatusChangeNotification(
       'checked-in': 'Checked In',
     };
 
-    const title = `📋 ${rental.equipment.name} - Status Changed`;
+    const title = `📋 ${rental.EquipmentItem.name} - Status Changed`;
     const message = `Status changed from ${statusMessages[oldStatus]} to ${statusMessages[newStatus]}`;
 
     // Send to managers
@@ -281,8 +283,8 @@ export async function createOverdueNotification(rentalId: string, daysOverdue: n
     const rental = await prisma.rental.findUnique({
       where: { id: rentalId },
       include: {
-        event: true,
-        equipment: true,
+        Event: true,
+        EquipmentItem: true,
       },
     });
 
@@ -290,8 +292,8 @@ export async function createOverdueNotification(rentalId: string, daysOverdue: n
       throw new Error('Rental not found');
     }
 
-    const title = `🚨 OVERDUE: ${rental.equipment.name}`;
-    const message = `${rental.equipment.name} from event "${rental.event.name}" is ${daysOverdue} days overdue. Event ended on ${rental.event.endDate?.toLocaleDateString()}`;
+    const title = `🚨 OVERDUE: ${rental.EquipmentItem.name}`;
+    const message = `${rental.EquipmentItem.name} from event "${rental.Event.name}" is ${daysOverdue} days overdue. Event ended on ${rental.Event.endDate?.toLocaleDateString()}`;
 
     // Send to warehouse and managers
     await sendNotificationToRole('Manager', {
@@ -338,7 +340,7 @@ export async function createCriticalEventNotification(eventId: string) {
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       include: {
-        rentals: true,
+        Rental: true,
       },
     });
 
@@ -346,7 +348,7 @@ export async function createCriticalEventNotification(eventId: string) {
       throw new Error('Event not found');
     }
 
-    const checkedOutRentals = event.rentals.filter((r) => r.prepStatus === 'checked-out');
+    const checkedOutRentals = event.Rental.filter((r: { prepStatus: string | null }) => r.prepStatus === 'checked-out');
 
     if (checkedOutRentals.length === 0) {
       return; // Only notify if equipment is checked out
@@ -509,7 +511,11 @@ export async function isNotificationEnabled(
     // Create default preferences if they don't exist
     if (!preferences) {
       preferences = await prisma.notificationPreference.create({
-        data: { userId },
+        data: { 
+          id: crypto.randomUUID(),
+          userId,
+          updatedAt: new Date(),
+        },
       });
     }
 
@@ -638,14 +644,14 @@ export async function checkEquipmentConflicts(
     const conflicts = await prisma.rental.findMany({
       where: {
         equipmentId,
-        event: {
+        Event: {
           startDate: { lt: endDate },
           endDate: { gt: startDate },
         },
         ...(excludeRentalId && { id: { not: excludeRentalId } }),
       },
       include: {
-        event: true,
+        Event: true,
       },
     });
 

@@ -88,6 +88,7 @@ export async function PUT(
     try {
       await prisma.translationHistory.create({
         data: {
+          id: crypto.randomUUID(),
           translationId: id,
           oldTranslatedText: prev.translatedText,
           newTranslatedText: translation.translatedText,

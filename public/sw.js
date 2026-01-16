@@ -47,13 +47,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Only cache GET requests - skip POST, PUT, DELETE, PATCH, etc.
+  if (event.request.method !== 'GET') {
+    // For non-GET requests, always use network (don't cache)
+    return;
+  }
+
   // Handle API requests with Network First strategy
   if (event.request.url.includes('/api/')) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // Only cache GET requests, not POST, PUT, DELETE, etc.
-          if (response.status === 200 && event.request.method === 'GET') {
+          // Only cache successful GET responses
+          if (response.status === 200) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, responseClone);
@@ -62,11 +68,8 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Fallback to cache if network fails (only for GET requests)
-          if (event.request.method === 'GET') {
-            return caches.match(event.request);
-          }
-          throw new Error('Network request failed');
+          // Fallback to cache if network fails
+          return caches.match(event.request);
         })
     );
     return;
@@ -82,7 +85,7 @@ self.addEventListener('fetch', (event) => {
         
         return fetch(event.request)
           .then((response) => {
-            // Don't cache non-successful responses
+            // Don't cache non-successful responses or non-GET requests
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }

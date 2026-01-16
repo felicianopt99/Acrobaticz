@@ -100,7 +100,7 @@ export function InventoryListView() {
       .filter(item => selectedSubcategory ? item.subcategoryId === selectedSubcategory : true)
       .filter(item => selectedStatus ? item.status === selectedStatus : true)
       .filter(item => selectedLocation ? item.location === selectedLocation : true)
-      .filter(item => selectedType ? item.type === selectedType : true)
+      .filter(item => !selectedType || (item.type?.toLowerCase() || 'equipment') === selectedType.toLowerCase())
       .filter(item => {
         if (selectedAvailability === 'all') return true;
         const rented = isCurrentlyRented(item.id);

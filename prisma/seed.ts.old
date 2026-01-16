@@ -1,0 +1,252 @@
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🌱 Starting database seed...');
+
+  try {
+    // Clear existing data
+    await prisma.user.deleteMany({});
+    await prisma.event.deleteMany({});
+    await prisma.equipmentItem.deleteMany({});
+    await prisma.category.deleteMany({});
+
+    console.log('🗑️  Cleared existing data');
+
+    // Create Categories
+    const categories = await prisma.category.createMany({
+      data: [
+        { name: 'Audio', description: 'Audio equipment' },
+        { name: 'Video', description: 'Video equipment' },
+        { name: 'Lighting', description: 'Lighting equipment' },
+        { name: 'Cables', description: 'Cables and connectors' },
+        { name: 'Stands', description: 'Stands and rigging' },
+      ],
+    });
+
+    console.log(`✅ Created ${categories.count} categories`);
+
+    // Get category IDs
+    const audioCategory = await prisma.category.findFirst({ where: { name: 'Audio' } });
+    const videoCategory = await prisma.category.findFirst({ where: { name: 'Video' } });
+    const lightingCategory = await prisma.category.findFirst({ where: { name: 'Lighting' } });
+    const cablesCategory = await prisma.category.findFirst({ where: { name: 'Cables' } });
+
+    // Create Equipment Items
+    const equipment = await prisma.equipmentItem.createMany({
+      data: [
+        {
+          name: 'Microphone SM7B',
+          type: 'Microphone',
+          categoryId: audioCategory!.id,
+          code: 'MIC-001',
+          quantity: 5,
+          location: 'Storage A',
+          condition: 'Good',
+          lastMaintenanceDate: new Date('2025-12-01'),
+        },
+        {
+          name: 'Microphone SM58',
+          type: 'Microphone',
+          categoryId: audioCategory!.id,
+          code: 'MIC-002',
+          quantity: 10,
+          location: 'Storage A',
+          condition: 'Good',
+          lastMaintenanceDate: new Date('2025-11-15'),
+        },
+        {
+          name: 'Audio Mixer X32',
+          type: 'Mixer',
+          categoryId: audioCategory!.id,
+          code: 'MIX-001',
+          quantity: 2,
+          location: 'Storage B',
+          condition: 'Excellent',
+          lastMaintenanceDate: new Date('2026-01-10'),
+        },
+        {
+          name: 'Speaker QSC K12',
+          type: 'Speaker',
+          categoryId: audioCategory!.id,
+          code: 'SPK-001',
+          quantity: 8,
+          location: 'Storage A',
+          condition: 'Good',
+          lastMaintenanceDate: new Date('2025-10-20'),
+        },
+        {
+          name: 'XLR Cable 10m',
+          type: 'Cable',
+          categoryId: cablesCategory!.id,
+          code: 'CAB-001',
+          quantity: 50,
+          location: 'Storage C',
+          condition: 'Good',
+          lastMaintenanceDate: new Date('2025-12-15'),
+        },
+        {
+          name: '4K Video Camera',
+          type: 'Camera',
+          categoryId: videoCategory!.id,
+          code: 'CAM-001',
+          quantity: 3,
+          location: 'Storage D',
+          condition: 'Excellent',
+          lastMaintenanceDate: new Date('2026-01-05'),
+        },
+        {
+          name: 'LED Lights 100W',
+          type: 'Light',
+          categoryId: lightingCategory!.id,
+          code: 'LED-001',
+          quantity: 20,
+          location: 'Storage E',
+          condition: 'Good',
+          lastMaintenanceDate: new Date('2025-11-30'),
+        },
+      ],
+    });
+
+    console.log(`✅ Created ${equipment.count} equipment items`);
+
+    // Create Users
+    const hashPassword = (password: string) => bcrypt.hashSync(password, 10);
+
+    const users = await prisma.user.createMany({
+      data: [
+        {
+          username: 'admin',
+          email: 'admin@acrobaticz.com',
+          name: 'Admin User',
+          password: hashPassword('admin123'),
+          role: 'ADMIN',
+          isActive: true,
+        },
+        {
+          username: 'manager',
+          email: 'manager@acrobaticz.com',
+          name: 'John Manager',
+          password: hashPassword('manager123'),
+          role: 'MANAGER',
+          isActive: true,
+        },
+        {
+          username: 'tech',
+          email: 'tech@acrobaticz.com',
+          name: 'Jane Technician',
+          password: hashPassword('tech123'),
+          role: 'TECHNICIAN',
+          isActive: true,
+        },
+        {
+          username: 'viewer',
+          email: 'viewer@acrobaticz.com',
+          name: 'Bob Viewer',
+          password: hashPassword('viewer123'),
+          role: 'VIEWER',
+          isActive: true,
+        },
+      ],
+    });
+
+    console.log(`✅ Created ${users.count} users`);
+
+    // Create Events
+    const events = await prisma.event.createMany({
+      data: [
+        {
+          name: 'Wedding - Silva',
+          eventType: 'Wedding',
+          startDate: new Date('2026-02-14'),
+          endDate: new Date('2026-02-14'),
+          location: 'Grand Hotel',
+          description: 'Wedding ceremony and reception',
+          status: 'SCHEDULED',
+          contactName: 'Maria Silva',
+          contactEmail: 'maria@example.com',
+          contactPhone: '+351 912345678',
+        },
+        {
+          name: 'Corporate Conference 2026',
+          eventType: 'Conference',
+          startDate: new Date('2026-03-20'),
+          endDate: new Date('2026-03-22'),
+          location: 'Convention Center',
+          description: 'Annual corporate conference',
+          status: 'PLANNING',
+          contactName: 'John Corporate',
+          contactEmail: 'john@company.com',
+          contactPhone: '+351 923456789',
+        },
+        {
+          name: 'Concert - Rock Festival',
+          eventType: 'Concert',
+          startDate: new Date('2026-05-15'),
+          endDate: new Date('2026-05-16'),
+          location: 'Stadium',
+          description: 'Live rock concert with multiple bands',
+          status: 'PLANNING',
+          contactName: 'Pedro Music',
+          contactEmail: 'pedro@festival.com',
+          contactPhone: '+351 934567890',
+        },
+      ],
+    });
+
+    console.log(`✅ Created ${events.count} events`);
+
+    // Get first event for rentals
+    const firstEvent = await prisma.event.findFirst();
+    const firstMic = await prisma.equipmentItem.findFirst({ where: { code: 'MIC-001' } });
+    const firstSpeaker = await prisma.equipmentItem.findFirst({ where: { code: 'SPK-001' } });
+
+    // Create Rentals
+    if (firstEvent && firstMic && firstSpeaker) {
+      const rentals = await prisma.rental.createMany({
+        data: [
+          {
+            eventId: firstEvent.id,
+            equipmentId: firstMic.id,
+            quantityRented: 3,
+            rentalStartDate: firstEvent.startDate,
+            rentalEndDate: firstEvent.endDate,
+            notes: 'Main stage microphones',
+            status: 'CONFIRMED',
+          },
+          {
+            eventId: firstEvent.id,
+            equipmentId: firstSpeaker.id,
+            quantityRented: 4,
+            rentalStartDate: firstEvent.startDate,
+            rentalEndDate: firstEvent.endDate,
+            notes: 'PA system speakers',
+            status: 'CONFIRMED',
+          },
+        ],
+      });
+
+      console.log(`✅ Created ${rentals.count} rentals`);
+    }
+
+    console.log('\n✨ Database seed completed successfully!');
+    console.log('\n📝 Test Credentials:');
+    console.log('   Admin: admin / admin123');
+    console.log('   Manager: manager / manager123');
+    console.log('   Tech: tech / tech123');
+    console.log('   Viewer: viewer / viewer123');
+
+  } catch (error) {
+    console.error('❌ Error during seeding:', error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

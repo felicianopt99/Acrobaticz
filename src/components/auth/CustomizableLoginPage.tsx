@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Lock, Building, Eye, EyeOff } from 'lucide-react';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import LightRays from '@/components/LightRays';
+import { useAppDispatch } from '@/contexts/AppContext';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -82,6 +83,7 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
   const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { checkAuth } = useAppDispatch();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -141,10 +143,11 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
         description: `Welcome back, ${result.user.name}!`,
       });
 
-      // Wait a bit longer for cookies to be fully set
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Sync AppContext with authenticated user BEFORE redirect
+      // This ensures currentUser is set when Dashboard loads
+      await checkAuth();
       
-      console.log('Cookies after delay:', document.cookie);
+      console.log('Auth synced, redirecting to dashboard...');
       
       router.push('/app-select');
       router.refresh();

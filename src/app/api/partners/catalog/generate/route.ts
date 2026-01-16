@@ -75,8 +75,8 @@ export async function POST(request: NextRequest) {
         // Don't filter by status - allow all statuses for catalog generation
       },
       include: {
-        category: true,
-        subcategory: true,
+        Category: true,
+        Subcategory: true,
       },
     });
 
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     let partnerRecord: any = null;
     try {
       if (partnerId) {
-        partnerRecord = await prisma.partner.findUnique({ where: { id: partnerId }, include: { client: true } });
+        partnerRecord = await prisma.partner.findUnique({ where: { id: partnerId }, include: { Client_Partner_clientIdToClient: true } });
         if (partnerRecord) {
           partnerName = partnerName || partnerRecord.name;
           companyName = companyName || partnerRecord.companyName;
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Build partner info
-    const clientRecord = partnerRecord?.client ?? null;
+    const clientRecord = partnerRecord?.Client_Partner_clientIdToClient ?? null;
     const partnerInfo = {
       name: clientRecord?.name || partnerName || (partnerRecord ? partnerRecord.name : undefined) || 'Partner',
       companyName: clientRecord ? undefined : (companyName || (partnerRecord ? partnerRecord.companyName : undefined)),
@@ -161,8 +161,8 @@ export async function POST(request: NextRequest) {
       description: item.description,
       imageUrl: item.imageUrl ?? undefined,
       dailyRate: item.dailyRate,
-      category: item.category?.name,
-      subcategory: item.subcategory?.name,
+      category: item.Category?.name,
+      subcategory: item.Subcategory?.name,
       quantity: item.quantity
     }));
 

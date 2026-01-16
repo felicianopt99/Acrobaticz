@@ -14,11 +14,11 @@ export async function GET(
     const jobReference = await prisma.jobReference.findUnique({
       where: { id },
       include: {
-        partner: true,
-        event: {
-          include: { client: true }
+        Partner: true,
+        Event: {
+          include: { Client: true }
         },
-        quote: true,
+        Quote: true,
       },
     })
 

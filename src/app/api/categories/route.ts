@@ -37,9 +37,13 @@ export async function POST(request: NextRequest) {
     const validatedData = CategorySchema.parse(body)
     
     const category = await prisma.category.create({
-      data: validatedData,
+      data: {
+        id: crypto.randomUUID(),
+        ...validatedData,
+        updatedAt: new Date(),
+      },
       include: {
-        subcategories: true,
+        Subcategory: true,
       },
     })
     
@@ -86,9 +90,12 @@ export async function PUT(request: NextRequest) {
     
     const category = await prisma.category.update({
       where: { id },
-      data: validatedData,
+      data: {
+        ...validatedData,
+        updatedAt: new Date(),
+      },
       include: {
-        subcategories: true,
+        Subcategory: true,
       },
     })
     

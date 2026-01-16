@@ -88,6 +88,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ═════════════════════════════════════════════════════════════════════════════
+  // ALL CALLBACKS FIRST - Before any useEffect
+  // ═════════════════════════════════════════════════════════════════════════════
+
   // Authentication functions
   const checkAuth = useCallback(async () => {
     try {
@@ -144,21 +148,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsDataLoaded(false);
   }, []);
 
-  // ...existing code...
-
-  // Check authentication on mount
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  // Load data when authenticated
-  useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      refreshData();
-    }
-  }, [isAuthenticated, currentUser]);
-
-  // Load all data from API
+  // Load all data from API - DEFINE BEFORE useEffect that uses it
   const refreshData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -193,6 +183,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setRentals(rentalsData);
       setQuotes(quotesData);
 
+      // 📦 DIAGNOSTIC: Log inventory data with type info
+      console.log('📦 Inventory Data Loaded:', {
+        equipmentCount: equipmentData?.length || 0,
+        categoriesCount: categoriesData?.length || 0,
+        items: equipmentData?.slice(0, 3).map((e: any) => ({ id: e.id, name: e.name, type: e.type })) || [],
+        typeDistribution: equipmentData ? {
+          equipment: equipmentData.filter((e: any) => (e.type?.toLowerCase() || 'equipment') === 'equipment').length,
+          consumable: equipmentData.filter((e: any) => (e.type?.toLowerCase() || 'equipment') === 'consumable').length,
+          other: equipmentData.filter((e: any) => !e.type).length
+        } : {}
+      });
+
       // Removed logic that sets currentUser from usersData. currentUser should only be set by authentication (login or /api/auth/me).
 
       setIsDataLoaded(true);
@@ -202,11 +204,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
-
-  // Load data on mount
-  useEffect(() => {
-    refreshData();
   }, []);
 
   // Category operations
@@ -498,6 +495,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { success: false, message: 'Failed to approve quote. Ensure the quote is linked to a valid client and try again.' };
     }
   }, [addEvent, addRental, updateQuote]);
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // USEEFFECTS - After all callbacks are defined
+  // ═════════════════════════════════════════════════════════════════════════════
+
+  // Check authentication on mount
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  // Load data ONLY when authenticated and auth check is complete
+  // This prevents race conditions: wait for checkAuth to finish, THEN load data
+  useEffect(() => {
+    // Guard: Don't fetch data if auth is still loading or user is not authenticated
+    if (isAuthLoading || !isAuthenticated || !currentUser) {
+      return;
+    }
+    refreshData();
+  }, [isAuthenticated, isAuthLoading, currentUser, refreshData]);
 
   const contextValue: AppContextState = {
     users,

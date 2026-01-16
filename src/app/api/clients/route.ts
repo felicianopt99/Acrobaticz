@@ -22,12 +22,12 @@ export async function GET(request: NextRequest) {
     
     const clients = await prisma.client.findMany({
       include: {
-        events: true,
-        quotes: true,
+        Event: true,
+        Quote: true,
         _count: {
           select: { 
-            events: true,
-            quotes: true 
+            Event: true,
+            Quote: true 
           }
         }
       },
@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
     
     const client = await prisma.client.create({
       data: {
+        id: crypto.randomUUID(),
         name: validatedData.name,
         contactPerson: validatedData.contactPerson,
         email: validatedData.email || undefined,
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
         address: validatedData.address,
         notes: validatedData.notes,
         partnerId,
+        updatedAt: new Date(),
       },
     })
     
@@ -149,10 +151,13 @@ export async function PUT(request: NextRequest) {
     
     const client = await prisma.client.update({
       where: { id },
-      data: updatePayload,
+      data: {
+        ...updatePayload,
+        updatedAt: new Date(),
+      },
       include: {
         _count: {
-          select: { events: true, quotes: true }
+          select: { Event: true, Quote: true }
         }
       }
     })

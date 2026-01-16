@@ -31,13 +31,13 @@ export async function GET(request: NextRequest) {
     const topPartners = await prisma.partner.findMany({
       take: 5,
       orderBy: {
-        subrentals: {
+        Subrental: {
           _count: 'desc'
         }
       },
       include: {
         _count: {
-          select: { subrentals: true }
+          select: { Subrental: true }
         }
       }
     })

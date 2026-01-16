@@ -8,10 +8,10 @@ async function exportProducts() {
   try {
     console.log("Exportando produtos do banco de dados...");
 
-    const products = await prisma.product.findMany({
+    const products = await prisma.equipmentItem.findMany({
       include: {
-        category: true,
-        subcategory: true,
+        Category: true,
+        Subcategory: true,
       },
     });
 
@@ -24,9 +24,9 @@ async function exportProducts() {
       description: product.description,
       descriptionPt: product.descriptionPt,
       categoryId: product.categoryId,
-      categoryName: product.category?.name,
+      categoryName: product.Category?.name,
       subcategoryId: product.subcategoryId,
-      subcategoryName: product.subcategory?.name,
+      subcategoryName: product.Subcategory?.name,
       quantity: product.quantity,
       status: product.status,
       location: product.location,

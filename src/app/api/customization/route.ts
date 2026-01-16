@@ -121,12 +121,13 @@ export async function GET() {
     }
 
     // Get the first (and should be only) customization record
-    let settings = await prisma.customizationSettings.findFirst();
+    let settings = await prisma.customization_settings.findFirst();
     
     // If no settings exist, create default ones
     if (!settings) {
-      settings = await prisma.customizationSettings.create({
+      settings = await prisma.customization_settings.create({
         data: {
+          id: crypto.randomUUID(),
           companyName: 'AV Rentals',
           companyTagline: 'Professional Audio Visual Equipment Rental',
           contactEmail: 'info@avrental.com',
@@ -171,6 +172,7 @@ export async function GET() {
           // Ensure logos are not mixed
           logoUrl: '', // platform logo only
           pdfLogoUrl: '', // pdf branding logo only
+          updatedAt: new Date(),
         },
       });
     }
@@ -216,19 +218,23 @@ export async function PUT(request: NextRequest) {
     console.log('Updating customization with data:', Object.keys(cleanData));
     
     // Try to find existing settings
-    const existingSettings = await prisma.customizationSettings.findFirst();
+    const existingSettings = await prisma.customization_settings.findFirst();
     
     let updatedSettings;
     if (existingSettings) {
       // Update existing settings
-      updatedSettings = await prisma.customizationSettings.update({
+      updatedSettings = await prisma.customization_settings.update({
         where: { id: existingSettings.id },
         data: cleanData,
       });
     } else {
       // Create new settings
-      updatedSettings = await prisma.customizationSettings.create({
-        data: cleanData,
+      updatedSettings = await prisma.customization_settings.create({
+        data: {
+          id: crypto.randomUUID(),
+          ...cleanData,
+          updatedAt: new Date(),
+        },
       });
     }
     
@@ -266,9 +272,10 @@ export async function POST(request: NextRequest) {
     
     if (action === 'reset') {
       // Delete existing settings and create new defaults
-      await prisma.customizationSettings.deleteMany();
-      const defaultSettings = await prisma.customizationSettings.create({
+      await prisma.customization_settings.deleteMany();
+      const defaultSettings = await prisma.customization_settings.create({
         data: {
+          id: crypto.randomUUID(),
           companyName: 'AV Rentals',
           companyTagline: 'Professional Audio Visual Equipment Rental',
           contactEmail: 'info@avrental.com',
@@ -296,6 +303,7 @@ export async function POST(request: NextRequest) {
           // Ensure logos are not mixed
           logoUrl: '', // platform logo only
           pdfLogoUrl: '', // pdf branding logo only
+          updatedAt: new Date(),
         },
       });
       return NextResponse.json(defaultSettings);

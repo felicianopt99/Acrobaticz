@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
           updatedAt: true,
           isStarred: true,
           isPublic: true,
-          owner: {
+          User: {
             select: {
               id: true,
               name: true,
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
           createdAt: true,
           updatedAt: true,
           isStarred: true,
-          owner: {
+          User: {
             select: {
               id: true,
               name: true,

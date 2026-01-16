@@ -27,7 +27,7 @@ export class CategoryRepository {
         icon: true,
         createdAt: true,
         updatedAt: true,
-        subcategories: {
+        Subcategory: {
           select: {
             id: true,
             name: true,
@@ -44,7 +44,7 @@ export class CategoryRepository {
           prisma.equipmentItem.count({
             where: { categoryId: cat.id },
           }),
-          cat.subcategories.length,
+          cat.Subcategory.length,
         ])
 
         return {
@@ -96,10 +96,10 @@ export class CategoryRepository {
     return prisma.category.findUnique({
       where: { id },
       include: {
-        subcategories: {
+        Subcategory: {
           orderBy: { name: 'asc' },
         },
-        equipment: {
+        EquipmentItem: {
           select: {
             id: true,
             name: true,
@@ -121,9 +121,13 @@ export class CategoryRepository {
     icon?: string
   }) {
     const result = await prisma.category.create({
-      data,
+      data: {
+        id: crypto.randomUUID(),
+        ...data,
+        updatedAt: new Date(),
+      },
       include: {
-        subcategories: true,
+        Subcategory: true,
       },
     })
 
@@ -143,9 +147,12 @@ export class CategoryRepository {
   }) {
     const result = await prisma.category.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        updatedAt: new Date(),
+      },
       include: {
-        subcategories: true,
+        Subcategory: true,
       },
     })
 

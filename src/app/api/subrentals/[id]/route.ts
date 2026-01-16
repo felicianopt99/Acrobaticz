@@ -14,10 +14,10 @@ export async function GET(
     const subrental = await prisma.subrental.findUnique({
       where: { id },
       include: {
-        partner: true,
-        event: {
+        Partner: true,
+        Event: {
           include: {
-            client: {
+            Client: {
               select: {
                 id: true,
                 name: true,
@@ -60,13 +60,13 @@ export async function PATCH(
         status,
       },
       include: {
-        partner: {
+        Partner: {
           select: {
             id: true,
             name: true,
           }
         },
-        event: {
+        Event: {
           select: {
             id: true,
             name: true,

@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
         createdAt: true,
         _count: {
           select: {
-            files: true,
-            folders: true,
+            FileTag: true,
+            FolderTag: true,
           },
         },
       },
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       tags: tags.map((tag) => ({
         ...tag,
-        itemCount: tag._count.files + tag._count.folders,
+        itemCount: tag._count.FileTag + tag._count.FolderTag,
       })),
     });
   } catch (error) {
@@ -94,10 +94,12 @@ export async function POST(request: NextRequest) {
 
     const tag = await prisma.tagDefinition.create({
       data: {
+        id: crypto.randomUUID(),
         name: name.trim(),
         color: color || '#3B82F6',
         description: description || null,
         ownerId: auth.userId,
+        updatedAt: new Date(),
       },
       select: {
         id: true,

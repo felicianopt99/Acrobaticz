@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 export interface APIConfigRequest {
   provider: 'deepl' | 'gemini';
@@ -104,13 +105,15 @@ export async function updateAPIConfiguration(
       where: { provider: request.provider },
       update: {
         apiKey: request.apiKey,
-        settings: request.settings || {},
+        settings: (request.settings || {}) as Prisma.JsonObject,
         updatedAt: new Date(),
       },
       create: {
+        id: crypto.randomUUID(),
         provider: request.provider,
         apiKey: request.apiKey,
-        settings: request.settings || {},
+        settings: (request.settings || {}) as Prisma.JsonObject,
+        updatedAt: new Date(),
       },
     });
 

@@ -33,6 +33,7 @@ import BackgroundTranslationProvider from '@/components/translation/BackgroundTr
 
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const { currentUser } = useAppContext();
   const { logout } = useAppDispatch();
   const { toast } = useToast();

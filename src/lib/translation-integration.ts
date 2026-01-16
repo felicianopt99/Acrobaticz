@@ -23,10 +23,12 @@ export async function triggerProductTranslation(
     // Create a translation job for tracking
     await prisma.translationJob.create({
       data: {
+        id: crypto.randomUUID(),
         contentType: 'product',
         contentId: productId,
         targetLanguages: JSON.stringify(targetLanguages),
         status: 'pending',
+        updatedAt: new Date(),
       },
     });
 
@@ -66,10 +68,12 @@ export async function triggerCategoryTranslation(
     // Create a translation job for tracking
     await prisma.translationJob.create({
       data: {
+        id: crypto.randomUUID(),
         contentType: 'category',
         contentId: categoryId,
         targetLanguages: JSON.stringify(targetLanguages),
         status: 'pending',
+        updatedAt: new Date(),
       },
     });
 

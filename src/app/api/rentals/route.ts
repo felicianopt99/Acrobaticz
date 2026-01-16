@@ -23,20 +23,26 @@ const SingleRentalUpdateSchema = z.object({
 
 // GET /api/rentals - Get all rentals
 export async function GET(request: NextRequest) {
-  // Allow any authenticated user to view rentals
+  // Require authentication to view rentals
+  try {
+    await requireReadAccess(request);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unauthorized';
+    return NextResponse.json({ error: message }, { status: 401 });
+  }
 
   try {
     const rentals = await prisma.rental.findMany({
       include: {
-        event: {
+        Event: {
           include: {
-            client: true,
+            Client: true,
           }
         },
-        equipment: {
+        EquipmentItem: {
           include: {
-            category: true,
-            subcategory: true,
+            Category: true,
+            Subcategory: true,
           }
         },
       },
@@ -52,6 +58,14 @@ export async function GET(request: NextRequest) {
 
 // POST /api/rentals - Create new rentals
 export async function POST(request: NextRequest) {
+  // Require authentication and permission to manage rentals
+  let user;
+  try {
+    user = await requirePermission(request, 'canManageRentals');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unauthorized';
+    return NextResponse.json({ error: message }, { status: message === 'Forbidden' ? 403 : 401 });
+  }
 
   try {
     const body = await request.json()
@@ -77,20 +91,22 @@ export async function POST(request: NextRequest) {
 
       const rental = await prisma.rental.create({
         data: {
+          id: crypto.randomUUID(),
           eventId: validatedData.eventId,
           equipmentId: item.equipmentId,
           quantityRented: item.quantity,
+          updatedAt: new Date(),
         },
         include: {
-          event: {
+          Event: {
             include: {
-              client: true,
+              Client: true,
             }
           },
-          equipment: {
+          EquipmentItem: {
             include: {
-              category: true,
-              subcategory: true,
+              Category: true,
+              Subcategory: true,
             }
           },
         },
@@ -112,7 +128,7 @@ export async function POST(request: NextRequest) {
         )
         
         if (conflictingEventIds.length > 0) {
-          await createConflictNotification([event.id, ...conflictingEventIds], rental.equipment.name)
+          await createConflictNotification([event.id, ...conflictingEventIds], rental.EquipmentItem.name)
         }
       }
     } catch (e) {
@@ -131,6 +147,14 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/rentals - Update rental
 export async function PUT(request: NextRequest) {
+  // Require authentication and permission to manage rentals
+  let user;
+  try {
+    user = await requirePermission(request, 'canManageRentals');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unauthorized';
+    return NextResponse.json({ error: message }, { status: message === 'Forbidden' ? 403 : 401 });
+  }
 
   try {
     const body = await request.json()
@@ -144,7 +168,7 @@ export async function PUT(request: NextRequest) {
     const oldRental = await prisma.rental.findUnique({
       where: { id },
       include: {
-        equipment: true,
+        EquipmentItem: true,
       },
     })
     
@@ -154,12 +178,12 @@ export async function PUT(request: NextRequest) {
       where: { id },
       data: validatedData,
       include: {
-        event: {
+        Event: {
           include: {
-            client: true,
+            Client: true,
           }
         },
-        equipment: true,
+        EquipmentItem: true,
       },
     })
     
@@ -182,6 +206,14 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/rentals - Delete rental
 export async function DELETE(request: NextRequest) {
+  // Require authentication and permission to manage rentals
+  let user;
+  try {
+    user = await requirePermission(request, 'canManageRentals');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unauthorized';
+    return NextResponse.json({ error: message }, { status: message === 'Forbidden' ? 403 : 401 });
+  }
 
   try {
     const { searchParams } = new URL(request.url)

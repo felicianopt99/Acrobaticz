@@ -1,0 +1,109 @@
+{
+  "categories": {
+    "cmk1e0n230003tb4gtbayc9jd": "Lighting",
+    "cmk2xt5s50023cw5g2242d74c": "Power",
+    "cmk2yg76g002xcw5gs5phwj4g": "Staging and Structures",
+    "cmk2u2ind000ccw5gwp8sjln3": "Video",
+    "cmk1e0n260004tb4g37154d95": "Audio and Sound",
+    "cmk2yahn1002mcw5gvbcgkszj": "Others"
+  },
+  "subcategories": {
+    "cmk1e0n3f000mtb4g4wo3p1kw": {
+      "name": "Battery",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd"
+    },
+    "cmk1e0n5m001etb4gstw7s39f": {
+      "name": "Battery Speakers",
+      "parentId": "cmk1e0n260004tb4g37154d95"
+    },
+    "cmk1e0n44000stb4gyw8a3jx9": {
+      "name": "Decorative Lighting",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd"
+    },
+    "cmk1ra3xh000qtjeh69nb1iod": {
+      "name": "Effects",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd"
+    },
+    "cmk1e0n2w000etb4gowy0l9bi": {
+      "name": "LED Par",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd"
+    },
+    "cmk1e0n5v001itb4g5o2ie47u": {
+      "name": "Microphones",
+      "parentId": "cmk1e0n260004tb4g37154d95"
+    },
+    "cmk1e0n2a0006tb4gfvum37v3": {
+      "name": "Moving Head",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd"
+    },
+    "cmk1e0n4j000ytb4gz5y21ntw": {
+      "name": "Speakers",
+      "parentId": "cmk1e0n260004tb4g37154d95"
+    },
+    "cmk2u2qjj000ecw5gonqu3cu9": {
+      "name": "Projector",
+      "parentId": "cmk2u2ind000ccw5gwp8sjln3"
+    },
+    "cmk2ubkmf000pcw5g90hz31lj": {
+      "name": "Stage & Touring Gear",
+      "parentId": "cmk1e0n260004tb4g37154d95"
+    },
+    "cmk2wxsub001fcw5gcpkpmxpz": {
+      "name": "Mixing Consoles",
+      "parentId": "cmk1e0n260004tb4g37154d95"
+    },
+    "cmk2xpun6001ycw5gbbd6i2bz": {
+      "name": "Follow Spots",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd"
+    },
+    "cmk2xxaci0025cw5gl37pa6cl": {
+      "name": "Cabling & Distribution",
+      "parentId": "cmk2xt5s50023cw5g2242d74c"
+    },
+    "cmk2yav4d002ocw5g7jyebitz": {
+      "name": "Fans and ventilation",
+      "parentId": "cmk2yahn1002mcw5gvbcgkszj"
+    },
+    "cmk2yguod002zcw5gazl94gfi": {
+      "name": "Stage Platforms & Risers",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd"
+    },
+    "cmk2yn0840039cw5gavgf2wsn": {
+      "name": "DJ Equipment",
+      "parentId": "cmk1e0n260004tb4g37154d95"
+    },
+    "cmk2zfbje0047cw5gihy6kc4h": {
+      "name": "Lighting Control",
+      "parentId": "cmk1e0n230003tb4gtbayc9jd"
+    },
+    "cmk2zm9g4004hcw5g0hmjrt3d": {
+      "name": "Cable Management & Safety",
+      "parentId": "cmk2yg76g002xcw5gs5phwj4g"
+    },
+    "cmk2zsbnb004rcw5gpo2fybt8": {
+      "name": "Audio Recorder and Player",
+      "parentId": "cmk1e0n260004tb4g37154d95"
+    },
+    "cmk2zuebl004xcw5gs501q7p4": {
+      "name": "Trussing and Support",
+      "parentId": "cmk2yg76g002xcw5gs5phwj4g"
+    },
+    "cmk3062bl005fcw5g359snsxf": {
+      "name": "Power Distribution",
+      "parentId": "cmk2xt5s50023cw5g2242d74c"
+    }
+  },
+  "partners": [
+    {
+      "id": "cmk1e0n150000tb4g9cktv4bk",
+      "name": "Rey Davis",
+      "company": "VRD Production",
+      "email": "",
+      "phone": "hello@vrd.productions",
+      "website": "https://vrd.productions",
+      "type": "Professional Audio Visual Equipment Rental",
+      "logoUrl": "1"
+    }
+  ],
+  "users": []
+}

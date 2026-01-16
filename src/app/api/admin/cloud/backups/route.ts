@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
     // Create backup job record
     const job = await prisma.backupJob.create({
       data: {
+        id: crypto.randomUUID(),
         jobType: 'manual',
         status: 'running',
         startedAt: new Date(),

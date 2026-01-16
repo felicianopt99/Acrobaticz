@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { ConditionalLayout } from '@/components/layout/ConditionalLayout';
 import { AppProvider } from '@/contexts/AppContext';
+import { BrandingProvider } from '@/contexts/BrandingContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import { TranslationProvider } from '@/contexts/TranslationContext';
@@ -75,16 +76,18 @@ export default async function RootLayout({
           <ThemeProvider>
             <TranslationProvider>
               <BackgroundTranslationProvider>
-                <AppProvider>
-                  <NotificationProvider>
-                    <ConditionalLayout>
-                      {children}
-                    </ConditionalLayout>
-                    <PWAInstallPrompt />
-                    <TranslationPreloader />
-                    <RouteTranslationPreloader />
-                  </NotificationProvider>
-                </AppProvider>
+                <BrandingProvider>
+                  <AppProvider>
+                    <NotificationProvider>
+                      <ConditionalLayout>
+                        {children}
+                      </ConditionalLayout>
+                      <PWAInstallPrompt />
+                      <TranslationPreloader />
+                      <RouteTranslationPreloader />
+                    </NotificationProvider>
+                  </AppProvider>
+                </BrandingProvider>
               </BackgroundTranslationProvider>
             </TranslationProvider>
           </ThemeProvider>
