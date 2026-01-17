@@ -18,7 +18,7 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
         <main 
           className="flex-1 min-w-0 max-w-full bg-white dark:bg-black relative z-[1]"
           style={{ 
-            paddingBottom: 'max(calc(80px + env(safe-area-inset-bottom)), 100px)' 
+            paddingBottom: 'max(calc(64px + env(safe-area-inset-bottom)), 80px)' 
           }}
         >
           <div className="page-container">

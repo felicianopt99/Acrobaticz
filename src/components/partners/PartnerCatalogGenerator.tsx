@@ -18,9 +18,11 @@ import { translateText, translateBatch } from '@/lib/client-translation';
 interface PartnerCatalogGeneratorProps {
   partnerId: string;
   partnerName: string;
+  /** Display the page header with title and description */
+  showHeader?: boolean;
 }
 
-export function PartnerCatalogGenerator({ partnerId, partnerName }: PartnerCatalogGeneratorProps) {
+export function PartnerCatalogGenerator({ partnerId, partnerName, showHeader = false }: PartnerCatalogGeneratorProps) {
   const { toast } = useToast();
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [partner, setPartner] = useState<Partner | null>(null);
@@ -39,6 +41,8 @@ export function PartnerCatalogGenerator({ partnerId, partnerName }: PartnerCatal
   const [customTerms, setCustomTerms] = useState<string>('');
 
   // Translation hooks
+  const { translated: pageTitle } = useTranslate('Equipment Catalog');
+  const { translated: pageDescriptionPrefix } = useTranslate('Generate PDF catalogs of available equipment for');
   const { translated: equipmentCatalog } = useTranslate('Equipment Catalog Generator');
   const { translated: searchEquipment } = useTranslate('Search equipment...');
   const { translated: allCategories } = useTranslate('All Categories');
@@ -300,6 +304,16 @@ export function PartnerCatalogGenerator({ partnerId, partnerName }: PartnerCatal
 
   return (
     <div className="space-y-6">
+      {/* Page header with translation */}
+      {showHeader && (
+        <div>
+          <h1 className="text-3xl font-bold">{pageTitle}</h1>
+          <p className="text-muted-foreground mt-2">
+            {pageDescriptionPrefix} {partnerName}
+          </p>
+        </div>
+      )}
+      
       {/* Partner info with logo */}
       {partner && (
         <Card className="glass-card bg-card/50 border border-border/30">

@@ -60,8 +60,7 @@ export default async function EditPartnerPage({ params }: PageProps) {
     <div className="flex flex-col min-h-screen">
       <div className="flex-1 overflow-y-auto p-2 md:p-6">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-xl md:text-2xl font-semibold mb-6">Edit Partner</h2>
-          <PartnerForm initialData={partner as Partner} />
+          <PartnerForm initialData={partner as Partner} mode="edit" />
         </div>
       </div>
     </div>

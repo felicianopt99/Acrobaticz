@@ -9,6 +9,7 @@ import { useTranslate } from '@/contexts/TranslationContext';
 export default function NewQuotePage() {
   // Translation hooks
   const { translated: uiCreateNewQuoteText } = useTranslate('Create New Quote');
+  const { translated: uiQuoteSubtitleText } = useTranslate('Generate professional quotes for your AV rental services');
 
   return (
     <div className="min-h-screen bg-background">
@@ -20,7 +21,7 @@ export default function NewQuotePage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{uiCreateNewQuoteText}</h1>
-              <p className="text-gray-600 dark:text-gray-400">Generate professional quotes for your AV rental services</p>
+              <p className="text-gray-600 dark:text-gray-400">{uiQuoteSubtitleText}</p>
             </div>
           </div>
         </div>

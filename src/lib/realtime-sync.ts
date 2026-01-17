@@ -2,6 +2,7 @@ import { Server as NetServer } from 'http'
 import { NextApiRequest } from 'next'
 import { Server as ServerIO } from 'socket.io'
 import { prisma } from '@/lib/db-enhanced'
+import { getAppURL } from '@/lib/environment-urls'
 
 export interface NextApiResponseServerIO extends Response {
   socket: {
@@ -21,7 +22,7 @@ class RealTimeSync {
         path: '/api/socket',
         addTrailingSlash: false,
         cors: {
-          origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+          origin: getAppURL(),
           methods: ['GET', 'POST'],
         },
       })

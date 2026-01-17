@@ -357,7 +357,7 @@ export function TranslationCacheStats({ onRefresh }: CacheStatsProps) {
       <CardContent>
         {stats ? (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-blue-50 p-3 rounded-lg">
                 <p className="text-xs text-gray-600">Cached Items</p>
                 <p className="text-2xl font-bold text-blue-600">{stats.totalCached}</p>

@@ -54,9 +54,11 @@ type PartnerFormValues = z.infer<typeof partnerFormSchema>;
 interface PartnerFormProps {
   initialData?: Partner;
   onSubmitSuccess?: () => void;
+  /** Display mode - controls page title shown */
+  mode?: 'new' | 'edit';
 }
 
-export function PartnerForm({ initialData, onSubmitSuccess }: PartnerFormProps) {
+export function PartnerForm({ initialData, onSubmitSuccess, mode }: PartnerFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
@@ -80,6 +82,8 @@ export function PartnerForm({ initialData, onSubmitSuccess }: PartnerFormProps) 
   }, []);
 
   // Translation hooks
+  const { translated: pageTitleNew } = useTranslate('Add New Partner');
+  const { translated: pageTitleEdit } = useTranslate('Edit Partner');
   const { translated: toastFailedText } = useTranslate('Failed to save partner. Please try again.');
   const { translated: toastErrorTitle } = useTranslate('Error');
   const { translated: toastPartnerAddedTitle } = useTranslate('Partner Added');
@@ -268,8 +272,14 @@ export function PartnerForm({ initialData, onSubmitSuccess }: PartnerFormProps) 
   }
 
   return (
-    <Card className="glass-card bg-card text-card-foreground shadow-xl border border-border/40">
-      <CardContent className="pt-6">
+    <>
+      {mode && (
+        <h2 className="text-xl md:text-2xl font-semibold mb-6">
+          {mode === 'new' ? pageTitleNew : pageTitleEdit}
+        </h2>
+      )}
+      <Card className="glass-card bg-card text-card-foreground shadow-xl border border-border/40">
+        <CardContent className="pt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -508,5 +518,6 @@ export function PartnerForm({ initialData, onSubmitSuccess }: PartnerFormProps) 
         </Form>
       </CardContent>
     </Card>
+    </>
   );
 }

@@ -27,6 +27,13 @@ import { EQUIPMENT_STATUSES } from '@/lib/constants';
 import { useAppContext, useAppDispatch } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { getStatusBreakdownString, updateQuantityByStatus } from "@/lib/equipment-utils";
+import { useTranslate } from '@/contexts/TranslationContext';
+
+// Translation helper component
+const T = ({ text }: { text: string }) => {
+  const { translated } = useTranslate(text);
+  return <>{translated}</>;
+};
 
 // Work log tags/categories
 const WORK_TAGS = [
@@ -70,6 +77,47 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
   const { equipment } = useAppContext();
   const { addMaintenanceLog, updateEquipmentItem } = useAppDispatch();
   const { toast } = useToast();
+
+  // Translation hooks
+  const { translated: addWorkLogText } = useTranslate('Add Work Log');
+  const { translated: workLogAddedText } = useTranslate('Work Log Added');
+  const { translated: logAddedForText } = useTranslate('Log added for');
+  const { translated: errorText } = useTranslate('Error');
+  const { translated: failedToAddText } = useTranslate('Failed to add work log.');
+  const { translated: equipmentLabel } = useTranslate('Equipment');
+  const { translated: selectEquipmentText } = useTranslate('Select equipment');
+  const { translated: dateOfWorkText } = useTranslate('Date of Work');
+  const { translated: pickDateText } = useTranslate('Pick a date');
+  const { translated: workStatusText } = useTranslate('Work Status');
+  const { translated: pendingText } = useTranslate('Pending');
+  const { translated: inProgressText } = useTranslate('In Progress');
+  const { translated: completedText } = useTranslate('Completed');
+  const { translated: descriptionLabel } = useTranslate('Description of Work');
+  const { translated: descriptionPlaceholder } = useTranslate('Describe the work performed or issue resolved...');
+  const { translated: workTypeLabel } = useTranslate('Work Type (Select all that apply)');
+  const { translated: hoursSpentLabel } = useTranslate('Hours Spent (Optional)');
+  const { translated: costLabel } = useTranslate('Cost ($) (Optional)');
+  const { translated: technicianLabel } = useTranslate('Technician (Optional)');
+  const { translated: technicianPlaceholder } = useTranslate('Name of technician');
+  const { translated: notesLabel } = useTranslate('Notes (Optional)');
+  const { translated: notesPlaceholder } = useTranslate('Additional details, diagnostics, or recommendations...');
+  const { translated: outsideRepairLabel } = useTranslate('Sent for Outside Repair');
+  const { translated: vendorLabel } = useTranslate('Vendor/Shop Name');
+  const { translated: vendorPlaceholder } = useTranslate('Name of repair shop');
+  const { translated: expectedReturnLabel } = useTranslate('Expected Return Date');
+  const { translated: pickReturnDateText } = useTranslate('Pick return date');
+  const { translated: repairStatusLabel } = useTranslate('Repair Status');
+  const { translated: sentToVendorText } = useTranslate('Sent to Vendor');
+  const { translated: readyForPickupText } = useTranslate('Ready for Pickup');
+  const { translated: returnedText } = useTranslate('Returned');
+  const { translated: referenceNumberLabel } = useTranslate('Reference Number (Optional)');
+  const { translated: referencePlaceholder } = useTranslate('Invoice or ticket number');
+  const { translated: updateStatusLabel } = useTranslate('Update Equipment Status (Optional)');
+  const { translated: noChangeText } = useTranslate('No Change');
+  const { translated: cancelText } = useTranslate('Cancel');
+  const { translated: addLogText } = useTranslate('Add Log');
+  const { translated: recordActivityText } = useTranslate('Record a maintenance or repair activity. You can also update the item\'s status.');
+  const { translated: selectEquipmentLogText } = useTranslate('Select equipment and log maintenance or repair work performed.');
 
   const form = useForm<WorkLogFormValues>({
     resolver: zodResolver(workLogSchema),
@@ -153,8 +201,8 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
       }
 
       toast({ 
-        title: "Work Log Added", 
-        description: `Log added for ${selectedItem.name}.` 
+        title: workLogAddedText, 
+        description: `${logAddedForText} ${selectedItem.name}.` 
       });
       onOpenChange(false);
       form.reset({
@@ -178,19 +226,19 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
     } catch (error) {
       toast({ 
         variant: "destructive", 
-        title: "Error", 
-        description: "Failed to add work log." 
+        title: errorText, 
+        description: failedToAddText 
       });
     }
   }
 
   const isAddingToExisting = !!equipmentItem;
   const dialogTitle = isAddingToExisting 
-    ? `Add Work Log for "${equipmentItem.name}"`
-    : "Add Work Log";
+    ? `${addWorkLogText} - "${equipmentItem.name}"`
+    : addWorkLogText;
   const dialogDescription = isAddingToExisting
-    ? "Record a maintenance or repair activity. You can also update the item's status."
-    : "Select equipment and log maintenance or repair work performed.";
+    ? recordActivityText
+    : selectEquipmentLogText;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -208,11 +256,11 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                 name="equipmentId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Equipment</FormLabel>
+                    <FormLabel>{equipmentLabel}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select equipment" />
+                          <SelectValue placeholder={selectEquipmentText} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -235,7 +283,7 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
               name="date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Date of Work</FormLabel>
+                  <FormLabel>{dateOfWorkText}</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -243,7 +291,7 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                           variant={"outline"} 
                           className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                         >
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          {field.value ? format(field.value, "PPP") : <span>{pickDateText}</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </FormControl>
@@ -263,7 +311,7 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
               name="workStatus"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Work Status *</FormLabel>
+                  <FormLabel>{workStatusText} *</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -271,9 +319,9 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="pending">{pendingText}</SelectItem>
+                      <SelectItem value="in-progress">{inProgressText}</SelectItem>
+                      <SelectItem value="completed">{completedText}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -287,10 +335,10 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description of Work</FormLabel>
+                  <FormLabel>{descriptionLabel}</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Describe the work performed or issue resolved..." 
+                      placeholder={descriptionPlaceholder} 
                       {...field} 
                       className="min-h-[100px]"
                     />
@@ -306,7 +354,7 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
               name="tags"
               render={() => (
                 <FormItem>
-                  <FormLabel>Work Type (Select all that apply)</FormLabel>
+                  <FormLabel>{workTypeLabel}</FormLabel>
                   <div className="grid grid-cols-2 gap-3">
                     {WORK_TAGS.map(tag => (
                       <FormField
@@ -347,7 +395,7 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                 name="hoursSpent"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hours Spent (Optional)</FormLabel>
+                    <FormLabel>{hoursSpentLabel}</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
@@ -367,7 +415,7 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                 name="cost"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Cost ($) (Optional)</FormLabel>
+                    <FormLabel>{costLabel}</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
@@ -389,10 +437,10 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
               name="technician"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Technician (Optional)</FormLabel>
+                  <FormLabel>{technicianLabel}</FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="Name of technician" 
+                      placeholder={technicianPlaceholder} 
                       {...field} 
                     />
                   </FormControl>
@@ -407,10 +455,10 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormLabel>{notesLabel}</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Additional details, diagnostics, or recommendations..." 
+                      placeholder={notesPlaceholder} 
                       {...field} 
                       className="min-h-[60px]"
                     />
@@ -433,7 +481,7 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                     />
                   </FormControl>
                   <FormLabel className="font-semibold cursor-pointer">
-                    Sent for Outside Repair
+                    {outsideRepairLabel}
                   </FormLabel>
                 </FormItem>
               )}
@@ -447,10 +495,10 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                   name="vendorName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Vendor/Shop Name</FormLabel>
+                      <FormLabel>{vendorLabel}</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="Name of repair shop" 
+                          placeholder={vendorPlaceholder} 
                           {...field} 
                         />
                       </FormControl>
@@ -464,7 +512,7 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                   name="expectedReturnDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Expected Return Date</FormLabel>
+                      <FormLabel>{expectedReturnLabel}</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -472,7 +520,7 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                               variant={"outline"} 
                               className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                             >
-                              {field.value ? format(field.value, "MMM dd, yyyy") : <span>Pick return date</span>}
+                              {field.value ? format(field.value, "MMM dd, yyyy") : <span>{pickReturnDateText}</span>}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
@@ -491,7 +539,7 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                   name="repairStatus"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Repair Status</FormLabel>
+                      <FormLabel>{repairStatusLabel}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || 'sent'}>
                         <FormControl>
                           <SelectTrigger>
@@ -499,10 +547,10 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="sent">Sent to Vendor</SelectItem>
-                          <SelectItem value="in-progress">In Progress</SelectItem>
-                          <SelectItem value="ready-for-pickup">Ready for Pickup</SelectItem>
-                          <SelectItem value="returned">Returned</SelectItem>
+                          <SelectItem value="sent">{sentToVendorText}</SelectItem>
+                          <SelectItem value="in-progress">{inProgressText}</SelectItem>
+                          <SelectItem value="ready-for-pickup">{readyForPickupText}</SelectItem>
+                          <SelectItem value="returned">{returnedText}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -515,10 +563,10 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
                   name="referenceNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Reference Number (Optional)</FormLabel>
+                      <FormLabel>{referenceNumberLabel}</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="Invoice or ticket number" 
+                          placeholder={referencePlaceholder} 
                           {...field} 
                         />
                       </FormControl>
@@ -535,7 +583,7 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
               name="cost"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Cost ($) (Optional)</FormLabel>
+                  <FormLabel>{costLabel}</FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 
@@ -555,10 +603,10 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
               name="technician"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Technician (Optional)</FormLabel>
+                  <FormLabel>{technicianLabel}</FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="Technician name" 
+                      placeholder={technicianPlaceholder} 
                       {...field} 
                     />
                   </FormControl>
@@ -573,15 +621,15 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
               name="updateStatus"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Update Equipment Status (Optional)</FormLabel>
+                  <FormLabel>{updateStatusLabel}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="No Change" />
+                        <SelectValue placeholder={noChangeText} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="no-change">No Change</SelectItem>
+                      <SelectItem value="no-change">{noChangeText}</SelectItem>
                       {EQUIPMENT_STATUSES.map(status => (
                         <SelectItem key={status.value} value={status.value}>
                           {status.label}
@@ -624,13 +672,13 @@ export function WorkLogDialog({ isOpen, onOpenChange, equipmentItem }: WorkLogDi
 
             <DialogFooter className="pt-4">
               <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
+                <Button type="button" variant="outline">{cancelText}</Button>
               </DialogClose>
               <Button 
                 type="submit"
                 disabled={!form.watch('equipmentId') || !form.watch('description')}
               >
-                Add Log
+                {addLogText}
               </Button>
             </DialogFooter>
           </form>

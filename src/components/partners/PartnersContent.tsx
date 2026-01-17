@@ -78,6 +78,9 @@ export function PartnersContent() {
   const { translated: providerType } = useTranslate('Provider');
   const { translated: agencyType } = useTranslate('Agency');
   const { translated: bothType } = useTranslate('Both');
+  const { translated: allType } = useTranslate('All');
+  const { translated: linkedClientHeader } = useTranslate('Linked Client');
+  const { translated: clientLabel } = useTranslate('Client');
 
   const [partners, setPartners] = useState<Partner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -205,7 +208,7 @@ export function PartnersContent() {
                       onClick={() => setTypeFilter(type)}
                       className={typeFilter === type ? '' : 'text-muted-foreground'}
                     >
-                      {type === 'all' ? 'All' : type === 'provider' ? providerType : type === 'agency' ? agencyType : bothType}
+                      {type === 'all' ? allType : type === 'provider' ? providerType : type === 'agency' ? agencyType : bothType}
                     </Button>
                   ))}
                 </div>
@@ -261,7 +264,7 @@ export function PartnersContent() {
                             )}
                             {partner.client && (
                               <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
-                                📋 Client: {partner.client.name}
+                                📋 {clientLabel}: {partner.client.name}
                               </p>
                             )}
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -316,7 +319,7 @@ export function PartnersContent() {
                           <TableHead>{contactHeader}</TableHead>
                           <TableHead>{emailHeader}</TableHead>
                           <TableHead>{typeHeader}</TableHead>
-                          <TableHead>Linked Client</TableHead>
+                          <TableHead>{linkedClientHeader}</TableHead>
                           <TableHead>{subrentalsHeader}</TableHead>
                           <TableHead>{statusHeader}</TableHead>
                           <TableHead className="text-right">{actionsHeader}</TableHead>

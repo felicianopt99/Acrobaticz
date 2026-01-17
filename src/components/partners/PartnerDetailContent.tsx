@@ -85,8 +85,11 @@ export function PartnerDetailContent({ partnerId }: PartnerDetailContentProps) {
   const { translated: backToPartners } = useTranslate('Back to Partners');
   const { translated: editPartner } = useTranslate('Edit Partner');
   const { translated: addSubrental } = useTranslate('Add Subrental');
+  const { translated: addSubrentalFromPartner } = useTranslate('Add subrented equipment from');
+  const { translated: generateCatalogBtn } = useTranslate('Generate Catalog');
   const { translated: partnerInfo } = useTranslate('Partner Information');
   const { translated: subrentalHistory } = useTranslate('Subrental History');
+  const { translated: subrentedFromPartner } = useTranslate('Equipment subrented from this partner');
   const { translated: noSubrentalsYet } = useTranslate('No subrentals yet.');
   const { translated: addFirstSubrental } = useTranslate('Add the first subrental for this partner.');
   const { translated: equipmentHeader } = useTranslate('Equipment');
@@ -108,6 +111,17 @@ export function PartnerDetailContent({ partnerId }: PartnerDetailContentProps) {
   const { translated: markAsReturned } = useTranslate('Mark as Returned');
   const { translated: markAsCancelled } = useTranslate('Mark as Cancelled');
   const { translated: statusUpdated } = useTranslate('Status Updated');
+  const { translated: activeLabel } = useTranslate('Active');
+  const { translated: inactiveLabel } = useTranslate('Inactive');
+  const { translated: contactLabel } = useTranslate('Contact');
+  const { translated: notesLabel } = useTranslate('Notes');
+  const { translated: partnerNotFound } = useTranslate('Partner not found');
+  const { translated: qtyLabel } = useTranslate('Qty');
+  const { translated: toLabel } = useTranslate('to');
+  const { translated: errorTitle } = useTranslate('Error');
+  const { translated: failedDeleteSubrental } = useTranslate('Failed to delete subrental.');
+  const { translated: failedUpdateStatus } = useTranslate('Failed to update status.');
+  const { translated: statusChangedTo } = useTranslate('Status changed to');
 
   const [partner, setPartner] = useState<Partner | null>(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -66,44 +66,22 @@ function applyPostTranslationRules(translated: string, sourceText: string, rules
   return result;
 }
 
-// LRU in-memory cache to bound memory usage
-class LRUCache {
-  private max: number;
-  private map: Map<string, string>;
-  constructor(maxEntries: number) {
-    this.max = Math.max(100, maxEntries);
-    this.map = new Map();
-  }
-  get(key: string): string | undefined {
-    if (!this.map.has(key)) return undefined;
-    const value = this.map.get(key)!;
-    // refresh order
-    this.map.delete(key);
-    this.map.set(key, value);
-    return value;
-    }
-  set(key: string, value: string): void {
-    if (this.map.has(key)) {
-      this.map.delete(key);
-    } else if (this.map.size >= this.max) {
-      // delete least-recently used (first item)
-      const firstKey = this.map.keys().next().value as string | undefined;
-      if (firstKey !== undefined) this.map.delete(firstKey);
-    }
-    this.map.set(key, value);
-  }
-  clear(): void {
-    this.map.clear();
-  }
-  size(): number {
-    return this.map.size;
-  }
-  keys(): string[] {
-    return Array.from(this.map.keys());
-  }
-}
-
-const translationCache = new LRUCache(parseInt(process.env.TRANSLATION_CACHE_MAX || '5000', 10));
+/**
+ * NOTA: LRU Cache in-memory foi REMOVIDO.
+ * 
+ * Todas as traduções agora usam o sistema unificado de cache:
+ * - TranslationCache (Prisma): Cache TTL de 30 dias para traduções DeepL
+ * - Translation (Prisma): Tabela principal com analytics (usageCount, lastUsed)
+ * - clientCache (React): Cache in-memory no TranslationContext
+ * 
+ * Vantagens:
+ * - Sem duplicação de dados em memória
+ * - Analytics precisos via BD
+ * - Persistência entre restarts
+ * - Sincronização automática entre tabelas
+ * 
+ * Ver: src/lib/deepl.service.ts para implementação completa
+ */
 
 // Pending translation requests to avoid duplicates
 const pendingTranslations = new Map<string, Promise<string>>();
@@ -138,6 +116,18 @@ const PT_GLOSSARY: Array<{ pattern: RegExp; replace: string }> = [
   { pattern: /\bquote\b/g, replace: 'orçamento' },
   
   // PT-BR → PT-PT corrections (common differences)
+  // Pronomes - PT-PT não usa "você" da mesma forma
+  { pattern: /\bVocê tem\b/g, replace: 'Tem' },
+  { pattern: /\bvocê tem\b/g, replace: 'tem' },
+  { pattern: /\bVocê está\b/g, replace: 'Está' },
+  { pattern: /\bvocê está\b/g, replace: 'está' },
+  { pattern: /\bVocê pode\b/g, replace: 'Pode' },
+  { pattern: /\bvocê pode\b/g, replace: 'pode' },
+  { pattern: /\bVocê deve\b/g, replace: 'Deve' },
+  { pattern: /\bvocê deve\b/g, replace: 'deve' },
+  { pattern: /\bVocê precisa\b/g, replace: 'Precisa' },
+  { pattern: /\bvocê precisa\b/g, replace: 'precisa' },
+  // Palavras comuns PT-BR → PT-PT
   { pattern: /\bcontato\b/gi, replace: 'contacto' },
   { pattern: /\bContato\b/g, replace: 'Contacto' },
   { pattern: /\bconosco\b/gi, replace: 'connosco' },
@@ -156,6 +146,28 @@ const PT_GLOSSARY: Array<{ pattern: RegExp; replace: string }> = [
   { pattern: /\bGeladeira\b/g, replace: 'Frigorífico' },
   { pattern: /\bbanheiro\b/gi, replace: 'casa de banho' },
   { pattern: /\bBanheiro\b/g, replace: 'Casa de banho' },
+  { pattern: /\btime\b/g, replace: 'equipa' },
+  { pattern: /\bTime\b/g, replace: 'Equipa' },
+  { pattern: /\btimes\b/g, replace: 'equipas' },
+  { pattern: /\bTimes\b/g, replace: 'Equipas' },
+  { pattern: /\bprivacidade\b/g, replace: 'privacidade' },
+  { pattern: /\bgestor\b/gi, replace: 'gestor' },
+  { pattern: /\busuário\b/gi, replace: 'utilizador' },
+  { pattern: /\bUsuário\b/g, replace: 'Utilizador' },
+  { pattern: /\busuários\b/gi, replace: 'utilizadores' },
+  { pattern: /\bUsuários\b/g, replace: 'Utilizadores' },
+  { pattern: /\bequipe\b/gi, replace: 'equipa' },
+  { pattern: /\bEquipe\b/g, replace: 'Equipa' },
+  { pattern: /\bequipes\b/gi, replace: 'equipas' },
+  { pattern: /\bEquipes\b/g, replace: 'Equipas' },
+  { pattern: /\barquivo\b/gi, replace: 'ficheiro' },
+  { pattern: /\bArquivo\b/g, replace: 'Ficheiro' },
+  { pattern: /\barquivos\b/gi, replace: 'ficheiros' },
+  { pattern: /\bArquivos\b/g, replace: 'Ficheiros' },
+  { pattern: /\bmouse\b/gi, replace: 'rato' },
+  { pattern: /\bMouse\b/g, replace: 'Rato' },
+  { pattern: /\btela\b/gi, replace: 'ecrã' },
+  { pattern: /\bTela\b/g, replace: 'Ecrã' },
 ];
 
 function applyGlossary(text: string, targetLang: Language): string {
@@ -208,6 +220,7 @@ async function touchUsageMany(texts: string[], targetLang: Language, concurrency
 /**
  * Batch fetch translations from database
  * Much faster than individual queries
+ * IMPORTANTE: Só retorna traduções válidas (diferentes do texto original)
  */
 async function batchFetchFromDb(
   texts: string[],
@@ -228,8 +241,14 @@ async function batchFetchFromDb(
     });
     
     translations.forEach(t => {
-      results.set(t.sourceText, t.translatedText);
+      // CORREÇÃO: Só usar tradução se for diferente do original
+      // Traduções falsas (source == translated) devem ser ignoradas
+      if (t.translatedText && t.translatedText !== t.sourceText) {
+        results.set(t.sourceText, t.translatedText);
+      }
     });
+    
+    console.log(`[Translation] Found ${translations.length} in DB, ${results.size} valid translations`);
   } catch (error) {
     console.error('Batch fetch error:', error);
   }
@@ -475,17 +494,13 @@ export async function translateBatch(
       }
     }
     
-    // Then check in-memory cache
-    const cached = translationCache.get(cacheKey);
+    // LRU cache removido - todas as traduções agora vêm da BD
+    // O TranslationContext do React mantém cache in-memory no cliente
     
-    if (cached) {
-      results[index] = cached;
-    } else {
-      uncachedTexts.push(text);
-      uncachedIndices.push(index);
-      // Fill with original text as fallback
-      results[index] = text;
-    }
+    uncachedTexts.push(text);
+    uncachedIndices.push(index);
+    // Fill with original text as fallback
+    results[index] = text;
   });
 
   // If all cached or matched rules, return immediately
@@ -512,9 +527,7 @@ export async function translateBatch(
     const dbTranslation = dbResults.get(text);
     
     if (dbTranslation) {
-      // Found in DB, cache and use it
-      const cacheKey = getCacheKey(text, targetLang);
-      translationCache.set(cacheKey, dbTranslation);
+      // Found in DB, use it (cache é gerido pelo TranslationContext no cliente)
       results[index] = dbTranslation;
       // Update usage in background
       touchUsage(text, targetLang).catch(() => {});
@@ -547,11 +560,8 @@ export async function translateBatch(
       if (data.length > 0) {
         await prisma.translation.createMany({ data, skipDuplicates: true });
       }
-      // Update in-memory cache as well
-      data.forEach((row) => {
-        const cacheKey = getCacheKey(row.sourceText, row.targetLang);
-        translationCache.set(cacheKey, row.translatedText);
-      });
+      // Cache é agora gerido pelo TranslationContext do React (cliente)
+      // e pelo TranslationCache (BD com TTL)
       // Update usage for all newly translated items (background)
       touchUsageMany(stillMissing, targetLang).catch(() => {});
     } catch (err) {
@@ -580,8 +590,6 @@ async function translateBatchBackground(
     texts.forEach((text, i) => {
       const dbTranslation = dbResults.get(text);
       if (dbTranslation) {
-        const cacheKey = getCacheKey(text, targetLang);
-        translationCache.set(cacheKey, dbTranslation);
         // Update result array (client will get this on next render)
         results[indices[i]] = dbTranslation;
         touchUsage(text, targetLang).catch(() => {});
@@ -616,11 +624,7 @@ async function translateBatchBackground(
         if (data.length > 0) {
           await prisma.translation.createMany({ data, skipDuplicates: true });
         }
-        // Warm in-memory cache
-        data.forEach((row) => {
-          const cacheKey = `${row.targetLang}:${row.sourceText}`;
-          translationCache.set(cacheKey, row.translatedText);
-        });
+        // Cache é gerido pelo cliente (TranslationContext) e BD (TranslationCache)
         // Update usage for missing items
         touchUsageMany(stillMissing, targetLang).catch(() => {});
       } catch (e) {
@@ -633,22 +637,33 @@ async function translateBatchBackground(
 }
 
 /**
- * Clear in-memory translation cache
- * Note: Database translations are permanent and won't be cleared
+ * Clear translation cache
+ * Note: LRU cache was removed. This now clears TranslationCache in DB.
+ * For full reset, use Prisma to truncate tables.
  */
-export function clearTranslationCache(): void {
-  translationCache.clear();
-  console.log('In-memory translation cache cleared');
+export async function clearTranslationCache(): Promise<void> {
+  try {
+    // Import and use the clearExpiredCache from deepl.service
+    const { clearExpiredCache } = await import('./deepl.service');
+    await clearExpiredCache();
+    console.log('[Translation] Expired cache entries cleared');
+  } catch (error) {
+    console.error('[Translation] Failed to clear cache:', error);
+  }
 }
 
 /**
  * Get cache statistics
+ * Returns stats from the database TranslationCache table
  */
-export function getCacheStats() {
-  return {
-    size: translationCache.size(),
-    keys: translationCache.keys(),
-  };
+export async function getCacheStats() {
+  try {
+    const { getCacheStats: getDeeplCacheStats } = await import('./deepl.service');
+    const result = await getDeeplCacheStats();
+    return result.status === 'success' ? result.data : { size: 0, keys: [] };
+  } catch {
+    return { size: 0, keys: [] };
+  }
 }
 
 /**

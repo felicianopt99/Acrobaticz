@@ -22,6 +22,7 @@ import { useAppContext, useAppDispatch } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { getStatusBreakdownString } from "@/lib/equipment-utils";
+import { useTranslate } from '@/contexts/TranslationContext';
 
 const addEquipmentSchema = z.object({
   equipmentId: z.string().min(1, "Please select an equipment."),
@@ -42,6 +43,25 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
   const { addRental } = useAppDispatch();
   const { toast } = useToast();
   const [availabilityConflict, setAvailabilityConflict] = useState<string | null>(null);
+
+  // Translation hooks
+  const { translated: addEquipmentToText } = useTranslate('Add Equipment to');
+  const { translated: equipmentText } = useTranslate('Equipment');
+  const { translated: selectEquipmentText } = useTranslate('Select equipment to add');
+  const { translated: goodText } = useTranslate('good');
+  const { translated: totalText } = useTranslate('total');
+  const { translated: statusBreakdownText } = useTranslate('Status breakdown');
+  const { translated: quantityToRentText } = useTranslate('Quantity to Rent');
+  const { translated: cancelText } = useTranslate('Cancel');
+  const { translated: addToEventText } = useTranslate('Add to Event');
+  const { translated: availabilityConflictText } = useTranslate('Availability Conflict');
+  const { translated: equipmentAddedText } = useTranslate('Equipment Added');
+  const { translated: successfullyAddedText } = useTranslate('Successfully added to the event.');
+  const { translated: errorText } = useTranslate('Error');
+  const { translated: failedToAddText } = useTranslate('Failed to add equipment.');
+  const { translated: selectedEquipmentNotFoundText } = useTranslate('Selected equipment not found.');
+  const { translated: notEnoughStockText } = useTranslate('Not enough stock. Available units in good condition');
+  const { translated: requestedText } = useTranslate('Requested');
 
   const form = useForm<AddEquipmentFormValues>({
     resolver: zodResolver(addEquipmentSchema),
@@ -65,7 +85,7 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
     if (selectedEquipmentId && event.startDate && event.endDate && quantityToRent > 0) {
       const targetEquipment = equipment.find(e => e.id === selectedEquipmentId);
       if (!targetEquipment) {
-        setAvailabilityConflict("Selected equipment not found.");
+        setAvailabilityConflict(selectedEquipmentNotFoundText);
         return;
       }
 
@@ -90,7 +110,7 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
       const availableQuantity = qbs.good - rentedOutDuringPeriod;
 
       if (quantityToRent > availableQuantity) {
-        setAvailabilityConflict(`Not enough stock. Available units in good condition: ${availableQuantity}, Requested: ${quantityToRent}.`);
+        setAvailabilityConflict(`${notEnoughStockText}: ${availableQuantity}, ${requestedText}: ${quantityToRent}.`);
       } else {
         setAvailabilityConflict(null);
       }
@@ -102,7 +122,7 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
 
   function onSubmit(data: AddEquipmentFormValues) {
     if (availabilityConflict) {
-      toast({ variant: "destructive", title: "Availability Conflict", description: availabilityConflict });
+      toast({ variant: "destructive", title: availabilityConflictText, description: availabilityConflict });
       return;
     }
 
@@ -112,10 +132,10 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
         equipmentId: data.equipmentId,
         quantityRented: data.quantityRented,
       });
-      toast({ title: "Equipment Added", description: `Successfully added to the event.` });
+      toast({ title: equipmentAddedText, description: successfullyAddedText });
       if (onSubmitSuccess) onSubmitSuccess();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to add equipment." });
+      toast({ variant: "destructive", title: errorText, description: failedToAddText });
       console.error("Error adding rental:", error);
     }
   }
@@ -124,7 +144,7 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add Equipment to "{event.name}"</DialogTitle>
+          <DialogTitle>{addEquipmentToText} "{event.name}"</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
@@ -141,11 +161,11 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
                 
                 return (
                   <FormItem>
-                    <FormLabel>Equipment</FormLabel>
+                    <FormLabel>{equipmentText}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select equipment to add" />
+                          <SelectValue placeholder={selectEquipmentText} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -157,7 +177,7 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
                           }) as QuantityByStatus;
                           return (
                             <SelectItem key={eq.id} value={eq.id}>
-                              {eq.name} ({eqbs.good} good / {eq.quantity} total)
+                              {eq.name} ({eqbs.good} {goodText} / {eq.quantity} {totalText})
                             </SelectItem>
                           );
                         })}
@@ -166,7 +186,7 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
                     <FormMessage />
                     {selectedItem && (
                       <div className="text-xs text-muted-foreground mt-2">
-                        Status breakdown: {getStatusBreakdownString(qbs)}
+                        {statusBreakdownText}: {getStatusBreakdownString(qbs)}
                       </div>
                     )}
                   </FormItem>
@@ -178,7 +198,7 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
               name="quantityRented"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantity to Rent</FormLabel>
+                  <FormLabel>{quantityToRentText}</FormLabel>
                   <FormControl>
                     <Input type="number" placeholder="1" {...field} />
                   </FormControl>
@@ -195,8 +215,8 @@ export function AddEquipmentToEventDialog({ isOpen, onOpenChange, event, onSubmi
             )}
             
             <DialogFooter className="pt-4">
-                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                <Button type="submit" disabled={!!availabilityConflict}>Add to Event</Button>
+                <DialogClose asChild><Button type="button" variant="outline">{cancelText}</Button></DialogClose>
+                <Button type="submit" disabled={!!availabilityConflict}>{addToEventText}</Button>
             </DialogFooter>
           </form>
         </Form>

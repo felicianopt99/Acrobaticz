@@ -15,6 +15,7 @@ import { Loader2, Lock, Building, Eye, EyeOff } from 'lucide-react';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import LightRays from '@/components/LightRays';
 import { useAppDispatch } from '@/contexts/AppContext';
+import { useTranslate, T } from '@/components/ui/T';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -85,6 +86,23 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
   const { toast } = useToast();
   const { checkAuth } = useAppDispatch();
 
+  // Translation hooks for user-visible text
+  const { translated: tLoginSuccessful } = useTranslate('Login successful');
+  const { translated: tWelcomeBack } = useTranslate('Welcome back');
+  const { translated: tLoginFailed } = useTranslate('Login failed');
+  const { translated: tCheckCredentials } = useTranslate('Please check your credentials and try again.');
+  const { translated: tSigningIn } = useTranslate('Signing in...');
+  const { translated: tHidePassword } = useTranslate('Hide password');
+  const { translated: tShowPassword } = useTranslate('Show password');
+  const { translated: tUsernameRequired } = useTranslate('Username is required');
+  const { translated: tPasswordRequired } = useTranslate('Password is required');
+  const { translated: tUsername } = useTranslate('Username');
+  const { translated: tPassword } = useTranslate('Password');
+  const { translated: tEnterUsername } = useTranslate('Enter your username');
+  const { translated: tEnterPassword } = useTranslate('Enter your password');
+  const { translated: tSignInToAccount } = useTranslate('Sign in to your account');
+  const { translated: tForgotPassword } = useTranslate('Forgot your password?');
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -139,8 +157,8 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
       const result = await response.json();
       
       toast({
-        title: 'Login successful',
-        description: `Welcome back, ${result.user.name}!`,
+        title: tLoginSuccessful,
+        description: `${tWelcomeBack}, ${result.user.name}!`,
       });
 
       // Sync AppContext with authenticated user BEFORE redirect
@@ -155,8 +173,8 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
       console.error('Login error:', error);
       toast({
         variant: 'destructive',
-        title: 'Login failed',
-        description: error instanceof Error ? error.message : 'Please check your credentials and try again.',
+        title: tLoginFailed,
+        description: error instanceof Error ? error.message : tCheckCredentials,
       });
     } finally {
       setIsLoading(false);
@@ -257,8 +275,8 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
   };
     
   const displayName = i18n?.displayName || settings.companyName || 'AV Rentals';
-  const welcomeMessage = i18n?.welcomeMessage || settings.loginWelcomeMessage || 'Welcome back';
-  const welcomeSubtitle = i18n?.welcomeSubtitle || settings.loginWelcomeSubtitle || 'Sign in to your account';
+  const welcomeMessage = i18n?.welcomeMessage || settings.loginWelcomeMessage || tWelcomeBack;
+  const welcomeSubtitle = i18n?.welcomeSubtitle || settings.loginWelcomeSubtitle || tSignInToAccount;
   const logoSize = settings.loginLogoSize || 80;
 
   if (!isSettingsLoaded) {
@@ -371,11 +389,11 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-foreground">{i18n?.usernameLabel || 'Username'}</FormLabel>
+                      <FormLabel className="text-foreground">{i18n?.usernameLabel || tUsername}</FormLabel>
                       <FormControl>
                         <Input
                           type="text"
-                          placeholder={i18n?.usernamePlaceholder || 'Enter your username'}
+                          placeholder={i18n?.usernamePlaceholder || tEnterUsername}
                           {...field}
                           disabled={isLoading}
                           className={getInputClasses()}
@@ -390,12 +408,12 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-foreground">{i18n?.passwordLabel || 'Password'}</FormLabel>
+                      <FormLabel className="text-foreground">{i18n?.passwordLabel || tPassword}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
                             type={showPassword ? "text" : "password"}
-                            placeholder={i18n?.passwordPlaceholder || 'Enter your password'}
+                            placeholder={i18n?.passwordPlaceholder || tEnterPassword}
                             {...field}
                             disabled={isLoading}
                             className={getInputClasses() + ' pr-10'}
@@ -405,7 +423,7 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
                             tabIndex={-1}
                             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
                             onClick={() => setShowPassword((v) => !v)}
-                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            aria-label={showPassword ? tHidePassword : tShowPassword}
                           >
                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                           </button>
@@ -422,7 +440,7 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
                   style={{ backgroundColor: settings.primaryColor || 'hsl(var(--primary))' }}
                 >
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {i18n?.signIn || 'Sign In'}
+                  {isLoading ? tSigningIn : (i18n?.signIn || <T>Sign In</T>)}
                 </Button>
                 
                 <div className="text-center">
@@ -430,7 +448,7 @@ export default function CustomizableLoginPage({ i18n }: { i18n?: LoginI18n } = {
                     href="#" 
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    {i18n?.forgotPassword || 'Forgot your password?'}
+                    {i18n?.forgotPassword || tForgotPassword}
                   </a>
                 </div>
               </form>

@@ -236,7 +236,7 @@ export async function testAPIConnection(provider: string): Promise<{
  */
 async function testDeepLConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
   try {
-    const response = await fetch('https://api-free.deepl.com/v1/translate', {
+    const response = await fetch('https://api-free.deepl.com/v2/translate', {
       method: 'POST',
       headers: {
         'Authorization': `DeepL-Auth-Key ${apiKey}`,

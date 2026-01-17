@@ -13,6 +13,7 @@ import {
 import { FileText, Download, Eye } from "lucide-react";
 import type { BusinessInfo } from "@/lib/quote-business-info";
 import { formatBusinessInfoDisplay, getSourceLabel } from "@/lib/quote-business-info";
+import { useTranslate } from '@/contexts/TranslationContext';
 
 interface QuoteHeaderProps {
   selectedBusinessInfo?: BusinessInfo;
@@ -49,6 +50,15 @@ export function QuoteFormHeader({
   clientAddress,
   location,
 }: QuoteHeaderProps) {
+  // Translation hooks
+  const { translated: savedText } = useTranslate('Saved');
+  const { translated: savingText } = useTranslate('Saving...');
+  const { translated: draftText } = useTranslate('Draft');
+  const { translated: previewText } = useTranslate('Preview');
+  const { translated: downloadText } = useTranslate('Download');
+  const { translated: generatingText } = useTranslate('Generating...');
+  const { translated: quoteText } = useTranslate('Quote');
+
   // Always use app branding for display header (default)
   const appBranding = availableSources.find(s => s.source === 'app') || availableSources[0];
   const current = appBranding;
@@ -78,9 +88,9 @@ export function QuoteFormHeader({
                     'text-gray-600 dark:text-gray-400'
                   }`}>
                     {autoSaveStatus === 'saved' && lastSaved ? 
-                      `Saved ${lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` :
-                      autoSaveStatus === 'saving' ? 'Saving...' :
-                      'Draft'
+                      `${savedText} ${lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` :
+                      autoSaveStatus === 'saving' ? savingText :
+                      draftText
                     }
                   </span>
                 </div>
@@ -91,7 +101,7 @@ export function QuoteFormHeader({
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-700 rounded-full w-full justify-center">
                 <div className="h-2 w-2 bg-green-500 rounded-full"></div>
                 <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                  Quote #{quoteNumber}
+                  {quoteText} #{quoteNumber}
                 </span>
               </div>
             )}
@@ -110,7 +120,7 @@ export function QuoteFormHeader({
                     onClick={onPreview}
                   >
                     <Eye className="h-4 w-4 mr-1" />
-                    Preview
+                    {previewText}
                   </Button>
                 )}
                 {onDownload && (
@@ -127,7 +137,7 @@ export function QuoteFormHeader({
                     ) : (
                       <Download className="h-4 w-4 mr-1" />
                     )}
-                    {isGeneratingPDF ? 'Generating...' : 'Download'}
+                    {isGeneratingPDF ? generatingText : downloadText}
                   </Button>
                 )}
               </div>

@@ -14,6 +14,8 @@ export default function EditEquipmentPage() {
   const { translated: uiEditEquipmentText } = useTranslate('Edit Equipment');
   const { translated: uiInventoryText } = useTranslate('Inventory');
   const { translated: uiDashboardText } = useTranslate('Dashboard');
+  const { translated: uiLoadingText } = useTranslate('Loading equipment data...');
+  const { translated: uiEquipmentNotFoundText } = useTranslate('Equipment not found.');
 
   const params = useParams();
   const router = useRouter();
@@ -42,7 +44,7 @@ export default function EditEquipmentPage() {
       <div className="flex flex-col min-h-screen">
         <div className="flex-grow flex items-center justify-center p-4 md:p-6">
           <div className="text-center">
-            <p className="text-lg text-muted-foreground">Loading equipment data...</p>
+            <p className="text-lg text-muted-foreground">{uiLoadingText}</p>
           </div>
         </div>
       </div>
@@ -54,7 +56,7 @@ export default function EditEquipmentPage() {
       <div className="flex flex-col min-h-screen">
         <div className="flex-grow flex items-center justify-center p-4 md:p-6">
           <div className="text-center">
-            <p className="text-lg text-destructive">Equipment not found.</p>
+            <p className="text-lg text-destructive">{uiEquipmentNotFoundText}</p>
           </div>
         </div>
       </div>

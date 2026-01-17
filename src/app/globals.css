@@ -81,9 +81,10 @@
   --input: 200 20% 28%;
   --ring: 190 80% 50%;
 }
+
 /* Glassy, modern header and sidebar improvements */
 .glass-header {
-  background: rgba(24, 24, 32, 0.72) !important; /* deep dark glass, override any white */
+  background: rgba(24, 24, 32, 0.72) !important;
   box-shadow: 0 4px 32px 0 rgba(0,0,0,0.18);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -117,20 +118,79 @@
 body, html {
   background: #0a0a0a !important;
 }
-/* Translucent glassy header style */
-.glass-header {
-  background: rgba(30, 41, 59, 0.65); /* slate-800 with opacity */
-  box-shadow: 0 4px 32px 0 rgba(0,0,0,0.10);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-bottom: 1.5px solid rgba(255,255,255,0.08);
-}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* === PHASE 2: TIPOGRAFIA PADRÃO === */
+  h1 {
+    @apply text-4xl font-bold leading-tight tracking-tight;
+  }
+
+  h2 {
+    @apply text-3xl font-semibold leading-snug tracking-tight;
+  }
+
+  h3 {
+    @apply text-2xl font-semibold leading-snug;
+  }
+
+  h4 {
+    @apply text-xl font-semibold leading-snug;
+  }
+
+  h5 {
+    @apply text-lg font-semibold leading-snug;
+  }
+
+  h6 {
+    @apply text-base font-semibold leading-snug;
+  }
+
+  p, body {
+    @apply text-base font-normal leading-relaxed;
+  }
+
+  small {
+    @apply text-xs font-normal;
+  }
+
+  /* === PHASE 2: ESPAÇAMENTO GLOBAL === */
+  @supports (gap: var(--spacing-unit)) {
+    :root {
+      --spacing-unit: 0.5rem; /* 8px base */
+      --spacing-xs: calc(var(--spacing-unit) * 0.5);
+      --spacing-sm: var(--spacing-unit);
+      --spacing-md: calc(var(--spacing-unit) * 2);
+      --spacing-lg: calc(var(--spacing-unit) * 3);
+      --spacing-xl: calc(var(--spacing-unit) * 4);
+      --spacing-2xl: calc(var(--spacing-unit) * 6);
+    }
+  }
+
+  /* === PHASE 2: TRANSIÇÕES SUAVES === */
+  button, [role="button"], input, select, textarea, .interactive {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  button:active, [role="button"]:active {
+    @apply scale-95;
+  }
+
+  /* === PHASE 2: ESPAÇAMENTO CONSISTENTE === */
+  .page-container {
+    @apply px-4 py-4;
+  }
+
+  .card-spacing {
+    @apply space-y-4;
+  }
+
+  /* === PHASE 3: CONTRASTE MELHORADO === */
   :root {
+    --muted-foreground-enhanced: 220 8% 50%;
     --background: 0 0% 4%;
     --foreground: 0 0% 95%;
     --card: 0 0% 8%;
@@ -142,7 +202,7 @@ body, html {
     --secondary: 215 20% 22%;
     --secondary-foreground: 0 0% 90%;
     --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 65%;
+    --muted-foreground: 0 0% 55%;
     --accent: 217 78% 51%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 50%;
@@ -156,8 +216,6 @@ body, html {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-
-    /* Modern sidebar variables with subtle blue theme and clean hierarchy */
     --sidebar-background: 0 0% 4%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 217 78% 51%;
@@ -167,47 +225,45 @@ body, html {
     --sidebar-border: 215 15% 18%;
     --sidebar-ring: 217 78% 51%;
   }
-}
 
-@layer base {
+  .muted-enhanced {
+    color: hsl(var(--muted-foreground-enhanced));
+  }
+
   * {
     @apply border-border;
   }
+
   html {
     min-height: 100vh;
     width: 100%;
-    overflow-x: clip; /* Prevent horizontal scroll caused by overflowing children */
+    overflow-x: clip;
     background: hsl(var(--background));
     color: hsl(var(--foreground));
   }
 
   body {
     @apply bg-background text-foreground min-h-screen;
-    /* font-family is handled by Next/Font in layout.tsx */
     font-size: 16px;
     width: 100%;
-    overflow-x: clip; /* Clamp any accidental horizontal overflow */
+    overflow-x: clip;
     overscroll-behavior: none;
     background: hsl(var(--background)) !important;
     color: hsl(var(--foreground)) !important;
   }
-  
-  /* Prevent auto-scroll on input focus */
+
   input, textarea, select {
     scroll-margin: 0 !important;
   }
-  
-  /* Disable smooth scrolling which can cause focus issues */
+
   * {
     scroll-behavior: auto !important;
   }
-  
-  /* Prevent scroll chaining */
+
   html, body, [class*="overflow"] {
     overscroll-behavior: none;
   }
-  
-  /* When any input is focused, lock scroll on ancestors */
+
   input:focus, textarea:focus, select:focus {
     scroll-snap-align: none;
   }
@@ -218,45 +274,88 @@ body, html {
       padding-right: env(safe-area-inset-right);
     }
   }
-
 }
 
 @layer utilities {
+  /* === RESPONSIVE TYPOGRAPHY === */
+  @screen md {
+    h1 {
+      @apply text-5xl;
+    }
+    h2 {
+      @apply text-4xl;
+    }
+    h3 {
+      @apply text-3xl;
+    }
+    h4 {
+      @apply text-2xl;
+    }
+    h5 {
+      @apply text-xl;
+    }
+    h6 {
+      @apply text-lg;
+    }
+    small {
+      @apply text-sm;
+    }
+  }
+
+  /* === RESPONSIVE SPACING === */
+  @screen sm {
+    .page-container {
+      @apply sm:px-6 sm:py-6;
+    }
+  }
+
+  @screen md {
+    .page-container {
+      @apply md:px-8 md:py-8;
+    }
+    .card-spacing {
+      @apply md:space-y-6;
+    }
+  }
+
+  /* === Container and Layout === */
   .page-container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
     max-width: 1200px;
-    min-width: 0; /* Allow flex children to shrink without causing overflow */
+    min-width: 0;
   }
-  /* Normalize Tailwind .container to our max width and padding for consistency */
+
   .container {
     width: 100%;
     max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 0.75rem; /* 12px */
+    padding-left: 0.75rem;
     padding-right: 0.75rem;
   }
-  /* Minimal button utilities and subtle blue theme */
+
+  /* === Button Utilities === */
   .button-nav-primary {
     @apply bg-blue-600 text-white hover:bg-blue-700 border border-blue-600/20 transition-all duration-200 ease-out;
   }
-  
+
   .button-minimal-hover {
     @apply hover:bg-blue-50/80 dark:hover:bg-blue-950/50 transition-colors duration-200;
   }
-  
+
   .nav-subtle-active {
     @apply bg-blue-100/80 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-300/60 dark:border-blue-700/60;
   }
 
-  /* Soft gradient overlay for cards */
+  /* === Glass Effects === */
   .card-gradient {
     background-image: radial-gradient(1200px 500px at 10% -10%, hsla(var(--primary), 0.10), transparent 40%),
                       radial-gradient(800px 400px at 110% 0%, hsla(var(--chart-4), 0.08), transparent 50%);
     background-blend-mode: screen;
   }
+
   .glass {
     background: hsl(var(--background) / 0.8);
     backdrop-filter: blur(25px);
@@ -326,18 +425,18 @@ body, html {
     animation: glass-glow 3s ease-in-out infinite;
   }
 
-  /* Modern navigation animations */
+  /* === Navigation Animations === */
   .nav-item-enter {
     opacity: 0;
     transform: translateX(-10px);
     animation: nav-slide-in 0.4s ease-out forwards;
   }
-  
+
   .nav-item-hover {
     position: relative;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
+
   .nav-item-hover::before {
     content: '';
     position: absolute;
@@ -351,11 +450,11 @@ body, html {
     transition: transform 0.2s ease;
     transform-origin: center;
   }
-  
+
   .nav-item-active::before {
     transform: translateY(-50%) scaleY(1);
   }
-  
+
   @keyframes nav-slide-in {
     0% {
       opacity: 0;
@@ -366,22 +465,22 @@ body, html {
       transform: translateX(0);
     }
   }
-  
+
   .nav-gradient-bg {
-    background: linear-gradient(135deg, 
-      hsl(var(--sidebar-accent)) 0%, 
+    background: linear-gradient(135deg,
+      hsl(var(--sidebar-accent)) 0%,
       hsl(var(--sidebar-accent)/.8) 100%);
   }
-  
+
   .nav-icon-bounce {
     animation: icon-bounce 0.6s ease-in-out;
   }
-  
+
   @keyframes icon-bounce {
     0%, 100% { transform: translateY(0) scale(1); }
     50% { transform: translateY(-2px) scale(1.05); }
   }
-  
+
   /* Staggered menu item animations */
   .nav-item-0 { animation-delay: 0ms; }
   .nav-item-1 { animation-delay: 100ms; }
@@ -392,13 +491,13 @@ body, html {
   .nav-item-6 { animation-delay: 600ms; }
   .nav-item-7 { animation-delay: 700ms; }
   .nav-item-8 { animation-delay: 800ms; }
-  
+
   .nav-stagger {
     opacity: 0;
     transform: translateX(-20px) translateY(10px);
     animation: nav-stagger-in 0.6s ease-out forwards;
   }
-  
+
   @keyframes nav-stagger-in {
     0% {
       opacity: 0;
@@ -413,31 +512,31 @@ body, html {
       transform: translateX(0) translateY(0);
     }
   }
-  
-  /* Enhanced loading skeleton */
+
+  /* === Loading Skeleton === */
   .nav-loading-skeleton {
-    background: linear-gradient(90deg, 
-      hsl(var(--sidebar-accent)/.3) 25%, 
-      hsl(var(--sidebar-accent)/.5) 50%, 
+    background: linear-gradient(90deg,
+      hsl(var(--sidebar-accent)/.3) 25%,
+      hsl(var(--sidebar-accent)/.5) 50%,
       hsl(var(--sidebar-accent)/.3) 75%);
     background-size: 200% 100%;
     animation: loading-shimmer 2s infinite;
   }
-  
+
   @keyframes loading-shimmer {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
   }
-  
-  /* Collapsible menu animations */
+
+  /* === Collapsible Menu Animations === */
   .nav-collapsible-enter {
     animation: nav-collapsible-slide-in 0.3s ease-out forwards;
   }
-  
+
   .nav-collapsible-exit {
     animation: nav-collapsible-slide-out 0.2s ease-in forwards;
   }
-  
+
   @keyframes nav-collapsible-slide-in {
     0% {
       opacity: 0;
@@ -450,7 +549,7 @@ body, html {
       max-height: 200px;
     }
   }
-  
+
   @keyframes nav-collapsible-slide-out {
     0% {
       opacity: 1;
@@ -464,497 +563,258 @@ body, html {
     }
   }
 
-  /* Mobile touch targets and enhanced navigation */
-  @media (max-width: 768px) {
-    button, [role="button"], .btn, input[type="button"], input[type="submit"] {
-      min-height: 48px;
-      min-width: 48px;
-    }
-    
-    .nav-mobile {
-      padding: 1rem;
-    }
-    
-    .nav-mobile [data-sidebar="menu-button"] {
-      min-height: 48px;
-      padding: 0.875rem 1rem;
-      border-radius: 1rem;
-    }
-    
-    .nav-mobile [data-sidebar="menu-button"]:active {
-      scale: 0.98;
-      transition: scale 0.1s ease;
-    }
-    
-    /* Enhanced mobile sidebar backdrop */
-    .sidebar-mobile-backdrop {
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(8px);
-      transition: all 0.3s ease;
-    }
-  }
-  
-  /* Improved scrollbar styling */
-  .nav-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--sidebar-border)) transparent;
-  }
-  
-  .nav-scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  .nav-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .nav-scrollbar::-webkit-scrollbar-thumb {
-    background: hsl(var(--sidebar-border));
-    border-radius: 3px;
-  }
-  
-  .nav-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--sidebar-accent));
-  }
-
-  /* Ultra-narrow screens */
-  @media (max-width: 320px) {
-    .container {
-      padding-left: 0.5rem;
-      padding-right: 0.5rem;
-    }
-    .grid-cols-1 {
-      gap: 0.5rem;
-    }
-  }
-
-  .bottom-safe {
-    bottom: env(safe-area-inset-bottom);
-  }
-
-  /* Hide scrollbar for scrollable quick-link rows */
+  /* === Mobile Utilities === */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .no-scrollbar {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
-  /* Allow vertical scrolling while enabling horizontal swipe detection */
   .touch-pan-y {
     touch-action: pan-y;
   }
 
-  /* Media should never overflow horizontally */
   img, svg, video, canvas, iframe {
     max-width: 100%;
     height: auto;
   }
-  /* Long content should wrap to avoid pushing layout */
+
   pre, code {
     white-space: pre-wrap;
     word-break: break-word;
   }
-}
 
-/* Design System: Typography */
-:root {
-  --font-primary: 'Inter', sans-serif;
-  --font-size-base: 16px;
-  --font-size-sm: 14px;
-  --font-size-lg: 18px;
-  --font-size-xl: 24px;
-  --font-weight-regular: 400;
-  --font-weight-bold: 700;
-
-  /* Design System: Colors */
-  --color-primary: #0057FF; /* Inspired by Revolut's blue */
-  --color-secondary: #FF5722; /* Accent color */
-  --color-background: #F9F9F9;
-  --color-text: #333333;
-  --color-muted: #888888;
-  --color-success: #4CAF50;
-  --color-error: #F44336;
-
-  /* Design System: Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-}
-
-/* Typography */
-body {
-  font-family: var(--font-primary);
-  font-size: var(--font-size-base);
-  color: var(--color-text);
-  background-color: var(--color-background);
-  margin: 0;
-  padding: 0;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-weight: var(--font-weight-bold);
-  margin: 0;
-}
-
-p {
-  margin: 0 0 var(--spacing-md) 0;
-  line-height: 1.5;
-}
-
-/* Buttons */
-button {
-  font-family: var(--font-primary);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-bold);
-  border: none;
-  border-radius: 8px;
-  padding: var(--spacing-sm) var(--spacing-md);
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-button:hover {
-  background-color: #0046CC;
-}
-
-/* Cards */
-.card {
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-}
-
-/* Inputs */
-input, textarea {
-  font-family: var(--font-primary);
-  font-size: var(--font-size-base);
-  color: var(--color-text);
-  border: 1px solid var(--color-muted);
-  border-radius: 8px;
-  padding: var(--spacing-sm);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-input:focus, textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(0, 87, 255, 0.2);
-}
-
-/* Utility Classes */
-.text-center {
-  text-align: center;
-}
-
-.text-muted {
-  color: var(--color-muted);
-}
-
-.mt-lg {
-  margin-top: var(--spacing-lg);
-}
-
-.mb-lg {
-  margin-bottom: var(--spacing-lg);
-}
-
-/* FullCalendar Theme Overrides */
-.fc {
-  --fc-page-bg-color: hsl(var(--background));
-  --fc-border-color: hsl(var(--border));
-  --fc-button-bg-color: hsl(var(--secondary));
-  --fc-button-text-color: hsl(var(--secondary-foreground));
-  --fc-button-hover-bg-color: hsl(var(--accent));
-  --fc-button-hover-text-color: hsl(var(--accent-foreground));
-  --fc-button-active-bg-color: hsl(var(--primary));
-  --fc-button-active-text-color: hsl(var(--primary-foreground));
-  --fc-today-bg-color: hsl(var(--muted));
-  --fc-event-bg-color: hsl(var(--primary));
-  --fc-event-border-color: hsl(var(--primary));
-  --fc-event-text-color: hsl(var(--primary-foreground));
-  --fc-list-event-hover-bg-color: hsl(var(--accent));
-  --fc-daygrid-event-dot-color: hsl(var(--primary));
-  --fc-neutral-bg-color: hsl(var(--muted));
-  --fc-neutral-text-color: hsl(var(--muted-foreground));
-  --fc-list-event-dot-color: hsl(var(--primary));
-  --fc-highlight-color: hsl(var(--accent));
-  --fc-border-radius: var(--radius);
-}
-
-/* Global Header Styling */
-header[class*="sticky"] {
-  background: rgb(250 250 250) !important;
-  border-bottom: 1px solid rgb(229 229 229) !important;
-}
-
-.dark header[class*="sticky"] {
-  background: rgb(23 23 23) !important;
-  border-bottom: 1px solid rgb(39 39 42) !important;
-}
-
-/* Ensure header text uses neutral colors */
-header[class*="sticky"] h1 {
-  color: rgb(23 23 23) !important;
-}
-
-.dark header[class*="sticky"] h1 {
-  color: rgb(250 250 250) !important;
-}
-
-/* Header button styling */
-header[class*="sticky"] button {
-  color: rgb(82 82 82) !important;
-}
-
-.dark header[class*="sticky"] button {
-  color: rgb(212 212 212) !important;
-}
-
-header[class*="sticky"] button:hover {
-  color: rgb(23 23 23) !important;
-  background-color: rgb(229 229 229) !important;
-}
-
-.dark header[class*="sticky"] button:hover {
-  color: rgb(250 250 250) !important;
-  background-color: rgb(39 39 42) !important;
-}
-
-/* Mobile-specific improvements */
-@media (max-width: 768px) {
-  /* Better touch targets */
-  button, a, [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
-  }
-  
-  /* Improved text size for readability */
-  body {
-    font-size: 16px; /* Prevents zoom on input focus */
-  }
-  
-  /* Better form inputs */
-  input, textarea, select {
-    font-size: 16px; /* Prevents zoom on focus */
-  }
-  
-  /* Better spacing for mobile */
-  .page-container {
-    padding-left: 1rem;
-    padding-right: 1rem;
-    background: transparent;
-  }
-  
-  /* Ensure dark theme consistency on mobile */
-  body, html {
-    background: hsl(var(--background)) !important;
-    color: hsl(var(--foreground)) !important;
-  }
-  
-  /* Ensure all main containers use dark theme */
-  main, .main, [role="main"] {
-    background: hsl(var(--background)) !important;
-    color: hsl(var(--foreground)) !important;
-  }
-  
-  /* Enhanced glass effects for mobile */
-  .glass-card {
-    background: hsl(var(--card) / 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-  }
-  
-  /* Better mobile button styling - Revolut inspired */
-  .mobile-btn {
-    background: hsl(var(--muted) / 0.6);
-    border: 1px solid hsl(var(--border) / 0.3);
-    color: hsl(var(--primary));
-    backdrop-filter: blur(12px);
-    border-radius: 12px;
-    font-weight: 500;
-  }
-  
-  .mobile-btn:hover, .mobile-btn:active {
-    background: hsl(var(--muted) / 0.8);
-    border-color: hsl(var(--border) / 0.5);
-    transform: scale(0.97);
+  /* === FullCalendar Theme === */
+  .fc {
+    --fc-page-bg-color: hsl(var(--background));
+    --fc-border-color: hsl(var(--border));
+    --fc-button-bg-color: hsl(var(--secondary));
+    --fc-button-text-color: hsl(var(--secondary-foreground));
+    --fc-button-hover-bg-color: hsl(var(--accent));
+    --fc-button-hover-text-color: hsl(var(--accent-foreground));
+    --fc-button-active-bg-color: hsl(var(--primary));
+    --fc-button-active-text-color: hsl(var(--primary-foreground));
+    --fc-today-bg-color: hsl(var(--muted));
+    --fc-event-bg-color: hsl(var(--primary));
+    --fc-event-border-color: hsl(var(--primary));
+    --fc-event-text-color: hsl(var(--primary-foreground));
+    --fc-list-event-hover-bg-color: hsl(var(--accent));
+    --fc-daygrid-event-dot-color: hsl(var(--primary));
+    --fc-neutral-bg-color: hsl(var(--muted));
+    --fc-neutral-text-color: hsl(var(--muted-foreground));
+    --fc-list-event-dot-color: hsl(var(--primary));
+    --fc-highlight-color: hsl(var(--accent));
+    --fc-border-radius: var(--radius);
   }
 
-  /* Mobile-first card styling */
+  /* === Header Styling === */
+  header[class*="sticky"] {
+    background: rgb(250 250 250) !important;
+    border-bottom: 1px solid rgb(229 229 229) !important;
+  }
+
+  .dark header[class*="sticky"] {
+    background: rgb(23 23 23) !important;
+    border-bottom: 1px solid rgb(39 39 42) !important;
+  }
+
+  header[class*="sticky"] h1 {
+    color: rgb(23 23 23) !important;
+  }
+
+  .dark header[class*="sticky"] h1 {
+    color: rgb(250 250 250) !important;
+  }
+
+  header[class*="sticky"] button {
+    color: rgb(82 82 82) !important;
+  }
+
+  .dark header[class*="sticky"] button {
+    color: rgb(212 212 212) !important;
+  }
+
+  header[class*="sticky"] button:hover {
+    color: rgb(23 23 23) !important;
+    background-color: rgb(229 229 229) !important;
+  }
+
+  .dark header[class*="sticky"] button:hover {
+    color: rgb(250 250 250) !important;
+    background-color: rgb(39 39 42) !important;
+  }
+
+  /* === Mobile Specific === */
   @media (max-width: 768px) {
+    button, a, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    body {
+      font-size: 16px;
+    }
+
+    input, textarea, select {
+      font-size: 16px;
+    }
+
+    .page-container {
+      padding-left: 1rem;
+      padding-right: 1rem;
+      background: transparent;
+    }
+
+    body, html {
+      background: hsl(var(--background)) !important;
+      color: hsl(var(--foreground)) !important;
+    }
+
+    main, .main, [role="main"] {
+      background: hsl(var(--background)) !important;
+      color: hsl(var(--foreground)) !important;
+    }
+
+    .glass-card {
+      background: hsl(var(--card) / 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .mobile-btn {
+      background: hsl(var(--muted) / 0.6);
+      border: 1px solid hsl(var(--border) / 0.3);
+      color: hsl(var(--primary));
+      backdrop-filter: blur(12px);
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .mobile-btn:hover, .mobile-btn:active {
+      background: hsl(var(--muted) / 0.8);
+      border-color: hsl(var(--border) / 0.5);
+      transform: scale(0.97);
+    }
+
     .mobile-card {
       background: hsl(var(--card) / 0.6);
       border: 1px solid hsl(var(--border) / 0.2);
       backdrop-filter: blur(10px);
       border-radius: 16px;
     }
-    
-    /* Improved tap targets */
-    button, [role="button"] {
-      min-height: 44px;
-      min-width: 44px;
-    }
-    
-    /* Better form controls */
+
     input, select, textarea {
-      font-size: 16px; /* Prevent zoom on iOS */
       border-radius: 12px;
     }
-    
-    /* Clean header styling */
+
     header {
       background: hsl(var(--card) / 0.4) !important;
       border-bottom: 1px solid hsl(var(--border) / 0.15) !important;
     }
-    
-    /* Minimalist navigation */
-  nav[aria-label="Primary"] {
-    background: hsl(var(--card) / 0.7) !important;
-    border: 1px solid hsl(var(--border) / 0.2) !important;
-    backdrop-filter: blur(16px) !important;
-  }
-  }
-}
 
-/* Ultra-narrow screens */
-@media (max-width: 320px) {
-  .page-container {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-  }
-  
-  /* Smaller text for very narrow screens */
-  h1 { font-size: 1.5rem; }
-  h2 { font-size: 1.25rem; }
-}
-
-/* Revolut-inspired mobile improvements */
-@media (max-width: 768px) {
-  /* Clean, minimal spacing */
-  .mobile-spacing {
-    padding: 1rem;
-    margin: 0.5rem 0;
-  }
-  
-  /* Improved card shadows */
-  .mobile-card-shadow {
-    box-shadow: 0 2px 16px hsl(var(--background) / 0.1), 
-                0 1px 4px hsl(var(--background) / 0.05);
-  }
-  
-  /* Better visual hierarchy */
-  .mobile-text-hierarchy h1,
-  .mobile-text-hierarchy h2,
-  .mobile-text-hierarchy h3 {
-    font-weight: 600;
-    letter-spacing: -0.02em;
-  }
-  
-  /* Smooth interactions */
-  .mobile-interactive {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  .mobile-interactive:active {
-    transform: scale(0.98);
-  }
-  
-  /* Clean borders */
-  .mobile-border {
-    border: 1px solid hsl(var(--border) / 0.2);
-  }
-  
-  /* Consistent border radius */
-  .mobile-rounded {
-    border-radius: 12px;
-  }
-}
-
-/* Mobile bottom navigation fixes */
-@media (max-width: 768px) {
-  /* Ensure bottom navigation is properly positioned and visible */
-  nav[aria-label="Primary"] {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 9999 !important;
-    display: flex !important;
-    align-items: flex-end !important;
-    justify-content: center !important;
-    padding: 0 8px !important;
-    min-height: auto !important;
-  }
-  
-  /* Force the navigation container to be properly responsive */
-  nav[aria-label="Primary"] > div {
-    position: relative !important;
-    width: 100% !important;
-    max-width: calc(100vw - 16px) !important;
-    margin: 0 auto !important;
-    bottom: auto !important;
-    left: auto !important;
-    right: auto !important;
-    transform: none !important;
-  }
-  
-  /* Ensure proper safe area handling for different devices */
-  @supports (padding: max(0px)) {
     nav[aria-label="Primary"] {
-      padding-left: max(env(safe-area-inset-left), 8px) !important;
-      padding-right: max(env(safe-area-inset-right), 8px) !important;
-      padding-bottom: max(env(safe-area-inset-bottom), 8px) !important;
+      background: hsl(var(--card) / 0.7) !important;
+      border: 1px solid hsl(var(--border) / 0.2) !important;
+      backdrop-filter: blur(16px) !important;
+    }
+
+    /* Bottom navigation positioning */
+    nav[aria-label="Primary"] {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      z-index: 9999 !important;
+      display: flex !important;
+      align-items: flex-end !important;
+      justify-content: center !important;
+      padding: 0 8px !important;
+      min-height: auto !important;
+    }
+
+    nav[aria-label="Primary"] > div {
+      position: relative !important;
+      width: 100% !important;
+      max-width: calc(100vw - 16px) !important;
+      margin: 0 auto !important;
+      bottom: auto !important;
+      left: auto !important;
+      right: auto !important;
+      transform: none !important;
+    }
+
+    @supports (padding: max(0px)) {
+      nav[aria-label="Primary"] {
+        padding-left: max(env(safe-area-inset-left), 8px) !important;
+        padding-right: max(env(safe-area-inset-right), 8px) !important;
+        padding-bottom: max(env(safe-area-inset-bottom), 8px) !important;
+      }
+    }
+
+    .swiper {
+      z-index: 1 !important;
+    }
+
+    .swiper-slide {
+      z-index: 1 !important;
+    }
+
+    .swiper-wrapper {
+      z-index: 1 !important;
+    }
+
+    [data-radix-popper-content-wrapper] {
+      z-index: 99999 !important;
+    }
+
+    [data-radix-select-content] {
+      z-index: 99999 !important;
+    }
+
+    [data-radix-dropdown-menu-content] {
+      z-index: 99999 !important;
+    }
+
+    main {
+      padding-bottom: max(env(safe-area-inset-bottom, 0px) + 120px, 140px) !important;
     }
   }
-  
-  /* Ensure Swiper components don't interfere with bottom navigation */
-  .swiper {
-    z-index: 1 !important;
-  }
-  
-  .swiper-slide {
-    z-index: 1 !important;
-  }
-  
-  .swiper-wrapper {
-    z-index: 1 !important;
-  }
-  
-  /* Ensure dropdown menus appear above everything */
-  [data-radix-popper-content-wrapper] {
-    z-index: 99999 !important;
-  }
-  
-  [data-radix-select-content] {
-    z-index: 99999 !important;
-  }
-  
-  [data-radix-dropdown-menu-content] {
-    z-index: 99999 !important;
-  }
-  
-  /* Ensure main content has enough bottom padding */
-  main {
-    padding-bottom: max(env(safe-area-inset-bottom, 0px) + 120px, 140px) !important;
-  }
-}
 
-/* Landscape mobile improvements */
-@media (max-height: 500px) and (orientation: landscape) {
-  /* Reduce header height on landscape mobile */
-  header {
-    min-height: 3rem;
+  /* === Landscape Mobile === */
+  @media (max-height: 500px) and (orientation: landscape) {
+    header {
+      min-height: 3rem;
+    }
+
+    .modal-content {
+      max-height: 80vh;
+    }
   }
-  
-  /* Adjust modal heights */
-  .modal-content {
-    max-height: 80vh;
+
+  /* === Ultra-narrow Screens === */
+  @media (max-width: 320px) {
+    .page-container {
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
+
+    .container {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+
+    .grid-cols-1 {
+      gap: 0.5rem;
+    }
+
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.25rem; }
+  }
+
+  .bottom-safe {
+    bottom: env(safe-area-inset-bottom);
   }
 }

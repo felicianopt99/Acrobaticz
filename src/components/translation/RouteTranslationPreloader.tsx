@@ -9,7 +9,10 @@ const routeTexts: Array<{ match: (p: string) => boolean; texts: string[] }> = [
     'Home','Dashboard','Login','Logout','Search','Settings','Clients','Equipment','Rentals','Inventory','Categories','Admin'
   ]},
   { match: (p) => p.startsWith('/login'), texts: [
-    'Email','Password','Remember me','Forgot password?','Sign in','Welcome back','Continue','Create account'
+    'Email','Password','Remember me','Forgot password?','Sign in','Welcome back','Continue','Create account',
+    'Username','Enter your username','Enter your password','Sign in to your account','Sign In',
+    'Signing in...','Login successful','Login failed','Please check your credentials and try again.',
+    'Hide password','Show password','Username is required','Password is required','Forgot your password?'
   ]},
   { match: (p) => p.startsWith('/dashboard'), texts: [
     'Dashboard','Total Equipment','Total Clients','Upcoming Events','In next 7 days','Needs Maintenance','View details'

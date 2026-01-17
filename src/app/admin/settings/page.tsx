@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useTranslate } from '@/contexts/TranslationContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,6 +35,9 @@ interface CustomizationSettings {
 
 export default function SystemSettingsPage() {
   const { toast } = useToast();
+
+  // Translation helper
+  const T = ({ text }: { text: string }) => { const { translated } = useTranslate(text); return <>{translated}</>; };
 
   // Loading and error states
   const [isLoading, setIsLoading] = useState(true);
@@ -309,9 +313,9 @@ export default function SystemSettingsPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">System Settings</h1>
+          <h1 className="text-3xl font-bold"><T text="System Settings" /></h1>
           <p className="text-muted-foreground">
-            Configure system-wide settings and preferences.
+            <T text="Configure system-wide settings and preferences." />
           </p>
         </div>
         <Button onClick={handleSaveSettings} disabled={isSaving || isLoading}>
@@ -320,16 +324,16 @@ export default function SystemSettingsPage() {
           ) : (
             <Save className="h-4 w-4 mr-2" />
           )}
-          {isSaving ? 'Saving...' : 'Save All Settings'}
+          {isSaving ? <T text="Saving..." /> : <T text="Save All Settings" />}
         </Button>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="email">Email</TabsTrigger>
-          <TabsTrigger value="backup">Backup</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="general"><T text="General" /></TabsTrigger>
+          <TabsTrigger value="security"><T text="Security" /></TabsTrigger>
+          <TabsTrigger value="email"><T text="Email" /></TabsTrigger>
+          <TabsTrigger value="backup"><T text="Backup" /></TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
@@ -337,16 +341,16 @@ export default function SystemSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                General Settings
+                <T text="General Settings" />
               </CardTitle>
               <CardDescription>
-                Basic system configuration and regional settings.
+                <T text="Basic system configuration and regional settings." />
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="system-name">System Name</Label>
+                  <Label htmlFor="system-name"><T text="System Name" /></Label>
                   <Input
                     id="system-name"
                     value={systemName}
@@ -355,7 +359,7 @@ export default function SystemSettingsPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
+                  <Label htmlFor="timezone"><T text="Timezone" /></Label>
                   <Select value={timezone} onValueChange={setTimezone}>
                     <SelectTrigger>
                       <SelectValue />
@@ -375,7 +379,7 @@ export default function SystemSettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="date-format">Date Format</Label>
+                  <Label htmlFor="date-format"><T text="Date Format" /></Label>
                   <Select value={dateFormat} onValueChange={setDateFormat}>
                     <SelectTrigger>
                       <SelectValue />
@@ -389,7 +393,7 @@ export default function SystemSettingsPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="currency">Currency</Label>
+                  <Label htmlFor="currency"><T text="Currency" /></Label>
                   <Select value={currency} onValueChange={setCurrency}>
                     <SelectTrigger>
                       <SelectValue />
@@ -404,7 +408,7 @@ export default function SystemSettingsPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="language">Language</Label>
+                  <Label htmlFor="language"><T text="Language" /></Label>
                   <Select value={language} onValueChange={setLanguage}>
                     <SelectTrigger>
                       <SelectValue />
@@ -427,16 +431,16 @@ export default function SystemSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Security Settings
+                <T text="Security Settings" />
               </CardTitle>
               <CardDescription>
-                Configure security policies and authentication settings.
+                <T text="Configure security policies and authentication settings." />
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="session-timeout">Session Timeout (hours)</Label>
+                  <Label htmlFor="session-timeout"><T text="Session Timeout (hours)" /></Label>
                   <Input
                     id="session-timeout"
                     type="number"
@@ -448,7 +452,7 @@ export default function SystemSettingsPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="max-login-attempts">Max Login Attempts</Label>
+                  <Label htmlFor="max-login-attempts"><T text="Max Login Attempts" /></Label>
                   <Input
                     id="max-login-attempts"
                     type="number"
@@ -467,7 +471,7 @@ export default function SystemSettingsPage() {
                     checked={requireStrongPasswords}
                     onCheckedChange={setRequireStrongPasswords}
                   />
-                  <Label htmlFor="strong-passwords">Require Strong Passwords</Label>
+                  <Label htmlFor="strong-passwords"><T text="Require Strong Passwords" /></Label>
                 </div>
                 
                 <div className="flex items-center space-x-2">
@@ -476,7 +480,7 @@ export default function SystemSettingsPage() {
                     checked={enableTwoFactor}
                     onCheckedChange={setEnableTwoFactor}
                   />
-                  <Label htmlFor="two-factor">Enable Two-Factor Authentication</Label>
+                  <Label htmlFor="two-factor"><T text="Enable Two-Factor Authentication" /></Label>
                 </div>
               </div>
 
@@ -484,9 +488,9 @@ export default function SystemSettingsPage() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
                   <div>
-                    <h4 className="font-medium text-yellow-800 dark:text-yellow-200">Security Notice</h4>
+                    <h4 className="font-medium text-yellow-800 dark:text-yellow-200"><T text="Security Notice" /></h4>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                      Changes to security settings will affect all users. Ensure you communicate policy changes to your team.
+                      <T text="Changes to security settings will affect all users. Ensure you communicate policy changes to your team." />
                     </p>
                   </div>
                 </div>
@@ -500,10 +504,10 @@ export default function SystemSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5" />
-                Email Configuration
+                <T text="Email Configuration" />
               </CardTitle>
               <CardDescription>
-                Configure SMTP settings for system email notifications.
+                <T text="Configure SMTP settings for system email notifications." />
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -513,14 +517,14 @@ export default function SystemSettingsPage() {
                   checked={emailEnabled}
                   onCheckedChange={setEmailEnabled}
                 />
-                <Label htmlFor="email-enabled">Enable Email Notifications</Label>
+                <Label htmlFor="email-enabled"><T text="Enable Email Notifications" /></Label>
               </div>
 
               {emailEnabled && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="smtp-server">SMTP Server</Label>
+                      <Label htmlFor="smtp-server"><T text="SMTP Server" /></Label>
                       <Input
                         id="smtp-server"
                         value={smtpServer}
@@ -530,7 +534,7 @@ export default function SystemSettingsPage() {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="smtp-port">SMTP Port</Label>
+                      <Label htmlFor="smtp-port"><T text="SMTP Port" /></Label>
                       <Input
                         id="smtp-port"
                         value={smtpPort}
@@ -542,7 +546,7 @@ export default function SystemSettingsPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="smtp-username">SMTP Username</Label>
+                      <Label htmlFor="smtp-username"><T text="SMTP Username" /></Label>
                       <Input
                         id="smtp-username"
                         value={smtpUsername}
@@ -552,7 +556,7 @@ export default function SystemSettingsPage() {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="smtp-password">SMTP Password</Label>
+                      <Label htmlFor="smtp-password"><T text="SMTP Password" /></Label>
                       <Input
                         id="smtp-password"
                         type="password"
@@ -564,7 +568,7 @@ export default function SystemSettingsPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="from-email">From Email Address</Label>
+                    <Label htmlFor="from-email"><T text="From Email Address" /></Label>
                     <Input
                       id="from-email"
                       type="email"
@@ -575,7 +579,7 @@ export default function SystemSettingsPage() {
                   </div>
 
                   <Button onClick={handleTestEmail} variant="outline">
-                    Send Test Email
+                    <T text="Send Test Email" />
                   </Button>
                 </div>
               )}
@@ -588,31 +592,31 @@ export default function SystemSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5" />
-                3-Day Rotation Backup System
+                <T text="3-Day Rotation Backup System" />
               </CardTitle>
               <CardDescription>
-                Efficient backup system that maintains 3 rotating daily backups, using 97% less storage than traditional systems.
+                <T text="Efficient backup system that maintains 3 rotating daily backups, using 97% less storage than traditional systems." />
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Enterprise Settings */}
               <div className="border rounded-lg p-4">
-                <h4 className="font-medium mb-3">Backup Settings</h4>
+                <h4 className="font-medium mb-3"><T text="Backup Settings" /></h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Retention - Daily</Label>
+                    <Label><T text="Retention - Daily" /></Label>
                     <Input type="number" min={0} value={retentionDaily} onChange={(e) => setRetentionDaily(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Retention - Weekly</Label>
+                    <Label><T text="Retention - Weekly" /></Label>
                     <Input type="number" min={0} value={retentionWeekly} onChange={(e) => setRetentionWeekly(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Retention - Monthly</Label>
+                    <Label><T text="Retention - Monthly" /></Label>
                     <Input type="number" min={0} value={retentionMonthly} onChange={(e) => setRetentionMonthly(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Cron Schedule</Label>
+                    <Label><T text="Cron Schedule" /></Label>
                     <Input placeholder="0 2 * * *" value={cronExpr} onChange={(e) => setCronExpr(e.target.value)} />
                   </div>
                 </div>
@@ -621,7 +625,7 @@ export default function SystemSettingsPage() {
                     <div>Backup directory: {backupStatus?.backupDirectory || '/mnt/backup_drive/av-rentals/backups'}</div>
                     <div>Encrypted storage: {backupStatus?.hasResticRepo === true || backupStatus?.hasResticRepo === false ? 'Enabled (LUKS planned/active)' : 'Pending'}</div>
                   </div>
-                  <Button onClick={saveBackupConfig} variant="outline" size="sm">Save Backup Settings</Button>
+                  <Button onClick={saveBackupConfig} variant="outline" size="sm"><T text="Save Backup Settings" /></Button>
                 </div>
               </div>
 
@@ -631,33 +635,33 @@ export default function SystemSettingsPage() {
                   checked={autoBackup}
                   onCheckedChange={setAutoBackup}
                 />
-                <Label htmlFor="auto-backup">Enable Automatic 3-Day Rotation Backups</Label>
+                <Label htmlFor="auto-backup"><T text="Enable Automatic 3-Day Rotation Backups" /></Label>
               </div>
 
               {autoBackup && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="backup-frequency">Backup Frequency</Label>
+                    <Label htmlFor="backup-frequency"><T text="Backup Frequency" /></Label>
                     <Select value={backupFrequency} onValueChange={setBackupFrequency}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="daily">Daily (Recommended)</SelectItem>
-                        <SelectItem value="hourly">Hourly</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="daily"><T text="Daily (Recommended)" /></SelectItem>
+                        <SelectItem value="hourly"><T text="Hourly" /></SelectItem>
+                        <SelectItem value="weekly"><T text="Weekly" /></SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="backup-retention">Rotation System</Label>
+                    <Label htmlFor="backup-retention"><T text="Rotation System" /></Label>
                     <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-md border">
                       <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                        3-Day Rotation (Fixed)
+                        <T text="3-Day Rotation (Fixed)" />
                       </span>
                       <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                        Always keeps exactly 3 backups
+                        <T text="Always keeps exactly 3 backups" />
                       </p>
                     </div>
                   </div>
@@ -674,12 +678,12 @@ export default function SystemSettingsPage() {
                   {isBackingUp ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating Backup...
+                      <T text="Creating Backup..." />
                     </>
                   ) : (
                     <>
                       <Database className="h-4 w-4 mr-2" />
-                      Backup Now
+                      <T text="Backup Now" />
                     </>
                   )}
                 </Button>
@@ -690,13 +694,13 @@ export default function SystemSettingsPage() {
                   className="w-full"
                 >
                   <AlertTriangle className="h-4 w-4 mr-2" />
-                  Restore Database
+                  <T text="Restore Database" />
                 </Button>
               </div>
 
               {/* 3-Day Rotation Status */}
               <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-3">3-Day Rotation Status</h4>
+                <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-3"><T text="3-Day Rotation Status" /></h4>
                 
                 {backupStatus ? (
                   <div className="space-y-2">
@@ -735,7 +739,7 @@ export default function SystemSettingsPage() {
 
               {/* Backup Information */}
               <div className="p-4 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                <h4 className="font-medium text-green-800 dark:text-green-200 mb-2">How 3-Day Rotation Works</h4>
+                <h4 className="font-medium text-green-800 dark:text-green-200 mb-2"><T text="How 3-Day Rotation Works" /></h4>
                 <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
                   <li>• <strong>Day 1:</strong> Monday, Thursday, Sunday backups</li>
                   <li>• <strong>Day 2:</strong> Tuesday, Friday backups</li>

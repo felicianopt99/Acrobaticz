@@ -99,8 +99,9 @@ export const equipmentAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: string) => fetchAPI<{ success: boolean }>(`/equipment?id=${id}`, {
+  delete: (id: string) => fetchAPI<{ success: boolean }>('/equipment', {
     method: 'DELETE',
+    body: JSON.stringify({ id }),
   }),
 }
 
@@ -115,8 +116,9 @@ export const categoriesAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: string) => fetchAPI<{ success: boolean }>(`/categories?id=${id}`, {
+  delete: (id: string) => fetchAPI<{ success: boolean }>('/categories', {
     method: 'DELETE',
+    body: JSON.stringify({ id }),
   }),
 }
 
@@ -131,8 +133,9 @@ export const subcategoriesAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: string) => fetchAPI<{ success: boolean }>(`/subcategories?id=${id}`, {
+  delete: (id: string) => fetchAPI<{ success: boolean }>('/subcategories', {
     method: 'DELETE',
+    body: JSON.stringify({ id }),
   }),
 }
 
@@ -147,8 +150,9 @@ export const clientsAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: string) => fetchAPI<{ success: boolean }>(`/clients?id=${id}`, {
+  delete: (id: string) => fetchAPI<{ success: boolean }>('/clients', {
     method: 'DELETE',
+    body: JSON.stringify({ id }),
   }),
 }
 
@@ -163,8 +167,9 @@ export const eventsAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: string) => fetchAPI<{ success: boolean }>(`/events?id=${id}`, {
+  delete: (id: string) => fetchAPI<{ success: boolean }>('/events', {
     method: 'DELETE',
+    body: JSON.stringify({ id }),
   }),
 }
 
@@ -179,8 +184,9 @@ export const rentalsAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: string) => fetchAPI<{ success: boolean }>(`/rentals?id=${id}`, {
+  delete: (id: string) => fetchAPI<{ success: boolean }>('/rentals', {
     method: 'DELETE',
+    body: JSON.stringify({ id }),
   }),
 }
 
@@ -195,8 +201,9 @@ export const quotesAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: string) => fetchAPI<{ success: boolean }>(`/quotes?id=${id}`, {
+  delete: (id: string) => fetchAPI<{ success: boolean }>('/quotes', {
     method: 'DELETE',
+    body: JSON.stringify({ id }),
   }),
 }
 
@@ -211,7 +218,8 @@ export const usersAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: string) => fetchAPI<{ success: boolean }>(`/users?id=${id}`, {
+  delete: (id: string) => fetchAPI<{ success: boolean }>('/users', {
     method: 'DELETE',
+    body: JSON.stringify({ id }),
   }),
 }

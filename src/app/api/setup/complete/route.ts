@@ -256,6 +256,16 @@ export async function POST(request: NextRequest) {
                 updatedAt: new Date(),
               },
             });
+            
+            // Reset API key cache after updating
+            if (DEBUG) console.log('[INSTALL-DEBUG] 6d: Resetando cache de API key do DeepL');
+            try {
+              const { resetDeeplApiKeyCache } = await import('@/lib/deepl.service');
+              resetDeeplApiKeyCache();
+              if (DEBUG) console.log('[INSTALL-DEBUG] 6d: Cache resetado com sucesso');
+            } catch (err) {
+              if (DEBUG) console.log('[INSTALL-DEBUG] 6d: Aviso - não foi possível resetar cache (DeepL service pode não estar carregado)');
+            }
           }
 
           if (data.geminiApiKeys && data.geminiApiKeys.length > 0) {

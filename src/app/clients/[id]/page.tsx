@@ -34,6 +34,14 @@ export default function ClientDetailsPage() {
   const { translated: uiClientNotesText } = useTranslate('Client Notes');
   const { translated: uiEditClientText } = useTranslate('Edit Client');
   const { translated: uiAccessDeniedText } = useTranslate('Access Denied');
+  const { translated: uiLoadingClientDataText } = useTranslate('Loading client data...');
+  const { translated: uiClientNotFoundText } = useTranslate('Client not found.');
+  const { translated: uiContactText } = useTranslate('Contact');
+  const { translated: uiNoNotesText } = useTranslate('No notes for this client.');
+  const { translated: uiFromAcceptedQuotesText } = useTranslate('From accepted quotes.');
+  const { translated: uiNoEventsFoundText } = useTranslate('No events found for this client.');
+  const { translated: uiNoQuotesFoundText } = useTranslate('No quotes found for this client.');
+  const { translated: uiNoPermissionDetailsText } = useTranslate('You do not have permission to view client details.');
 
   const params = useParams();
   const router = useRouter();
@@ -81,7 +89,7 @@ export default function ClientDetailsPage() {
       <div className="flex flex-col min-h-screen">
 
         <div className="flex-grow flex items-center justify-center p-4 md:p-6">
-          <p className="text-lg text-muted-foreground">Loading client data...</p>
+          <p className="text-lg text-muted-foreground">{uiLoadingClientDataText}</p>
         </div>
       </div>
     );
@@ -97,7 +105,7 @@ export default function ClientDetailsPage() {
                     <AlertTriangle className="w-8 h-8 text-destructive" />
                     <div>
                         <CardTitle className="text-destructive">{uiAccessDeniedText}</CardTitle>
-                        <CardDescription>You do not have permission to view client details.</CardDescription>
+                        <CardDescription>{uiNoPermissionDetailsText}</CardDescription>
                     </div>
                 </CardHeader>
             </Card>
@@ -111,7 +119,7 @@ export default function ClientDetailsPage() {
       <div className="flex flex-col min-h-screen">
         
         <div className="flex-grow flex items-center justify-center p-4 md:p-6">
-          <p className="text-lg text-destructive">Client not found.</p>
+          <p className="text-lg text-destructive">{uiClientNotFoundText}</p>
         </div>
       </div>
     );
@@ -139,7 +147,7 @@ export default function ClientDetailsPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-3xl">{client.name}</CardTitle>
-                  {client.contactPerson && <CardDescription className="text-base mt-1">Contact: {client.contactPerson}</CardDescription>}
+                  {client.contactPerson && <CardDescription className="text-base mt-1">{uiContactText}: {client.contactPerson}</CardDescription>}
                 </div>
                 <Button variant="outline" onClick={() => router.push(`/clients/${client.id}/edit`)}>
                   <Edit className="mr-2 h-4 w-4" /> {uiEditClientText}</Button>
@@ -158,7 +166,7 @@ export default function ClientDetailsPage() {
                 <CardTitle>{uiClientNotesText}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{client.notes || 'No notes for this client.'}</p>
+                <p className="text-sm text-muted-foreground">{client.notes || uiNoNotesText}</p>
               </CardContent>
             </Card>
             <Card>
@@ -167,7 +175,7 @@ export default function ClientDetailsPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold">€{clientValue.toFixed(2)}</p>
-                <p className="text-sm text-muted-foreground">From {clientQuotes.filter(q=>q.status === 'Accepted').length} accepted quotes.</p>
+                <p className="text-sm text-muted-foreground">{clientQuotes.filter(q=>q.status === 'Accepted').length} {uiFromAcceptedQuotesText}</p>
               </CardContent>
             </Card>
           </div>
@@ -217,7 +225,7 @@ export default function ClientDetailsPage() {
                       </ScrollArea>
                     )}
                   </>
-                ) : <p className="text-sm text-muted-foreground">No events found for this client.</p>}
+                ) : <p className="text-sm text-muted-foreground">{uiNoEventsFoundText}</p>}
             </CardContent>
           </Card>
           
@@ -270,7 +278,7 @@ export default function ClientDetailsPage() {
                       </ScrollArea>
                     )}
                   </>
-                ) : <p className="text-sm text-muted-foreground">No quotes found for this client.</p>}
+                ) : <p className="text-sm text-muted-foreground">{uiNoQuotesFoundText}</p>}
             </CardContent>
           </Card>
 

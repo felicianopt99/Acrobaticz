@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslate } from '@/contexts/TranslationContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +48,71 @@ interface UserManagerProps {
 }
 
 export function UserManager({ currentUser }: UserManagerProps) {
+  // Translation helper component
+  const T = ({ text }: { text: string }) => { const { translated } = useTranslate(text); return <>{translated}</>; };
+  
+  // Translation hooks for dynamic content
+  const { translated: userManagementText } = useTranslate('User Management');
+  const { translated: manageSystemUsersText } = useTranslate('Manage system users and their roles');
+  const { translated: addUserText } = useTranslate('Add User');
+  const { translated: createNewUserText } = useTranslate('Create New User');
+  const { translated: createUserDescText } = useTranslate('Add a new user to the system with appropriate role and permissions.');
+  const { translated: nameText } = useTranslate('Name');
+  const { translated: usernameText } = useTranslate('Username');
+  const { translated: passwordText } = useTranslate('Password');
+  const { translated: roleText } = useTranslate('Role');
+  const { translated: cancelText } = useTranslate('Cancel');
+  const { translated: createUserBtnText } = useTranslate('Create User');
+  const { translated: activeText } = useTranslate('Active');
+  const { translated: inactiveText } = useTranslate('Inactive');
+  const { translated: teamMemberText } = useTranslate('Team Member');
+  const { translated: addToTeamText } = useTranslate('Add to Team');
+  const { translated: removeFromTeamText } = useTranslate('Remove from Team');
+  const { translated: coverPhotoText } = useTranslate('Cover Photo');
+  const { translated: uploadingText } = useTranslate('Uploading...');
+  const { translated: editText } = useTranslate('Edit');
+  const { translated: deleteText } = useTranslate('Delete');
+  const { translated: editUserText } = useTranslate('Edit User');
+  const { translated: updateUserInfoText } = useTranslate('Update user information and permissions.');
+  const { translated: newPasswordText } = useTranslate('New Password (leave blank to keep current)');
+  const { translated: activeStatusText } = useTranslate('Active Status');
+  const { translated: inactiveUsersText } = useTranslate('Inactive users cannot log in to the system');
+  const { translated: updateUserBtnText } = useTranslate('Update User');
+  const { translated: loadingUsersText } = useTranslate('Loading users...');
+  const { translated: enterFullNameText } = useTranslate('Enter full name');
+  const { translated: enterUsernameText } = useTranslate('Enter username');
+  const { translated: enterPasswordText } = useTranslate('Enter password');
+  const { translated: selectRoleText } = useTranslate('Select a role');
+  const { translated: enterNewPasswordText } = useTranslate('Enter new password');
+  
+  // Toast translations
+  const { translated: errorText } = useTranslate('Error');
+  const { translated: failedLoadUsersText } = useTranslate('Failed to load users. Please refresh the page.');
+  const { translated: userCreatedText } = useTranslate('User created');
+  const { translated: hasBeenAddedText } = useTranslate('has been added successfully.');
+  const { translated: failedCreateUserText } = useTranslate('Failed to create user');
+  const { translated: userUpdatedText } = useTranslate('User updated');
+  const { translated: hasBeenUpdatedText } = useTranslate('has been updated successfully.');
+  const { translated: failedUpdateUserText } = useTranslate('Failed to update user');
+  const { translated: teamStatusUpdatedText } = useTranslate('Team member status updated');
+  const { translated: addedToTeamText } = useTranslate('added to');
+  const { translated: removedFromTeamText } = useTranslate('removed from');
+  const { translated: teamText } = useTranslate('team');
+  const { translated: failedUpdateTeamText } = useTranslate('Failed to update team member status');
+  const { translated: coverPhotoUpdatedText } = useTranslate('Cover photo updated');
+  const { translated: coverPhotoUploadedText } = useTranslate('Team cover photo has been uploaded successfully.');
+  const { translated: failedUploadCoverText } = useTranslate('Failed to upload cover photo');
+  const { translated: fileTooLargeText } = useTranslate('File too large');
+  const { translated: selectSmallerImageText } = useTranslate('Please select an image smaller than 5MB.');
+  const { translated: invalidFileTypeText } = useTranslate('Invalid file type');
+  const { translated: selectImageFileText } = useTranslate('Please select an image file.');
+  const { translated: cannotDeleteText } = useTranslate('Cannot delete');
+  const { translated: cannotDeleteSelfText } = useTranslate('You cannot delete your own account.');
+  const { translated: userDeletedText } = useTranslate('User deleted');
+  const { translated: hasBeenRemovedText } = useTranslate('has been removed.');
+  const { translated: failedDeleteUserText } = useTranslate('Failed to delete user');
+  const { translated: confirmDeleteText } = useTranslate('Are you sure you want to delete');
+  
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -94,8 +160,8 @@ export function UserManager({ currentUser }: UserManagerProps) {
       console.error('Error loading users:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load users. Please refresh the page.',
+        title: errorText,
+        description: failedLoadUsersText,
       });
     } finally {
       setIsLoading(false);
@@ -125,15 +191,15 @@ export function UserManager({ currentUser }: UserManagerProps) {
       createForm.reset();
       
       toast({
-        title: 'User created',
-        description: `${newUser.name} has been added successfully.`,
+        title: userCreatedText,
+        description: `${newUser.name} ${hasBeenAddedText}`,
       });
     } catch (error) {
       console.error('Error creating user:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create user',
+        title: errorText,
+        description: error instanceof Error ? error.message : failedCreateUserText,
       });
     }
   };
@@ -163,15 +229,15 @@ export function UserManager({ currentUser }: UserManagerProps) {
       setEditingUser(null);
       
       toast({
-        title: 'User updated',
-        description: `${updatedUser.name} has been updated successfully.`,
+        title: userUpdatedText,
+        description: `${updatedUser.name} ${hasBeenUpdatedText}`,
       });
     } catch (error) {
       console.error('Error updating user:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update user',
+        title: errorText,
+        description: error instanceof Error ? error.message : failedUpdateUserText,
       });
     }
   };
@@ -195,15 +261,15 @@ export function UserManager({ currentUser }: UserManagerProps) {
       setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
       
       toast({
-        title: 'Team member status updated',
-        description: `${user.name} ${updatedUser.isTeamMember ? 'added to' : 'removed from'} team.`,
+        title: teamStatusUpdatedText,
+        description: `${user.name} ${updatedUser.isTeamMember ? addedToTeamText : removedFromTeamText} ${teamText}.`,
       });
     } catch (error) {
       console.error('Error updating team member status:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to update team member status',
+        title: errorText,
+        description: failedUpdateTeamText,
       });
     }
   };
@@ -246,15 +312,15 @@ export function UserManager({ currentUser }: UserManagerProps) {
       setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
       
       toast({
-        title: 'Cover photo updated',
-        description: 'Team cover photo has been uploaded successfully.',
+        title: coverPhotoUpdatedText,
+        description: coverPhotoUploadedText,
       });
     } catch (error) {
       console.error('Error uploading cover photo:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to upload cover photo',
+        title: errorText,
+        description: failedUploadCoverText,
       });
     } finally {
       setUploadingCoverPhoto(null);
@@ -267,8 +333,8 @@ export function UserManager({ currentUser }: UserManagerProps) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({
           variant: 'destructive',
-          title: 'File too large',
-          description: 'Please select an image smaller than 5MB.',
+          title: fileTooLargeText,
+          description: selectSmallerImageText,
         });
         return;
       }
@@ -276,8 +342,8 @@ export function UserManager({ currentUser }: UserManagerProps) {
       if (!file.type.startsWith('image/')) {
         toast({
           variant: 'destructive',
-          title: 'Invalid file type',
-          description: 'Please select an image file.',
+          title: invalidFileTypeText,
+          description: selectImageFileText,
         });
         return;
       }
@@ -290,13 +356,13 @@ export function UserManager({ currentUser }: UserManagerProps) {
     if (user.id === currentUser.id) {
       toast({
         variant: 'destructive',
-        title: 'Cannot delete',
-        description: 'You cannot delete your own account.',
+        title: cannotDeleteText,
+        description: cannotDeleteSelfText,
       });
       return;
     }
 
-    if (confirm(`Are you sure you want to delete ${user.name}?`)) {
+    if (confirm(`${confirmDeleteText} ${user.name}?`)) {
       try {
         const response = await fetch(`/api/users?id=${user.id}`, {
           method: 'DELETE',
@@ -309,15 +375,15 @@ export function UserManager({ currentUser }: UserManagerProps) {
         setUsers(prev => prev.filter(u => u.id !== user.id));
         
         toast({
-          title: 'User deleted',
-          description: `${user.name} has been removed.`,
+          title: userDeletedText,
+          description: `${user.name} ${hasBeenRemovedText}`,
         });
       } catch (error) {
         console.error('Error deleting user:', error);
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to delete user',
+          title: errorText,
+          description: failedDeleteUserText,
         });
       }
     }
@@ -349,29 +415,29 @@ export function UserManager({ currentUser }: UserManagerProps) {
   };
 
   if (isLoading) {
-    return <div className="p-6">Loading users...</div>;
+    return <div className="p-6">{loadingUsersText}</div>;
   }
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">User Management</h1>
-          <p className="text-gray-600">Manage system users and their roles</p>
+          <h1 className="text-2xl font-bold">{userManagementText}</h1>
+          <p className="text-gray-600">{manageSystemUsersText}</p>
         </div>
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
-              Add User
+              {addUserText}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
+              <DialogTitle>{createNewUserText}</DialogTitle>
               <DialogDescription>
-                Add a new user to the system with appropriate role and permissions.
+                {createUserDescText}
               </DialogDescription>
             </DialogHeader>
             <Form {...createForm}>
@@ -381,9 +447,9 @@ export function UserManager({ currentUser }: UserManagerProps) {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
+                      <FormLabel>{nameText}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter full name" {...field} />
+                        <Input placeholder={enterFullNameText} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -394,9 +460,9 @@ export function UserManager({ currentUser }: UserManagerProps) {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel>{usernameText}</FormLabel>
                       <FormControl>
-                        <Input type="text" placeholder="Enter username" {...field} />
+                        <Input type="text" placeholder={enterUsernameText} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -407,9 +473,9 @@ export function UserManager({ currentUser }: UserManagerProps) {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>{passwordText}</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="Enter password" {...field} />
+                        <Input type="password" placeholder={enterPasswordText} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -420,11 +486,11 @@ export function UserManager({ currentUser }: UserManagerProps) {
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
+                      <FormLabel>{roleText}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a role" />
+                            <SelectValue placeholder={selectRoleText} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -444,9 +510,9 @@ export function UserManager({ currentUser }: UserManagerProps) {
                 />
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                    Cancel
+                    {cancelText}
                   </Button>
-                  <Button type="submit">Create User</Button>
+                  <Button type="submit">{createUserBtnText}</Button>
                 </div>
               </form>
             </Form>
@@ -477,13 +543,13 @@ export function UserManager({ currentUser }: UserManagerProps) {
                       <EyeOff className="w-4 h-4 text-gray-400" />
                     )}
                     <span className="text-sm text-gray-500">
-                      {user.isActive ? 'Active' : 'Inactive'}
+                      {user.isActive ? activeText : inactiveText}
                     </span>
                   </div>
                   {user.isTeamMember && (
                     <div className="flex items-center space-x-2">
                       <Users className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm text-blue-600">Team Member</span>
+                      <span className="text-sm text-blue-600">{teamMemberText}</span>
                     </div>
                   )}
                 </div>
@@ -495,7 +561,7 @@ export function UserManager({ currentUser }: UserManagerProps) {
                     onClick={() => toggleTeamMember(user)}
                   >
                     <Users className="w-4 h-4 mr-1" />
-                    {user.isTeamMember ? 'Remove from Team' : 'Add to Team'}
+                    {user.isTeamMember ? removeFromTeamText : addToTeamText}
                   </Button>
                   
                   {user.isTeamMember && (
@@ -514,7 +580,7 @@ export function UserManager({ currentUser }: UserManagerProps) {
                         className="pointer-events-none"
                       >
                         <Upload className="w-4 h-4 mr-1" />
-                        {uploadingCoverPhoto === user.id ? 'Uploading...' : 'Cover Photo'}
+                        {uploadingCoverPhoto === user.id ? uploadingText : coverPhotoText}
                       </Button>
                     </div>
                   )}
@@ -525,7 +591,7 @@ export function UserManager({ currentUser }: UserManagerProps) {
                     onClick={() => openEditDialog(user)}
                   >
                     <Edit className="w-4 h-4 mr-1" />
-                    Edit
+                    {editText}
                   </Button>
                   <Button
                     variant="outline"
@@ -534,7 +600,7 @@ export function UserManager({ currentUser }: UserManagerProps) {
                     disabled={user.id === currentUser.id}
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
-                    Delete
+                    {deleteText}
                   </Button>
                 </div>
               </div>
@@ -547,9 +613,9 @@ export function UserManager({ currentUser }: UserManagerProps) {
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+            <DialogTitle>{editUserText}</DialogTitle>
             <DialogDescription>
-              Update user information and permissions.
+              {updateUserInfoText}
             </DialogDescription>
           </DialogHeader>
           {editingUser && (
@@ -560,7 +626,7 @@ export function UserManager({ currentUser }: UserManagerProps) {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
+                      <FormLabel>{nameText}</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -573,7 +639,7 @@ export function UserManager({ currentUser }: UserManagerProps) {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel>{usernameText}</FormLabel>
                       <FormControl>
                         <Input type="text" {...field} />
                       </FormControl>
@@ -586,9 +652,9 @@ export function UserManager({ currentUser }: UserManagerProps) {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>New Password (leave blank to keep current)</FormLabel>
+                      <FormLabel>{newPasswordText}</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="Enter new password" {...field} />
+                        <Input type="password" placeholder={enterNewPasswordText} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -599,7 +665,7 @@ export function UserManager({ currentUser }: UserManagerProps) {
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
+                      <FormLabel>{roleText}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -627,9 +693,9 @@ export function UserManager({ currentUser }: UserManagerProps) {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                       <div className="space-y-0.5">
-                        <FormLabel>Active Status</FormLabel>
+                        <FormLabel>{activeStatusText}</FormLabel>
                         <div className="text-sm text-gray-500">
-                          Inactive users cannot log in to the system
+                          {inactiveUsersText}
                         </div>
                       </div>
                       <FormControl>
@@ -643,9 +709,9 @@ export function UserManager({ currentUser }: UserManagerProps) {
                 />
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setEditingUser(null)}>
-                    Cancel
+                    {cancelText}
                   </Button>
-                  <Button type="submit">Update User</Button>
+                  <Button type="submit">{updateUserBtnText}</Button>
                 </div>
               </form>
             </Form>

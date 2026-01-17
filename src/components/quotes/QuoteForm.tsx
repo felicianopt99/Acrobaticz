@@ -1000,9 +1000,19 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
     const totals = calculateTotals();
     const finalClientId = formValues.clientId === MANUAL_CLIENT_ENTRY_VALUE ? undefined : formValues.clientId;
 
+    // Generate a draft quote number if not editing existing quote
+    const draftQuoteNumber = (() => {
+      if (initialData?.quoteNumber) return initialData.quoteNumber;
+      const now = new Date();
+      const year = now.getFullYear().toString().slice(-2);
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      return `Q-${year}${month}-${random}`;
+    })();
+
     return {
-      id: initialData?.id || 'preview',
-      quoteNumber: initialData?.quoteNumber || `PREVIEW-${Date.now()}`,
+      id: initialData?.id || 'draft',
+      quoteNumber: draftQuoteNumber,
       ...formValues,
       clientId: finalClientId,
       items: processedItems,
@@ -1229,7 +1239,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                               selected={field.value}
                               onSelect={field.onChange}
                               disabled={(date) =>
-                                date <= watchStartDate || date < new Date(new Date().setHours(0, 0, 0, 0))
+                                date < watchStartDate || date < new Date(new Date().setHours(0, 0, 0, 0))
                               }
                               initialFocus
                             />

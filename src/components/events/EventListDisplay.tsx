@@ -75,6 +75,22 @@ export function EventListDisplay() {
   const { translated: noEventsMatchFiltersText } = useTranslate('No events match your filters.');
   const { translated: noEventsYetText } = useTranslate('No events yet.');
   const { translated: tryAdjustingFiltersText } = useTranslate('Try adjusting your filters or search terms.');
+  const { translated: sortText } = useTranslate('Sort');
+  const { translated: cardsText } = useTranslate('Cards');
+  const { translated: tableText } = useTranslate('Table');
+  const { translated: prepareEventText } = useTranslate('Prepare Event');
+  const { translated: prepareText } = useTranslate('Prepare');
+  const { translated: noClientAssignedText } = useTranslate('No client assigned');
+  const { translated: noLocationSpecifiedText } = useTranslate('No location specified');
+  const { translated: toText } = useTranslate('to');
+  const { translated: viewText } = useTranslate('View');
+  const { translated: eventNameText } = useTranslate('Event Name');
+  const { translated: statusText } = useTranslate('Status');
+  const { translated: datesText } = useTranslate('Dates');
+  const { translated: actionsText } = useTranslate('Actions');
+  const { translated: ofText } = useTranslate('of');
+  const { translated: eventsCountText } = useTranslate('events');
+  const { translated: naText } = useTranslate('N/A');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [sortField, setSortField] = useState<SortField>('startDate');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -199,7 +215,7 @@ export function EventListDisplay() {
         <div>
           <h2 className="text-xl md:text-2xl font-semibold">{eventsText}</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {filteredAndSortedEvents.length} of {events.length} events
+            {filteredAndSortedEvents.length} {ofText} {events.length} {eventsCountText}
           </p>
         </div>
         <Button onClick={() => setIsFormOpen(true)} className="w-full sm:w-auto">
@@ -209,7 +225,7 @@ export function EventListDisplay() {
 
       {/* Quick Status Tabs */}
       <Tabs value={filterStatus} onValueChange={(value) => setFilterStatus(value as FilterStatus)} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4">
           <TabsTrigger value="all" className="text-xs sm:text-sm">
             {allText} ({eventsWithClient.length})
           </TabsTrigger>
@@ -263,7 +279,7 @@ export function EventListDisplay() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="w-full sm:w-auto">
                       {sortOrder === 'asc' ? <SortAsc className="mr-2 h-4 w-4" /> : <SortDesc className="mr-2 h-4 w-4" />}
-                      <span className="hidden sm:inline">Sort</span>
+                      <span className="hidden sm:inline">{sortText}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
@@ -292,7 +308,7 @@ export function EventListDisplay() {
                   className="h-8 flex-1 sm:flex-initial"
                 >
                   <Grid3X3 className="h-4 w-4" />
-                  <span className="ml-1 sm:hidden">Cards</span>
+                  <span className="ml-1 sm:hidden">{cardsText}</span>
                 </Button>
                 <Button
                   variant={viewMode === 'table' ? 'secondary' : 'ghost'}
@@ -301,7 +317,7 @@ export function EventListDisplay() {
                   className="h-8 flex-1 sm:flex-initial"
                 >
                   <List className="h-4 w-4" />
-                  <span className="ml-1 sm:hidden">Table</span>
+                  <span className="ml-1 sm:hidden">{tableText}</span>
                 </Button>
               </div>
             </div>
@@ -365,7 +381,7 @@ export function EventListDisplay() {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/rentals/${event.id}/prep`)}}>
                         <ListChecks className="mr-2 h-4 w-4 text-blue-500 dark:text-blue-400" />
-                        <span className="text-blue-600 dark:text-blue-400">Prepare Event</span>
+                        <span className="text-blue-600 dark:text-blue-400">{prepareEventText}</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -375,17 +391,17 @@ export function EventListDisplay() {
                 <div className="space-y-2 text-sm text-muted-foreground mb-4">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{event.client?.name || 'No client assigned'}</span>
+                    <span className="truncate">{event.client?.name || noClientAssignedText}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{event.location || 'No location specified'}</span>
+                    <span className="truncate">{event.location || noLocationSpecifiedText}</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <Calendar className="h-4 w-4 flex-shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs">{getDateDescription(new Date(event.startDate))}</div>
-                      <div className="text-xs">to {getDateDescription(new Date(event.endDate))}</div>
+                      <div className="text-xs">{toText} {getDateDescription(new Date(event.endDate))}</div>
                     </div>
                   </div>
                 </div>
@@ -396,7 +412,7 @@ export function EventListDisplay() {
                     onClick={(e) => { e.stopPropagation(); router.push(`/events/${event.id}`)}}
                     className="flex-1 text-xs"
                   >
-                    <Edit className="mr-1 h-3 w-3" /> View
+                    <Edit className="mr-1 h-3 w-3" /> {viewText}
                   </Button>
                   <Button
                     variant="outline"
@@ -404,7 +420,7 @@ export function EventListDisplay() {
                     onClick={(e) => { e.stopPropagation(); router.push(`/rentals/${event.id}/prep`)}}
                     className="flex-1 text-xs bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-100/50 dark:hover:bg-blue-800/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700"
                   >
-                    <ListChecks className="mr-1 h-3 w-3 text-blue-500 dark:text-blue-400" /> Prepare
+                    <ListChecks className="mr-1 h-3 w-3 text-blue-500 dark:text-blue-400" /> {prepareText}
                   </Button>
                 </div>
               </CardContent>
@@ -420,31 +436,31 @@ export function EventListDisplay() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
-                      Event Name {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      {eventNameText} {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </TableHead>
                     <TableHead className="cursor-pointer" onClick={() => handleSort('client')}>
-                      Client {sortField === 'client' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      {clientText} {sortField === 'client' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{statusText}</TableHead>
                     <TableHead className="cursor-pointer" onClick={() => handleSort('location')}>
-                      Location {sortField === 'location' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      {locationText} {sortField === 'location' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </TableHead>
                     <TableHead className="cursor-pointer" onClick={() => handleSort('startDate')}>
-                      Dates {sortField === 'startDate' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      {datesText} {sortField === 'startDate' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">{actionsText}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAndSortedEvents.map((event) => (
                     <TableRow key={event.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/events/${event.id}`)}>
                       <TableCell className="font-medium">{event.name}</TableCell>
-                      <TableCell>{event.client?.name || 'N/A'}</TableCell>
+                      <TableCell>{event.client?.name || naText}</TableCell>
                       <TableCell>{getStatusBadge(event.status)}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{event.location}</TableCell>
                       <TableCell className="text-sm">
                         <div>{getDateDescription(new Date(event.startDate))}</div>
-                        <div className="text-muted-foreground">to {getDateDescription(new Date(event.endDate))}</div>
+                        <div className="text-muted-foreground">{toText} {getDateDescription(new Date(event.endDate))}</div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-1 justify-end">

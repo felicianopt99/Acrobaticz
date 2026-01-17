@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState, useMemo, useCallback, forwardRef } from "react";
 import AIEquipmentAssistant from "./AIEquipmentAssistant";
 import { getStatusBreakdownString } from "@/lib/equipment-utils";
+import { useTranslate } from '@/contexts/TranslationContext';
 import { 
   Eye, 
   EyeOff, 
@@ -114,6 +115,84 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
   const router = useRouter();
   const { toast } = useToast();
   
+  // Translation hooks
+  const { translated: uiResetFormText } = useTranslate('Reset Form');
+  const { translated: uiClearAllText } = useTranslate('Clear all form fields');
+  const { translated: uiBasicInfoText } = useTranslate('Basic Information');
+  const { translated: uiBasicInfoDescText } = useTranslate('Equipment name, description, and type');
+  const { translated: uiEquipmentNameText } = useTranslate('Equipment Name');
+  const { translated: uiRequiredText } = useTranslate('Required');
+  const { translated: uiDescriptionText } = useTranslate('Description');
+  const { translated: uiItemTypeText } = useTranslate('Item Type');
+  const { translated: uiEquipmentText } = useTranslate('Equipment');
+  const { translated: uiConsumableText } = useTranslate('Consumable');
+  const { translated: uiRentableItemsText } = useTranslate('Rentable items with daily rate');
+  const { translated: uiStockItemsText } = useTranslate('Stock items like tape or batteries');
+  const { translated: uiCategorizationText } = useTranslate('Categorization');
+  const { translated: uiCategorizationDescText } = useTranslate('Organize equipment in your inventory system');
+  const { translated: uiCategoryText } = useTranslate('Category');
+  const { translated: uiSubcategoryText } = useTranslate('Subcategory');
+  const { translated: uiOptionalText } = useTranslate('Optional');
+  const { translated: uiSelectCategoryText } = useTranslate('Select a category');
+  const { translated: uiSelectCategoryFirstText } = useTranslate('Select a category first');
+  const { translated: uiNoSubcategoriesText } = useTranslate('No subcategories available');
+  const { translated: uiSelectSubcategoryText } = useTranslate('Select a subcategory');
+  const { translated: uiNoSubcategoryText } = useTranslate('No subcategory');
+  const { translated: uiNoCategoriesText } = useTranslate('No categories available. Create one first.');
+  const { translated: uiAddNewCategoryText } = useTranslate('Add new category...');
+  const { translated: uiAddNewSubcategoryText } = useTranslate('Add new subcategory...');
+  const { translated: uiHelpsOrganizeText } = useTranslate('Helps organize within categories');
+  const { translated: uiInventoryPricingText } = useTranslate('Inventory & Pricing');
+  const { translated: uiInventoryPricingDescText } = useTranslate('Stock quantity and rental rate');
+  const { translated: uiQuantityInStockText } = useTranslate('Quantity in Stock');
+  const { translated: uiTotalUnitsText } = useTranslate('Total units available in inventory');
+  const { translated: uiDailyRateText } = useTranslate('Daily Rate');
+  const { translated: uiNAConsumablesText } = useTranslate('N/A for consumables');
+  const { translated: uiConsumablesNoRateText } = useTranslate("Consumables don't have rental rates");
+  const { translated: uiPhysicalInfoText } = useTranslate('Physical Information');
+  const { translated: uiPhysicalInfoDescText } = useTranslate('Location and status in inventory');
+  const { translated: uiPhysicalLocationText } = useTranslate('Physical Location');
+  const { translated: uiWhereStoredText } = useTranslate('Where this equipment is physically stored');
+  const { translated: uiExistingLocationsText } = useTranslate('existing locations available');
+  const { translated: uiStatusText } = useTranslate('Status');
+  const { translated: uiGoodText } = useTranslate('Good');
+  const { translated: uiMaintenanceText } = useTranslate('In Maintenance');
+  const { translated: uiDamagedText } = useTranslate('Damaged');
+  const { translated: uiReadyToRentText } = useTranslate('Ready to rent');
+  const { translated: uiInServiceText } = useTranslate('In service');
+  const { translated: uiNeedsRepairText } = useTranslate('Needs repair');
+  const { translated: uiQuantityBreakdownText } = useTranslate('Quantity Breakdown by Status');
+  const { translated: uiMaintenanceLogText } = useTranslate('Use the Maintenance Log feature to update individual unit statuses.');
+  const { translated: uiMediaText } = useTranslate('Media');
+  const { translated: uiMediaDescText } = useTranslate('Equipment image for visual identification');
+  const { translated: uiImageURLText } = useTranslate('Image URL');
+  const { translated: uiProvideURLText } = useTranslate('Provide a URL for the equipment image. Use a placeholder if needed:');
+  const { translated: uiImageCannotPreviewText } = useTranslate('Image cannot be previewed');
+  const { translated: uiWebsiteBlockText } = useTranslate('The website may block external access. The URL will still be saved.');
+  const { translated: uiOpenNewTabText } = useTranslate('Open in new tab');
+  const { translated: uiHidePreviewText } = useTranslate('Hide Preview');
+  const { translated: uiShowPreviewText } = useTranslate('Show Preview');
+  const { translated: uiSavingText } = useTranslate('Saving...');
+  const { translated: uiUpdateEquipmentText } = useTranslate('Update Equipment');
+  const { translated: uiAddEquipmentText } = useTranslate('Add Equipment');
+  const { translated: uiCancelText } = useTranslate('Cancel');
+  const { translated: uiBackToInventoryText } = useTranslate('Back to Inventory');
+  const { translated: uiFixErrorsText } = useTranslate('Please fix the errors above before submitting');
+  const { translated: uiAddNewCategoryTitleText } = useTranslate('Add New Category');
+  const { translated: uiAddNewCategoryDescText } = useTranslate('Enter a new category name to organize your equipment.');
+  const { translated: uiCategoryNameText } = useTranslate('Category name');
+  const { translated: uiCreateCategoryText } = useTranslate('Create Category');
+  const { translated: uiCreatingText } = useTranslate('Creating...');
+  const { translated: uiAddNewSubcategoryTitleText } = useTranslate('Add New Subcategory');
+  const { translated: uiAddNewSubcategoryDescText } = useTranslate('Add a subcategory for the selected category.');
+  const { translated: uiSubcategoryNameText } = useTranslate('Subcategory name');
+  const { translated: uiCreateSubcategoryText } = useTranslate('Create Subcategory');
+  const { translated: uiValidationErrorsText } = useTranslate('Validation errors:');
+  const { translated: uiFormResetText } = useTranslate('Form Reset');
+  const { translated: uiAllFieldsClearedText } = useTranslate('All fields have been cleared.');
+  const { translated: uiBrandModelTipText } = useTranslate('Brand + Model for clarity (e.g., "Sony A7III Camera")');
+  const { translated: uiDetailedDescText } = useTranslate('Detailed description of the equipment (10-500 characters)');
+
   const [availableSubcategories, setAvailableSubcategories] = useState<Subcategory[]>([]);
   const [availableLocations, setAvailableLocations] = useState<string[]>([]);
   const [showImagePreview, setShowImagePreview] = useState(false);
@@ -369,8 +448,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
     });
     setImagePreviewUrl("");
     toast({
-      title: "Form Reset",
-      description: "All fields have been cleared.",
+      title: uiFormResetText,
+      description: uiAllFieldsClearedText,
     });
   };
 
@@ -457,7 +536,7 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
         {/* DEBUG: Show all form errors at the top for troubleshooting */}
         {Object.keys(form.formState.errors).length > 0 && (
           <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-800 border border-red-300">
-            <strong>Validation errors:</strong>
+            <strong>{uiValidationErrorsText}</strong>
             <ul className="list-disc ml-5 mt-1">
               {Object.entries(form.formState.errors).map(([field, error]) => (
                 <li key={field}>
@@ -481,10 +560,10 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                     className="text-muted-foreground hover:text-destructive"
                   >
                     <RotateCcw className="w-4 h-4 mr-1" />
-                    <span className="hidden sm:inline">Reset Form</span>
+                    <span className="hidden sm:inline">{uiResetFormText}</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Clear all form fields</TooltipContent>
+                <TooltipContent>{uiClearAllText}</TooltipContent>
               </Tooltip>
             </div>
           )}
@@ -499,8 +578,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
           {/* BASIC INFORMATION SECTION */}
           <SectionCard
             id="basic"
-            title="Basic Information"
-            description="Equipment name, description, and type"
+            title={uiBasicInfoText}
+            description={uiBasicInfoDescText}
             icon={Package}
           >
             <FormField
@@ -509,8 +588,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
-                    Equipment Name
-                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Required</Badge>
+                    {uiEquipmentNameText}
+                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{uiRequiredText}</Badge>
                   </FormLabel>
                   <FormControl>
                     <Input 
@@ -522,7 +601,7 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                   </FormControl>
                   <FormDescription className="flex items-center gap-1">
                     <Info className="w-3 h-3" />
-                    Brand + Model for clarity (e.g., "Sony A7III Camera")
+                    {uiBrandModelTipText}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -534,8 +613,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
-                    Description
-                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Required</Badge>
+                    {uiDescriptionText}
+                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{uiRequiredText}</Badge>
                   </FormLabel>
                   <FormControl>
                     <Textarea 
@@ -545,7 +624,7 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                       onFocus={preventScrollOnFocus}
                     />
                   </FormControl>
-                  <FormDescription>Detailed description of the equipment (10-500 characters)</FormDescription>
+                  <FormDescription>{uiDetailedDescText}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -556,8 +635,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
               render={({ field }) => (
                 <FormItem className="space-y-3">
                   <FormLabel className="flex items-center gap-2">
-                    Item Type
-                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Required</Badge>
+                    {uiItemTypeText}
+                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{uiRequiredText}</Badge>
                   </FormLabel>
                   <FormControl>
                     <RadioGroup
@@ -579,8 +658,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                               <Box className="w-5 h-5" />
                             </div>
                             <div className="flex-1">
-                              <p className="font-medium">Equipment</p>
-                              <p className="text-xs text-muted-foreground">Rentable items with daily rate</p>
+                              <p className="font-medium">{uiEquipmentText}</p>
+                              <p className="text-xs text-muted-foreground">{uiRentableItemsText}</p>
                             </div>
                             {field.value === 'equipment' && <CheckCircle2 className="w-5 h-5 text-primary" />}
                           </label>
@@ -600,8 +679,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                               <Recycle className="w-5 h-5" />
                             </div>
                             <div className="flex-1">
-                              <p className="font-medium">Consumable</p>
-                              <p className="text-xs text-muted-foreground">Stock items like tape or batteries</p>
+                              <p className="font-medium">{uiConsumableText}</p>
+                              <p className="text-xs text-muted-foreground">{uiStockItemsText}</p>
                             </div>
                             {field.value === 'consumable' && <CheckCircle2 className="w-5 h-5 text-primary" />}
                           </label>
@@ -618,13 +697,13 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
           <Dialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New Category</DialogTitle>
-                <DialogDescription>Enter a new category name to organize your equipment.</DialogDescription>
+                <DialogTitle>{uiAddNewCategoryTitleText}</DialogTitle>
+                <DialogDescription>{uiAddNewCategoryDescText}</DialogDescription>
               </DialogHeader>
               <div className="mt-4">
                 <input
                   className="w-full border px-3 py-2 rounded-md"
-                  placeholder="Category name"
+                  placeholder={uiCategoryNameText}
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   autoFocus
@@ -632,8 +711,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
               </div>
               <DialogFooter>
                 <div className="flex gap-2 w-full justify-end mt-4">
-                  <Button variant="outline" onClick={() => { setShowAddCategoryDialog(false); setNewCategoryName(''); }}>Cancel</Button>
-                  <Button onClick={createCategory} disabled={creatingCategory}>{creatingCategory ? 'Creating...' : 'Create Category'}</Button>
+                  <Button variant="outline" onClick={() => { setShowAddCategoryDialog(false); setNewCategoryName(''); }}>{uiCancelText}</Button>
+                  <Button onClick={createCategory} disabled={creatingCategory}>{creatingCategory ? uiCreatingText : uiCreateCategoryText}</Button>
                 </div>
               </DialogFooter>
             </DialogContent>
@@ -643,13 +722,13 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
           <Dialog open={showAddSubcategoryDialog} onOpenChange={setShowAddSubcategoryDialog}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New Subcategory</DialogTitle>
-                <DialogDescription>Add a subcategory for the selected category.</DialogDescription>
+                <DialogTitle>{uiAddNewSubcategoryTitleText}</DialogTitle>
+                <DialogDescription>{uiAddNewSubcategoryDescText}</DialogDescription>
               </DialogHeader>
               <div className="mt-4">
                 <input
                   className="w-full border px-3 py-2 rounded-md"
-                  placeholder="Subcategory name"
+                  placeholder={uiSubcategoryNameText}
                   value={newSubcategoryName}
                   onChange={(e) => setNewSubcategoryName(e.target.value)}
                   autoFocus
@@ -657,8 +736,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
               </div>
               <DialogFooter>
                 <div className="flex gap-2 w-full justify-end mt-4">
-                  <Button variant="outline" onClick={() => { setShowAddSubcategoryDialog(false); setNewSubcategoryName(''); }}>Cancel</Button>
-                  <Button onClick={createSubcategory} disabled={creatingSubcategory}>{creatingSubcategory ? 'Creating...' : 'Create Subcategory'}</Button>
+                  <Button variant="outline" onClick={() => { setShowAddSubcategoryDialog(false); setNewSubcategoryName(''); }}>{uiCancelText}</Button>
+                  <Button onClick={createSubcategory} disabled={creatingSubcategory}>{creatingSubcategory ? uiCreatingText : uiCreateSubcategoryText}</Button>
                 </div>
               </DialogFooter>
             </DialogContent>
@@ -667,8 +746,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
           {/* CATEGORIZATION SECTION */}
           <SectionCard
             id="category"
-            title="Categorization"
-            description="Organize equipment in your inventory system"
+            title={uiCategorizationText}
+            description={uiCategorizationDescText}
             icon={FolderTree}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -678,8 +757,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      Category
-                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Required</Badge>
+                      {uiCategoryText}
+                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{uiRequiredText}</Badge>
                     </FormLabel>
                     <Select onValueChange={(val) => {
                         if (val === '__add_new__') {
@@ -690,20 +769,20 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                       }} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full text-base">
-                          <SelectValue placeholder="Select a category" />
+                          <SelectValue placeholder={uiSelectCategoryText} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {categories.map(cat => (
                           <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                         ))}
-                        <SelectItem value="__add_new__">Add new category...</SelectItem>
+                        <SelectItem value="__add_new__">{uiAddNewCategoryText}</SelectItem>
                       </SelectContent>
                     </Select>
                     {categories.length === 0 && (
                       <p className="text-xs text-orange-500 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
-                        No categories available. Create one first.
+                        {uiNoCategoriesText}
                       </p>
                     )}
                     <FormMessage />
@@ -716,8 +795,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      Subcategory
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">Optional</Badge>
+                      {uiSubcategoryText}
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{uiOptionalText}</Badge>
                     </FormLabel>
                     <Select
                       onValueChange={(value) => {
@@ -733,21 +812,21 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                       <FormControl>
                         <SelectTrigger className="w-full text-base">
                           <SelectValue placeholder={
-                            !selectedCategoryId ? "Select a category first" :
-                            availableSubcategories.length === 0 ? "No subcategories available" :
-                            "Select a subcategory"
+                            !selectedCategoryId ? uiSelectCategoryFirstText :
+                            availableSubcategories.length === 0 ? uiNoSubcategoriesText :
+                            uiSelectSubcategoryText
                           } />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                         <SelectItem value={NO_SUBCATEGORY_VALUE}>No subcategory</SelectItem>
+                         <SelectItem value={NO_SUBCATEGORY_VALUE}>{uiNoSubcategoryText}</SelectItem>
                         {availableSubcategories.map(subcat => (
                           <SelectItem key={subcat.id} value={subcat.id}>{subcat.name}</SelectItem>
                         ))}
-                        {selectedCategoryId && <SelectItem value="__add_sub__">Add new subcategory...</SelectItem>}
+                        {selectedCategoryId && <SelectItem value="__add_sub__">{uiAddNewSubcategoryText}</SelectItem>}
                       </SelectContent>
                     </Select>
-                    <FormDescription>Helps organize within categories</FormDescription>
+                    <FormDescription>{uiHelpsOrganizeText}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -758,8 +837,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
           {/* INVENTORY & PRICING SECTION */}
           <SectionCard
             id="inventory"
-            title="Inventory & Pricing"
-            description="Stock quantity and rental rate"
+            title={uiInventoryPricingText}
+            description={uiInventoryPricingDescText}
             icon={DollarSign}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -769,8 +848,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      Quantity in Stock
-                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Required</Badge>
+                      {uiQuantityInStockText}
+                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{uiRequiredText}</Badge>
                     </FormLabel>
                     <FormControl>
                       <div className="relative">
@@ -796,7 +875,7 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                         />
                       </div>
                     </FormControl>
-                    <FormDescription>Total units available in inventory</FormDescription>
+                    <FormDescription>{uiTotalUnitsText}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -807,9 +886,9 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      Daily Rate (€)
+                      {uiDailyRateText} (€)
                       {itemType === 'consumable' && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">N/A for consumables</Badge>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{uiNAConsumablesText}</Badge>
                       )}
                     </FormLabel>
                     <FormControl>
@@ -838,7 +917,7 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                       </div>
                     </FormControl>
                     {itemType === 'consumable' && (
-                      <FormDescription className="text-orange-500">Consumables don't have rental rates</FormDescription>
+                      <FormDescription className="text-orange-500">{uiConsumablesNoRateText}</FormDescription>
                     )}
                     <FormMessage />
                   </FormItem>
@@ -850,8 +929,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
           {/* PHYSICAL INFORMATION SECTION */}
           <SectionCard
             id="physical"
-            title="Physical Information"
-            description="Location and status in inventory"
+            title={uiPhysicalInfoText}
+            description={uiPhysicalInfoDescText}
             icon={MapPin}
           >
             <FormField
@@ -866,8 +945,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                 return (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      Physical Location
-                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Required</Badge>
+                      {uiPhysicalLocationText}
+                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{uiRequiredText}</Badge>
                     </FormLabel>
                     <FormControl>
                       <div className="relative">
@@ -910,9 +989,9 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                       </div>
                     </FormControl>
                     <FormDescription>
-                      Where this equipment is physically stored
+                      {uiWhereStoredText}
                       {availableLocations.length > 0 && (
-                        <span className="text-primary"> • {availableLocations.length} existing locations available</span>
+                        <span className="text-primary"> • {availableLocations.length} {uiExistingLocationsText}</span>
                       )}
                     </FormDescription>
                     <FormMessage />
@@ -926,8 +1005,8 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
               render={({ field }) => (
                 <FormItem className="space-y-3">
                   <FormLabel className="flex items-center gap-2">
-                    Status
-                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Required</Badge>
+                    {uiStatusText}
+                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{uiRequiredText}</Badge>
                   </FormLabel>
                   <FormControl>
                     <RadioGroup
@@ -943,6 +1022,14 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                           damaged: { bg: 'bg-red-500', border: 'border-red-500', text: 'text-red-600' },
                         }[statusInfo.value] || { bg: 'bg-gray-500', border: 'border-gray-500', text: 'text-gray-600' };
                         
+                        const translatedLabel = statusInfo.value === 'good' ? uiGoodText :
+                          statusInfo.value === 'maintenance' ? uiMaintenanceText :
+                          statusInfo.value === 'damaged' ? uiDamagedText : statusInfo.label;
+                        
+                        const translatedDescription = statusInfo.value === 'good' ? uiReadyToRentText :
+                          statusInfo.value === 'maintenance' ? uiInServiceText :
+                          statusInfo.value === 'damaged' ? uiNeedsRepairText : '';
+                        
                         return (
                           <FormItem key={statusInfo.value}>
                             <FormControl>
@@ -957,11 +1044,9 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                                 <RadioGroupItem value={statusInfo.value} className="sr-only" />
                                 <div className={`w-4 h-4 rounded-full ${colors.bg}`} />
                                 <div className="text-center">
-                                  <p className={`font-medium ${isSelected ? colors.text : ''}`}>{statusInfo.label}</p>
+                                  <p className={`font-medium ${isSelected ? colors.text : ''}`}>{translatedLabel}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    {statusInfo.value === 'good' && 'Ready to rent'}
-                                    {statusInfo.value === 'maintenance' && 'In service'}
-                                    {statusInfo.value === 'damaged' && 'Needs repair'}
+                                    {translatedDescription}
                                   </p>
                                 </div>
                               </label>
@@ -978,7 +1063,7 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
             {/* Display quantity breakdown if editing existing equipment */}
             {initialData && (
               <div className="mt-4 p-4 bg-muted rounded-lg border border-border">
-                <p className="text-sm font-semibold mb-2">Quantity Breakdown by Status</p>
+                <p className="text-sm font-semibold mb-2">{uiQuantityBreakdownText}</p>
                 <p className="text-sm text-muted-foreground">
                   {getStatusBreakdownString(
                     (initialData.quantityByStatus || {
@@ -989,7 +1074,7 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Use the Maintenance Log feature to update individual unit statuses.
+                  {uiMaintenanceLogText}
                 </p>
               </div>
             )}
@@ -998,17 +1083,17 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
           {/* MEDIA SECTION */}
           <SectionCard
             id="media"
-            title="Media"
-            description="Equipment image for visual identification"
+            title={uiMediaText}
+            description={uiMediaDescText}
             icon={ImageIcon}
-            badge={<Badge variant="secondary" className="text-xs">Optional</Badge>}
+            badge={<Badge variant="secondary" className="text-xs">{uiOptionalText}</Badge>}
           >
             <FormField
               control={form.control}
               name="imageUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL</FormLabel>
+                  <FormLabel>{uiImageURLText}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
@@ -1026,7 +1111,7 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                     </div>
                   </FormControl>
                   <FormDescription>
-                    Provide a URL for the equipment image. Use a placeholder if needed:{' '}
+                    {uiProvideURLText}{' '}
                     <button
                       type="button"
                       className="text-primary hover:underline"
@@ -1049,21 +1134,21 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                         className="flex items-center gap-2 text-sm text-primary hover:underline font-medium"
                       >
                         {showImagePreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        {showImagePreview ? 'Hide Preview' : 'Show Preview'}
+                        {showImagePreview ? uiHidePreviewText : uiShowPreviewText}
                       </button>
                       {showImagePreview && (
                         <div className="relative w-full max-w-xs h-48 bg-muted rounded-lg overflow-hidden border-2 border-dashed border-border">
                           {imageLoadError ? (
                             <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
                               <AlertCircle className="w-8 h-8 mb-2 text-orange-500" />
-                              <p className="text-sm font-medium">Image cannot be previewed</p>
-                              <p className="text-xs mt-1">The website may block external access. The URL will still be saved.</p>
+                              <p className="text-sm font-medium">{uiImageCannotPreviewText}</p>
+                              <p className="text-xs mt-1">{uiWebsiteBlockText}</p>
                               <button
                                 type="button"
                                 className="mt-2 text-xs text-primary hover:underline"
                                 onClick={() => window.open(imagePreviewUrl, '_blank')}
                               >
-                                Open in new tab
+                                {uiOpenNewTabText}
                               </button>
                             </div>
                           ) : (
@@ -1101,12 +1186,12 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                 {isSubmitting ? (
                   <>
                     <span className="animate-spin mr-2">⏳</span>
-                    Saving...
+                    {uiSavingText}
                   </>
                 ) : (
                   <>
                     <Save className="w-5 h-5 mr-2" />
-                    {initialData ? "Update Equipment" : "Add Equipment"}
+                    {initialData ? uiUpdateEquipmentText : uiAddEquipmentText}
                   </>
                 )}
               </Button>
@@ -1117,13 +1202,13 @@ export function EquipmentForm({ initialData, onSubmitSuccess }: EquipmentFormPro
                 className="flex-1 sm:flex-none h-12 text-base"
               >
                 <ArrowLeft className="w-5 h-5 mr-2" />
-                {initialData ? "Cancel" : "Back to Inventory"}
+                {initialData ? uiCancelText : uiBackToInventoryText}
               </Button>
             </div>
             {Object.keys(form.formState.errors).length > 0 && (
               <p className="text-sm text-destructive mt-3 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" />
-                Please fix the errors above before submitting
+                {uiFixErrorsText}
               </p>
             )}
           </div>

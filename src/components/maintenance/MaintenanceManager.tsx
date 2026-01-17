@@ -44,6 +44,20 @@ export function MaintenanceManager() {
   const { translated: actionsText } = useTranslate('Actions');
   const { translated: addLogText } = useTranslate('Add Log');
   const { translated: viewHistoryText } = useTranslate('View History');
+  const { translated: searchText } = useTranslate('Search');
+  const { translated: statusFilterText } = useTranslate('Status');
+  const { translated: allStatusText } = useTranslate('All Status');
+  const { translated: maintenanceStatusText } = useTranslate('Maintenance');
+  const { translated: damagedStatusText } = useTranslate('Damaged');
+  const { translated: sortByText } = useTranslate('Sort By');
+  const { translated: locationText } = useTranslate('Location');
+  const { translated: logsText } = useTranslate('Logs');
+  const { translated: equipmentText } = useTranslate('Equipment');
+  const { translated: viewDetailsText } = useTranslate('View Details');
+  const { translated: noResultsText } = useTranslate('No results found');
+  const { translated: adjustFiltersText } = useTranslate('Try adjusting your search or filters');
+  const { translated: trackItemsText } = useTranslate('Track items that are damaged or currently undergoing maintenance.');
+  const { translated: logEntriesText } = useTranslate('log entries');
 
   const [isWorkLogDialogOpen, setIsWorkLogDialogOpen] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState<EquipmentItem | null>(null);
@@ -148,7 +162,7 @@ export function MaintenanceManager() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
               {/* Search Input */}
               <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Search</label>
+                <label className="text-sm font-medium mb-2 block">{searchText}</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -162,30 +176,30 @@ export function MaintenanceManager() {
 
               {/* Status Filter */}
               <div className="w-full sm:w-48">
-                <label className="text-sm font-medium mb-2 block">Status</label>
+                <label className="text-sm font-medium mb-2 block">{statusFilterText}</label>
                 <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                    <SelectItem value="damaged">Damaged</SelectItem>
+                    <SelectItem value="all">{allStatusText}</SelectItem>
+                    <SelectItem value="maintenance">{maintenanceStatusText}</SelectItem>
+                    <SelectItem value="damaged">{damagedStatusText}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Sort By */}
               <div className="w-full sm:w-40">
-                <label className="text-sm font-medium mb-2 block">Sort By</label>
+                <label className="text-sm font-medium mb-2 block">{sortByText}</label>
                 <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="name">Name</SelectItem>
-                    <SelectItem value="status">Status</SelectItem>
-                    <SelectItem value="location">Location</SelectItem>
+                    <SelectItem value="name">{nameText}</SelectItem>
+                    <SelectItem value="status">{statusText}</SelectItem>
+                    <SelectItem value="location">{locationText}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -205,7 +219,7 @@ export function MaintenanceManager() {
               </Badge>
             )}
           </CardTitle>
-          <CardDescription>Track items that are damaged or currently undergoing maintenance.</CardDescription>
+          <CardDescription>{trackItemsText}</CardDescription>
         </CardHeader>
         <CardContent>
           {itemsInMaintenance.length === 0 ? (
@@ -217,8 +231,8 @@ export function MaintenanceManager() {
           ) : filteredItems.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground flex flex-col items-center">
               <Search className="w-16 h-16 mb-4 text-primary/50" />
-              <p className="text-lg">No results found</p>
-              <p className="text-sm">Try adjusting your search or filters</p>
+              <p className="text-lg">{noResultsText}</p>
+              <p className="text-sm">{adjustFiltersText}</p>
             </div>
           ) : (
             <>
@@ -243,7 +257,7 @@ export function MaintenanceManager() {
 
                       <div className="flex items-center justify-between mb-3 pb-3 border-b border-border/50">
                         <span className="text-xs text-muted-foreground">
-                          {item.maintenanceHistory?.length || 0} log entries
+                          {item.maintenanceHistory?.length || 0} {logEntriesText}
                         </span>
                         <Badge variant={getStatusBadgeVariant(item.status)} className="text-xs">
                           {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
@@ -271,7 +285,7 @@ export function MaintenanceManager() {
                           }} 
                           className="flex-1 h-8 text-xs"
                         >
-                          View Details
+                          {viewDetailsText}
                         </Button>
                       </div>
                     </div>
@@ -282,11 +296,11 @@ export function MaintenanceManager() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Equipment</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead className="text-center">Logs</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{equipmentText}</TableHead>
+                      <TableHead>{statusText}</TableHead>
+                      <TableHead>{locationText}</TableHead>
+                      <TableHead className="text-center">{logsText}</TableHead>
+                      <TableHead className="text-right">{actionsText}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -322,7 +336,7 @@ export function MaintenanceManager() {
                             onClick={() => router.push(`/maintenance/${item.id}`)}
                             title="View full equipment details"
                           >
-                            View Details
+                            {viewDetailsText}
                           </Button>
                         </TableCell>
                       </TableRow>

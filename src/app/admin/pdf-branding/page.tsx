@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useTranslate } from '@/contexts/TranslationContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,9 @@ interface PDFBrandingSettings {
 export default function PDFBrandingPage() {
   const router = useRouter();
   const { toast } = useToast();
+
+  // Translation helper
+  const T = ({ text }: { text: string }) => { const { translated } = useTranslate(text); return <>{translated}</>; };
 
   const [isLoading, setIsLoading] = useState(true); 
   const [isSaving, setIsSaving] = useState(false);
@@ -251,10 +255,10 @@ export default function PDFBrandingPage() {
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <FileText className="h-8 w-8" />
-              PDF Branding
+              <T text="PDF Branding" />
             </h1>
             <p className="text-muted-foreground mt-1">
-              Customize how your company appears on PDF quotes and invoices
+              <T text="Customize how your company appears on PDF quotes and invoices" />
             </p>
           </div>
         </div>
@@ -264,14 +268,14 @@ export default function PDFBrandingPage() {
         {/* Company Information Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Company Information</CardTitle>
+            <CardTitle><T text="Company Information" /></CardTitle>
             <CardDescription>
-              This information will appear in the header of all generated PDF documents
+              <T text="This information will appear in the header of all generated PDF documents" />
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="pdfCompanyName">PDF Company Name *</Label>
+              <Label htmlFor="pdfCompanyName"><T text="PDF Company Name" /> *</Label>
               <Input
                 id="pdfCompanyName"
                 value={pdfCompanyName}
@@ -280,12 +284,12 @@ export default function PDFBrandingPage() {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Displayed prominently in the PDF header
+                <T text="Displayed prominently in the PDF header" />
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pdfCompanyTagline">PDF Company Tagline</Label>
+              <Label htmlFor="pdfCompanyTagline"><T text="PDF Company Tagline" /></Label>
               <Input
                 id="pdfCompanyTagline"
                 value={pdfCompanyTagline}
@@ -293,7 +297,7 @@ export default function PDFBrandingPage() {
                 placeholder="Professional AV Equipment Rental"
               />
               <p className="text-xs text-muted-foreground">
-                Optional subtitle that appears below the company name
+                <T text="Optional subtitle that appears below the company name" />
               </p>
             </div>
           </CardContent>
@@ -302,14 +306,14 @@ export default function PDFBrandingPage() {
         {/* Contact Information Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
+            <CardTitle><T text="Contact Information" /></CardTitle>
             <CardDescription>
-              Contact details displayed on PDF documents
+              <T text="Contact details displayed on PDF documents" />
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="pdfContactEmail">PDF Contact Email</Label>
+              <Label htmlFor="pdfContactEmail"><T text="PDF Contact Email" /></Label>
               <Input
                 id="pdfContactEmail"
                 type="email"
@@ -320,7 +324,7 @@ export default function PDFBrandingPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pdfContactPhone">PDF Contact Phone</Label>
+              <Label htmlFor="pdfContactPhone"><T text="PDF Contact Phone" /></Label>
               <Input
                 id="pdfContactPhone"
                 type="tel"
@@ -335,17 +339,17 @@ export default function PDFBrandingPage() {
         {/* Footer Text Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Footer Text</CardTitle>
+            <CardTitle><T text="Footer Text" /></CardTitle>
             <CardDescription>
-              Customize the footer lines that appear at the bottom of PDF documents
+              <T text="Customize the footer lines that appear at the bottom of PDF documents" />
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="pdfShowFooterContact">Show Footer Contact</Label>
+                <Label htmlFor="pdfShowFooterContact"><T text="Show Footer Contact" /></Label>
                 <p className="text-xs text-muted-foreground">
-                  Toggle to hide all contact info on the PDF footer
+                  <T text="Toggle to hide all contact info on the PDF footer" />
                 </p>
               </div>
               <Switch
@@ -355,7 +359,7 @@ export default function PDFBrandingPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pdfFooterMessage">PDF Footer Message</Label>
+              <Label htmlFor="pdfFooterMessage"><T text="PDF Footer Message" /></Label>
               <Input
                 id="pdfFooterMessage"
                 value={pdfFooterMessage}
@@ -368,7 +372,7 @@ export default function PDFBrandingPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pdfFooterContactText">PDF Footer Contact Text</Label>
+              <Label htmlFor="pdfFooterContactText"><T text="PDF Footer Contact Text" /></Label>
               <Textarea
                 id="pdfFooterContactText"
                 value={pdfFooterContactText}
@@ -386,17 +390,17 @@ export default function PDFBrandingPage() {
         {/* Logo Settings Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Logo Settings</CardTitle>
+            <CardTitle><T text="Logo Settings" /></CardTitle>
             <CardDescription>
-              Configure how your logo appears in PDF documents
+              <T text="Configure how your logo appears in PDF documents" />
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="pdfUseTextLogo">Use Text Logo</Label>
+                <Label htmlFor="pdfUseTextLogo"><T text="Use Text Logo" /></Label>
                 <p className="text-xs text-muted-foreground">
-                  Display company name as text instead of image logo
+                  <T text="Display company name as text instead of image logo" />
                 </p>
               </div>
               <Switch
@@ -412,7 +416,7 @@ export default function PDFBrandingPage() {
                 <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-900/20">
                   <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
                     <ImageIcon className="h-4 w-4" />
-                    Recommended Logo Specifications
+                    <T text="Recommended Logo Specifications" />
                   </h4>
                   <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                     <li>• <strong>Best Resolution:</strong> 300 x 100 pixels (3:1 aspect ratio)</li>
@@ -425,7 +429,7 @@ export default function PDFBrandingPage() {
 
                 {/* Upload Options */}
                 <div className="space-y-3">
-                  <Label>Upload Logo</Label>
+                  <Label><T text="Upload Logo" /></Label>
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <input
@@ -446,25 +450,25 @@ export default function PDFBrandingPage() {
                         {isUploadingLogo ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Uploading...
+                            <T text="Uploading..." />
                           </>
                         ) : (
                           <>
                             <Upload className="mr-2 h-4 w-4" />
-                            Upload Logo Image
+                            <T text="Upload Logo Image" />
                           </>
                         )}
                       </Button>
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Upload a high-quality logo image for professional PDF documents
+                    <T text="Upload a high-quality logo image for professional PDF documents" />
                   </p>
                 </div>
 
                 {/* Or URL Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="pdfLogoUrl">Or Enter Logo URL</Label>
+                  <Label htmlFor="pdfLogoUrl"><T text="Or Enter Logo URL" /></Label>
                   <Input
                     id="pdfLogoUrl"
                     value={pdfLogoUrl && !pdfLogoUrl.startsWith('data:') ? pdfLogoUrl : ''}
@@ -480,7 +484,7 @@ export default function PDFBrandingPage() {
                 {/* Logo Preview */}
                 {pdfLogoUrl && (
                   <div className="space-y-2">
-                    <Label>Logo Preview</Label>
+                    <Label><T text="Logo Preview" /></Label>
                     <div className="relative p-6 border-2 rounded-lg bg-muted/30 flex items-center justify-center">
                       <img
                         src={pdfLogoUrl}
@@ -513,9 +517,9 @@ export default function PDFBrandingPage() {
         {/* Preview and Example Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Preview Your Branding</CardTitle>
+            <CardTitle><T text="Preview Your Branding" /></CardTitle>
             <CardDescription>
-              See how your branding will appear on PDF documents
+              <T text="See how your branding will appear on PDF documents" />
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -558,12 +562,12 @@ export default function PDFBrandingPage() {
               {isGeneratingPreview ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
+                  <T text="Generating..." />
                 </>
               ) : (
                 <>
                   <Eye className="mr-2 h-4 w-4" />
-                  How to Preview Full PDF
+                  <T text="How to Preview Full PDF" />
                 </>
               )}
             </Button>
@@ -578,7 +582,7 @@ export default function PDFBrandingPage() {
             disabled={isSaving}
           >
             <RotateCcw className="mr-2 h-4 w-4" />
-            Reset to Defaults
+            <T text="Reset to Defaults" />
           </Button>
           
           <Button
@@ -588,12 +592,12 @@ export default function PDFBrandingPage() {
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                <T text="Saving..." />
               </>
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                Save Changes
+                <T text="Save Changes" />
               </>
             )}
           </Button>

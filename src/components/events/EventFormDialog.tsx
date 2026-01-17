@@ -58,6 +58,29 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
   // Translation hooks
   const { translated: selectAgency } = useTranslate('Select an agency (optional)');
   const { translated: noAgency } = useTranslate('None');
+  const { translated: editEventText } = useTranslate('Edit Event');
+  const { translated: createNewEventText } = useTranslate('Create New Event');
+  const { translated: eventNameText } = useTranslate('Event Name');
+  const { translated: eventNamePlaceholderText } = useTranslate('e.g., Annual Tech Conference');
+  const { translated: clientText } = useTranslate('Client');
+  const { translated: selectClientText } = useTranslate('Select a client for this event');
+  const { translated: locationText } = useTranslate('Location');
+  const { translated: locationPlaceholderText } = useTranslate('e.g., Grand Hyatt Ballroom');
+  const { translated: agencyText } = useTranslate('Agency');
+  const { translated: assignedToText } = useTranslate('Assigned To');
+  const { translated: selectTechnicianText } = useTranslate('Select a technician/person for this event');
+  const { translated: startDateText } = useTranslate('Start Date');
+  const { translated: endDateText } = useTranslate('End Date');
+  const { translated: pickDateText } = useTranslate('Pick a date');
+  const { translated: cancelText } = useTranslate('Cancel');
+  const { translated: saveChangesText } = useTranslate('Save Changes');
+  const { translated: createEventText } = useTranslate('Create Event');
+  const { translated: eventUpdatedText } = useTranslate('Event Updated');
+  const { translated: eventCreatedText } = useTranslate('Event Created');
+  const { translated: errorText } = useTranslate('Error');
+  const { translated: failedToSaveText } = useTranslate('Failed to save event.');
+  const { translated: hasBeenUpdatedText } = useTranslate('has been updated.');
+  const { translated: hasBeenCreatedText } = useTranslate('has been created.');
 
   // Fetch agencies on mount
   useEffect(() => {
@@ -125,15 +148,15 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
 
       if (initialData) {
         await updateEvent({ ...initialData, ...eventData });
-        toast({ title: "Event Updated", description: `Event "${data.name}" has been updated.` });
+        toast({ title: eventUpdatedText, description: `"${data.name}" ${hasBeenUpdatedText}` });
         if (onSubmitSuccess) onSubmitSuccess();
       } else {
         const newEventId = await addEvent(eventData);
-        toast({ title: "Event Created", description: `Event "${data.name}" has been created.` });
+        toast({ title: eventCreatedText, description: `"${data.name}" ${hasBeenCreatedText}` });
         if (onSubmitSuccess) onSubmitSuccess(newEventId);
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to save event." });
+      toast({ variant: "destructive", title: errorText, description: failedToSaveText });
       console.error("Error saving event:", error);
     }
   }
@@ -142,7 +165,7 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>{initialData ? "Edit Event" : "Create New Event"}</DialogTitle>
+          <DialogTitle>{initialData ? editEventText : createNewEventText}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
@@ -151,8 +174,8 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Event Name</FormLabel>
-                  <FormControl><Input placeholder="e.g., Annual Tech Conference" {...field} /></FormControl>
+                  <FormLabel>{eventNameText}</FormLabel>
+                  <FormControl><Input placeholder={eventNamePlaceholderText} {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -163,11 +186,11 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
               name="clientId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Client</FormLabel>
+                  <FormLabel>{clientText}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a client for this event" />
+                        <SelectValue placeholder={selectClientText} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -186,8 +209,8 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
-                  <FormControl><Input placeholder="e.g., Grand Hyatt Ballroom" {...field} /></FormControl>
+                  <FormLabel>{locationText}</FormLabel>
+                  <FormControl><Input placeholder={locationPlaceholderText} {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -198,7 +221,7 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
               name="agencyId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Agency</FormLabel>
+                  <FormLabel>{agencyText}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || "none"}>
                     <FormControl>
                       <SelectTrigger>
@@ -224,11 +247,11 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
               name="assignedTo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Assigned To</FormLabel>
+                  <FormLabel>{assignedToText}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a technician/person for this event" />
+                        <SelectValue placeholder={selectTechnicianText} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -248,10 +271,10 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
                     name="startDate"
                     render={({ field }) => (
                     <FormItem className="flex flex-col">
-                        <FormLabel>Start Date</FormLabel>
+                        <FormLabel>{startDateText}</FormLabel>
                         <Popover><PopoverTrigger asChild><FormControl>
                             <Button variant={"outline"} className={cn("pl-3 text-left font-normal w-full",!field.value && "text-muted-foreground")}>
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                {field.value ? format(field.value, "PPP") : <span>{pickDateText}</span>}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                         </FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
@@ -266,10 +289,10 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
                     name="endDate"
                     render={({ field }) => (
                     <FormItem className="flex flex-col">
-                        <FormLabel>End Date</FormLabel>
+                        <FormLabel>{endDateText}</FormLabel>
                         <Popover><PopoverTrigger asChild><FormControl>
                             <Button variant={"outline"} className={cn("pl-3 text-left font-normal w-full",!field.value && "text-muted-foreground")}>
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                {field.value ? format(field.value, "PPP") : <span>{pickDateText}</span>}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                         </FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
@@ -282,8 +305,8 @@ export function EventFormDialog({ isOpen, onOpenChange, initialData, onSubmitSuc
             </div>
             
             <DialogFooter className="pt-4">
-                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                <Button type="submit">{initialData ? "Save Changes" : "Create Event"}</Button>
+                <DialogClose asChild><Button type="button" variant="outline">{cancelText}</Button></DialogClose>
+                <Button type="submit">{initialData ? saveChangesText : createEventText}</Button>
             </DialogFooter>
           </form>
         </Form>

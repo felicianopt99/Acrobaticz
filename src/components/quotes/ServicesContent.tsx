@@ -48,6 +48,20 @@ export function ServicesContent() {
   const { translated: toastSuccessTitleText } = useTranslate('Success');
   const { translated: toastPleasefillinallDescText } = useTranslate('Please fill in all required fields');
   const { translated: toastErrorTitleText } = useTranslate('Error');
+  const { translated: nameRequiredLabel } = useTranslate('Name *');
+  const { translated: unitPriceLabel } = useTranslate('Unit Price *');
+  const { translated: perHourLabel } = useTranslate('per Hour');
+  const { translated: perDayLabel } = useTranslate('per Day');
+  const { translated: perServiceLabel } = useTranslate('per Service');
+  const { translated: perEventLabel } = useTranslate('per Event');
+  const { translated: serviceNamePh } = useTranslate('Service name');
+  const { translated: priceLabel } = useTranslate('Price');
+  const { translated: statusLabel } = useTranslate('Status');
+  const { translated: noServicesMatchText } = useTranslate('No services match your search.');
+  const { translated: getStartedServiceText } = useTranslate('Get started by creating your first service.');
+  const { translated: deleteServiceConfirmText } = useTranslate('Are you sure you want to delete this service? This action cannot be undone.');
+  const { translated: categoryLabel } = useTranslate('Category');
+  const { translated: descriptionLabel } = useTranslate('Description');
 
   // Delete modal state
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -254,9 +268,9 @@ export function ServicesContent() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Services</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{uiServicesText}</h1>
               <p className="text-muted-foreground mt-2">
-                Manage services that can be added to quotes
+                {uiManageservicesthatcaText}
               </p>
             </div>
             <Button onClick={() => setIsCreating(!isCreating)}>
@@ -274,7 +288,7 @@ export function ServicesContent() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium">Name *</label>
+                      <label className="text-sm font-medium">{nameRequiredLabel}</label>
                       <Input
                         value={editService.name}
                         onChange={e => setEditService({ ...editService, name: e.target.value })}
@@ -282,7 +296,7 @@ export function ServicesContent() {
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">{uiCategoryText}</label>
+                      <label className="text-sm font-medium">{categoryLabel}</label>
                       <Input
                         value={editService.category || ''}
                         onChange={e => setEditService({ ...editService, category: e.target.value })}
@@ -290,7 +304,7 @@ export function ServicesContent() {
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Unit Price *</label>
+                      <label className="text-sm font-medium">{unitPriceLabel}</label>
                       <Input
                         type="number"
                         step="0.01"
@@ -306,15 +320,15 @@ export function ServicesContent() {
                         onChange={e => setEditService({ ...editService, unit: e.target.value })}
                         className="w-full p-2 border border-input rounded-md bg-background"
                       >
-                        <option value="hour">per Hour</option>
-                        <option value="day">per Day</option>
-                        <option value="service">per Service</option>
-                        <option value="event">per Event</option>
+                        <option value="hour">{perHourLabel}</option>
+                        <option value="day">{perDayLabel}</option>
+                        <option value="service">{perServiceLabel}</option>
+                        <option value="event">{perEventLabel}</option>
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">{uiDescriptionText}</label>
+                    <label className="text-sm font-medium">{descriptionLabel}</label>
                     <textarea
                       value={editService.description || ''}
                       onChange={e => setEditService({ ...editService, description: e.target.value })}
@@ -352,51 +366,51 @@ export function ServicesContent() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium">Name *</label>
+                    <label className="text-sm font-medium">{nameRequiredLabel}</label>
                     <Input
                       value={newService.name}
                       onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                      placeholder="Service name"
+                      placeholder={serviceNamePh}
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Category</label>
+                    <label className="text-sm font-medium">{categoryLabel}</label>
                     <Input
                       value={newService.category}
                       onChange={(e) => setNewService({ ...newService, category: e.target.value })}
-                      placeholder="e.g., Setup, Technical Support"
+                      placeholder={attregSetupTechnicalSuppText}
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Unit Price *</label>
+                    <label className="text-sm font-medium">{unitPriceLabel}</label>
                     <Input
                       type="number"
                       step="0.01"
                       value={newService.unitPrice}
                       onChange={(e) => setNewService({ ...newService, unitPrice: Number(e.target.value) })}
-                      placeholder="0.00"
+                      placeholder={attr000Text}
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Unit</label>
+                    <label className="text-sm font-medium">{uiUnitText}</label>
                     <select
                       value={newService.unit}
                       onChange={(e) => setNewService({ ...newService, unit: e.target.value })}
                       className="w-full p-2 border border-input rounded-md bg-background"
                     >
-                      <option value="hour">per Hour</option>
-                      <option value="day">per Day</option>
-                      <option value="service">per Service</option>
-                      <option value="event">per Event</option>
+                      <option value="hour">{perHourLabel}</option>
+                      <option value="day">{perDayLabel}</option>
+                      <option value="service">{perServiceLabel}</option>
+                      <option value="event">{perEventLabel}</option>
                     </select>
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Description</label>
+                  <label className="text-sm font-medium">{descriptionLabel}</label>
                   <textarea
                     value={newService.description}
                     onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-                    placeholder="Service description"
+                    placeholder={attrServicedescriptionText}
                     className="w-full p-2 border border-input rounded-md bg-background min-h-[100px]"
                   />
                 </div>
@@ -436,7 +450,7 @@ export function ServicesContent() {
               <DialogHeader>
                 <DialogTitle>{uiDeleteServiceText}</DialogTitle>
               </DialogHeader>
-              <p>Are you sure you want to delete this service? This action cannot be undone.</p>
+              <p>{deleteServiceConfirmText}</p>
               <div className="flex space-x-2 mt-4">
                 <Button variant="destructive" onClick={handleDeleteService}>{uiDeleteText}</Button>
                 <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>{uiCancelText}</Button>
@@ -460,13 +474,13 @@ export function ServicesContent() {
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Price:</span>
+                      <span className="text-muted-foreground">{priceLabel}:</span>
                       <span className="font-semibold">
                         ${service.unitPrice.toFixed(2)} {service.unit}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Status:</span>
+                      <span className="text-muted-foreground">{statusLabel}:</span>
                       <Badge variant={service.isActive ? "default" : "secondary"}>
                         {service.isActive ? textActiveText : textInactiveText}
                       </Badge>
@@ -483,7 +497,7 @@ export function ServicesContent() {
                 <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">{uiNoServicesFoundText}</h3>
                 <p className="text-muted-foreground mb-4">
-                  {searchTerm ? 'No services match your search.' : 'Get started by creating your first service.'}
+                  {searchTerm ? noServicesMatchText : getStartedServiceText}
                 </p>
                 {!searchTerm && (
                   <Button onClick={() => setIsCreating(true)}>

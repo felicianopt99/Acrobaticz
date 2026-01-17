@@ -4,6 +4,7 @@
 // aspect ratio preservation (no distortion), partner information section
 
 import jsPDF from 'jspdf';
+import { getNextAuthURL } from '@/lib/environment-urls';
 
 export interface CatalogueItem {
   id?: string;
@@ -166,7 +167,7 @@ export class ProfessionalCataloguePDFGenerator {
       let resolved = url;
       // Resolve relative URLs
       if (resolved.startsWith('/')) {
-        const origin = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        const origin = getNextAuthURL();
         resolved = origin.replace(/\/$/, '') + resolved;
       }
 

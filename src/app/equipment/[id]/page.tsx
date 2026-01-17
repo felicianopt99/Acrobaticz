@@ -17,6 +17,20 @@ export default function EquipmentDetailPage() {
   const { translated: uiDashboardText } = useTranslate('Dashboard');
   const { translated: uiEditText } = useTranslate('Edit');
   const { translated: uiBackText } = useTranslate('Back');
+  const { translated: uiLoadingText } = useTranslate('Loading...');
+  const { translated: uiEquipmentNotFoundText } = useTranslate('Equipment not found');
+  const { translated: uiNoDescriptionText } = useTranslate('No description');
+  const { translated: uiEquipmentTypeText } = useTranslate('Equipment Type');
+  const { translated: uiStatusText } = useTranslate('Status');
+  const { translated: uiTotalQuantityText } = useTranslate('Total Quantity');
+  const { translated: uiLocationText } = useTranslate('Location');
+  const { translated: uiDailyRateText } = useTranslate('Daily Rate');
+  const { translated: uiImageText } = useTranslate('Image');
+  const { translated: uiHasImageText } = useTranslate('Has image');
+  const { translated: uiNoImageText } = useTranslate('No image');
+  const { translated: uiConsumableText } = useTranslate('Consumable');
+  const { translated: uiEquipmentTypeValueText } = useTranslate('Equipment');
+  const { translated: uiNAText } = useTranslate('N/A');
 
   const params = useParams();
   const router = useRouter();
@@ -41,7 +55,7 @@ export default function EquipmentDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-muted-foreground">Loading...</div>
+        <div className="text-lg text-muted-foreground">{uiLoadingText}</div>
       </div>
     );
   }
@@ -71,7 +85,7 @@ export default function EquipmentDetailPage() {
           </Breadcrumb>
 
           <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <p className="text-lg text-muted-foreground mb-4">Equipment not found</p>
+            <p className="text-lg text-muted-foreground mb-4">{uiEquipmentNotFoundText}</p>
             <Button asChild variant="outline">
               <Link href="/inventory">
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -111,7 +125,7 @@ export default function EquipmentDetailPage() {
           <div className="flex justify-between items-start mb-6">
             <div>
               <h1 className="text-3xl font-bold mb-2">{equipmentItem.name}</h1>
-              <p className="text-muted-foreground">{equipmentItem.description || 'No description'}</p>
+              <p className="text-muted-foreground">{equipmentItem.description || uiNoDescriptionText}</p>
             </div>
             <Button asChild>
               <Link href={`/equipment/${itemId}/edit`}>
@@ -123,28 +137,28 @@ export default function EquipmentDetailPage() {
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="border border-border rounded p-4">
-              <p className="text-sm text-muted-foreground mb-1">Equipment Type</p>
-              <p className="font-semibold">{equipmentItem.type === 'consumable' ? 'Consumable' : 'Equipment'}</p>
+              <p className="text-sm text-muted-foreground mb-1">{uiEquipmentTypeText}</p>
+              <p className="font-semibold">{equipmentItem.type === 'consumable' ? uiConsumableText : uiEquipmentTypeValueText}</p>
             </div>
             <div className="border border-border rounded p-4">
-              <p className="text-sm text-muted-foreground mb-1">Status</p>
+              <p className="text-sm text-muted-foreground mb-1">{uiStatusText}</p>
               <p className="font-semibold capitalize">{equipmentItem.status}</p>
             </div>
             <div className="border border-border rounded p-4">
-              <p className="text-sm text-muted-foreground mb-1">Total Quantity</p>
+              <p className="text-sm text-muted-foreground mb-1">{uiTotalQuantityText}</p>
               <p className="font-semibold">{equipmentItem.quantity || 0}</p>
             </div>
             <div className="border border-border rounded p-4">
-              <p className="text-sm text-muted-foreground mb-1">Location</p>
-              <p className="font-semibold">{equipmentItem.location || 'N/A'}</p>
+              <p className="text-sm text-muted-foreground mb-1">{uiLocationText}</p>
+              <p className="font-semibold">{equipmentItem.location || uiNAText}</p>
             </div>
             <div className="border border-border rounded p-4">
-              <p className="text-sm text-muted-foreground mb-1">Daily Rate</p>
+              <p className="text-sm text-muted-foreground mb-1">{uiDailyRateText}</p>
               <p className="font-semibold">${equipmentItem.dailyRate?.toFixed(2) || '0.00'}</p>
             </div>
             <div className="border border-border rounded p-4">
-              <p className="text-sm text-muted-foreground mb-1">Image</p>
-              <p className="font-semibold text-sm">{equipmentItem.imageUrl ? 'Has image' : 'No image'}</p>
+              <p className="text-sm text-muted-foreground mb-1">{uiImageText}</p>
+              <p className="font-semibold text-sm">{equipmentItem.imageUrl ? uiHasImageText : uiNoImageText}</p>
             </div>
           </div>
         </div>

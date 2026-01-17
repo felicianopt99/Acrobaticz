@@ -16,6 +16,7 @@ export default function NewEquipmentPage() {
   const { translated: uiInventoryText } = useTranslate('Inventory');
   const { translated: uiDashboardText } = useTranslate('Dashboard');
   const { translated: uiFillFormText } = useTranslate('Fill in the details below to add a new piece of equipment to your inventory');
+  const { translated: uiDuplicatingText } = useTranslate('Duplicating existing item');
 
   const searchParams = useSearchParams();
   const duplicateId = searchParams.get('duplicate');
@@ -90,7 +91,7 @@ export default function NewEquipmentPage() {
                 </h1>
                 {duplicateId && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 mt-1">
-                    Duplicating existing item
+                    {uiDuplicatingText}
                   </span>
                 )}
               </div>

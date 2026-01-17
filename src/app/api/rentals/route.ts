@@ -216,8 +216,8 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
+    const body = await request.json()
+    const { id } = body
     
     if (!id) {
       return NextResponse.json({ error: 'Rental ID is required' }, { status: 400 })

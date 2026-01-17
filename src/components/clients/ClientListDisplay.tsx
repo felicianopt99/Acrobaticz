@@ -173,13 +173,13 @@ export function ClientListDisplay() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={(e) => {e.stopPropagation(); router.push(`/clients/${client.id}`)}}>
-                          <Eye className="mr-2 h-4 w-4" /> View Details
+                          <Eye className="mr-2 h-4 w-4" /> {viewDetails}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => {e.stopPropagation(); router.push(`/clients/${client.id}/edit`)}}>
-                          <Edit className="mr-2 h-4 w-4" /> Edit
+                        <DropdownMenuItem onClick={(e) => {e.stopPropagation(); router.push(`/clients/${client.id}/edit`)}}
+                          <Edit className="mr-2 h-4 w-4" /> {editLabel}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => {e.stopPropagation(); openDeleteDialog(client)}} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete
+                          <Trash2 className="mr-2 h-4 w-4" /> {deleteLabel}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

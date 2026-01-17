@@ -30,6 +30,19 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
   const { translated: lastMaintenanceText } = useTranslate('Last Maintenance');
   const { translated: avgDaysText } = useTranslate('Avg Days to Complete');
   const { translated: noLogsText } = useTranslate('No maintenance logs yet');
+  const { translated: statusText } = useTranslate('Status');
+  const { translated: locationText } = useTranslate('Location');
+  const { translated: quantityText } = useTranslate('Quantity');
+  const { translated: dailyRateText } = useTranslate('Daily Rate');
+  const { translated: ytdSpendingText } = useTranslate('YTD maintenance spending');
+  const { translated: workOrdersText } = useTranslate('Work orders recorded');
+  const { translated: daysAgoText } = useTranslate('days ago');
+  const { translated: noHistoryText } = useTranslate('No history');
+  const { translated: avgCompletionText } = useTranslate('Avg completion time');
+  const { translated: completeRecordText } = useTranslate('Complete record of all maintenance and repair work');
+  const { translated: noCostText } = useTranslate('No cost');
+  const { translated: neverText } = useTranslate('Never');
+  const { translated: equipmentNotFoundText } = useTranslate('Equipment not found');
 
   const equipmentItem = equipment.find(e => e.id === equipmentId);
 
@@ -89,7 +102,7 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
         </Button>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Equipment not found</p>
+            <p className="text-center text-muted-foreground">{equipmentNotFoundText}</p>
           </CardContent>
         </Card>
       </div>
@@ -125,7 +138,7 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Status</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{statusText}</CardTitle>
           </CardHeader>
           <CardContent>
             <Badge variant={getStatusBadgeVariant(equipmentItem.status)}>
@@ -136,7 +149,7 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Location</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{locationText}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="font-semibold">{equipmentItem.location}</p>
@@ -145,7 +158,7 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Quantity</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{quantityText}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="font-semibold">{equipmentItem.quantity}</p>
@@ -154,7 +167,7 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Daily Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{dailyRateText}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="font-semibold">${equipmentItem.dailyRate.toFixed(2)}</p>
@@ -174,7 +187,7 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
           <CardContent>
             <p className="text-2xl font-bold">${metrics.totalCost.toFixed(2)}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              YTD maintenance spending
+              {ytdSpendingText}
             </p>
           </CardContent>
         </Card>
@@ -189,7 +202,7 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
           <CardContent>
             <p className="text-2xl font-bold">{metrics.maintenanceCount}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Work orders recorded
+              {workOrdersText}
             </p>
           </CardContent>
         </Card>
@@ -205,12 +218,12 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
             <p className="text-lg font-bold">
               {metrics.lastMaintenanceDate 
                 ? format(new Date(metrics.lastMaintenanceDate), 'MMM d')
-                : 'Never'}
+                : neverText}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {metrics.lastMaintenanceDate 
-                ? `${differenceInDays(new Date(), new Date(metrics.lastMaintenanceDate))} days ago`
-                : 'No history'}
+                ? `${differenceInDays(new Date(), new Date(metrics.lastMaintenanceDate))} ${daysAgoText}`
+                : noHistoryText}
             </p>
           </CardContent>
         </Card>
@@ -225,7 +238,7 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
           <CardContent>
             <p className="text-2xl font-bold">{metrics.avgDaysToComplete}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Avg completion time
+              {avgCompletionText}
             </p>
           </CardContent>
         </Card>
@@ -242,7 +255,7 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
             <Badge variant="outline">{equipmentItem.maintenanceHistory?.length || 0}</Badge>
           </div>
           <CardDescription>
-            Complete record of all maintenance and repair work
+            {completeRecordText}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -281,7 +294,7 @@ export function EquipmentDetailView({ equipmentId, onBack }: EquipmentDetailView
                           {log.cost.toFixed(2)}
                         </div>
                       ) : (
-                        <span className="text-xs text-muted-foreground">No cost</span>
+                        <span className="text-xs text-muted-foreground">{noCostText}</span>
                       )}
                     </div>
                   </div>

@@ -72,7 +72,8 @@ DB_HEALTH_TIMEOUT=10
 MINIO_MAX_ATTEMPTS=20
 MINIO_ATTEMPT_DELAY=2
 MINIO_HEALTH_TIMEOUT=5
-MIGRATION_TIMEOUT=180
+MIGRATION_TIMEOUT=300
+MIGRATION_MAX_RETRIES=3
 
 # ============================================================
 # Step 1: Verify Required Environment Variables
@@ -97,6 +98,28 @@ fi
 log_success "Environment variables verified"
 log_info "NODE_ENV: $NODE_ENV"
 log_info "PORT: $PORT"
+
+# ============================================================
+# Step 1.5: Verify User Permissions
+# ============================================================
+log_section "STEP 1.5: Verifying Runtime User Permissions"
+
+if [ ! -w /app/.cache ] 2>/dev/null; then
+    log_error "Cannot write to /app/.cache - permission denied"
+    exit 1
+fi
+
+if [ ! -w /app/tmp ] 2>/dev/null; then
+    log_error "Cannot write to /app/tmp - permission denied"
+    exit 1
+fi
+
+if [ ! -r /app/node_modules ] 2>/dev/null; then
+    log_error "Cannot read /app/node_modules - permission denied"
+    exit 1
+fi
+
+log_success "User permissions verified (nextjs user has required access)"
 
 # ============================================================
 # Step 2: Validate Storage Path Permissions
@@ -197,16 +220,28 @@ fi
 if [ "$MINIO_READY" = true ]; then
     log_section "STEP 6: Setting Up MinIO Bucket"
     S3_BUCKET="${S3_BUCKET:-acrobaticz}"
+    S3_ACCESS_KEY="${S3_ACCESS_KEY:-minioadmin}"
+    S3_SECRET_KEY="${S3_SECRET_KEY:-minioadmin_change_me_123}"
+    S3_REGION="${S3_REGION:-us-east-1}"
     
+    # Try AWS CLI first, fall back to curl if not available
     if command -v aws > /dev/null 2>&1; then
         aws s3api create-bucket \
             --bucket "$S3_BUCKET" \
             --endpoint-url "http://minio:9000" \
-            --access-key-id "${S3_ACCESS_KEY:-minioadmin}" \
-            --secret-access-key "${S3_SECRET_KEY:-minioadmin_change_me_123}" \
-            --region "${S3_REGION:-us-east-1}" \
-            2>/dev/null || log_info "Bucket already exists"
-        log_success "Bucket configured: $S3_BUCKET"
+            --access-key-id "$S3_ACCESS_KEY" \
+            --secret-access-key "$S3_SECRET_KEY" \
+            --region "$S3_REGION" \
+            2>/dev/null || log_info "Bucket already exists or AWS not configured"
+        log_success "Bucket configuration attempted: $S3_BUCKET"
+    else
+        # Fallback: Use curl to create bucket via REST API
+        log_info "AWS CLI not found, attempting bucket creation via curl..."
+        curl -s -X PUT \
+            -H "Authorization: AWS $S3_ACCESS_KEY:$S3_SECRET_KEY" \
+            "http://minio:9000/$S3_BUCKET" 2>/dev/null && \
+            log_success "Bucket created: $S3_BUCKET" || \
+            log_info "Bucket creation skipped (may already exist)"
     fi
 fi
 
@@ -215,17 +250,35 @@ fi
 # ============================================================
 log_section "STEP 7: Applying Database Schema (Migrations)"
 
-if ! timeout $MIGRATION_TIMEOUT npx prisma migrate deploy --skip-generate 2>&1 | tee -a "$LOG_FILE"; then
-    migration_output=$(tail -20 "$LOG_FILE")
+MIGRATION_ATTEMPT=1
+MIGRATION_SUCCESS=false
+
+while [ $MIGRATION_ATTEMPT -le $MIGRATION_MAX_RETRIES ]; do
+    if timeout $MIGRATION_TIMEOUT npx prisma migrate deploy --skip-generate 2>&1 | tee -a "$LOG_FILE"; then
+        MIGRATION_SUCCESS=true
+        log_success "Database migrations completed (attempt $MIGRATION_ATTEMPT/$MIGRATION_MAX_RETRIES)"
+        break
+    fi
+    
+    migration_output=$(tail -30 "$LOG_FILE")
+    
     if echo "$migration_output" | grep -q "No migrations to apply"; then
+        MIGRATION_SUCCESS=true
         log_success "Database is up to date"
+        break
+    fi
+    
+    if [ $MIGRATION_ATTEMPT -lt $MIGRATION_MAX_RETRIES ]; then
+        log_warning "Migration failed (attempt $MIGRATION_ATTEMPT/$MIGRATION_MAX_RETRIES), retrying..."
+        MIGRATION_ATTEMPT=$((MIGRATION_ATTEMPT + 1))
+        sleep 5
     else
-        log_error "Migration failed"
+        log_error "Migration failed after $MIGRATION_MAX_RETRIES attempts"
+        log_error "Last error output:"
+        echo "$migration_output" | tail -10
         exit 1
     fi
-else
-    log_success "Database migrations completed"
-fi
+done
 
 # ============================================================
 # Step 8: Verify Database Schema
@@ -245,11 +298,23 @@ fi
 # ============================================================
 log_section "STEP 9: Preparing Application"
 
-npx prisma generate > /dev/null 2>&1 && log_success "Prisma client generated"
-
+# Verify node_modules exists and is readable
 if [ ! -d "node_modules" ]; then
-    npm ci --omit=dev --no-audit --no-fund --loglevel=error
-    log_success "Dependencies installed"
+    log_error "node_modules not found - cannot proceed"
+    exit 1
+fi
+
+# Generate Prisma client with error handling
+if npx prisma generate > /dev/null 2>&1; then
+    log_success "Prisma client generated successfully"
+    # Verify generation was successful
+    if [ ! -d "node_modules/.prisma/client" ]; then
+        log_error "Prisma client generation failed - .prisma/client not found"
+        exit 1
+    fi
+else
+    log_error "Failed to generate Prisma client"
+    exit 1
 fi
 
 # ============================================================
@@ -299,16 +364,25 @@ echo ""
 # ============================================================
 log_section "STARTING APPLICATION"
 
-if [ -f "server.js" ]; then
-    log_info "Starting with custom server: server.js"
-    exec node server.js
-elif [ -f ".next/standalone/server.js" ]; then
-    log_info "Starting with Next.js standalone server"
-    exec node .next/standalone/server.js
-else
-    log_info "Starting with npm start"
-    exec npm start
+# Verify critical files exist before starting
+if [ ! -f ".next/standalone/server.js" ]; then
+    log_error "Critical error: .next/standalone/server.js not found"
+    log_error "This indicates a build failure. Next.js output: 'standalone' missing"
+    exit 1
 fi
 
-log_error "Failed to start application"
-exit 1
+if [ ! -d "node_modules" ]; then
+    log_error "Critical error: node_modules not found"
+    exit 1
+fi
+
+log_info "All pre-startup checks passed ✓"
+log_info "Starting with Next.js standalone server..."
+
+# Start application with explicit error handling
+if [ -f ".next/standalone/server.js" ]; then
+    exec node .next/standalone/server.js
+else
+    log_error "Failed to start application - server.js not found"
+    exit 1
+fi

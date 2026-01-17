@@ -29,6 +29,18 @@ export function QuotePDFPreview({ quote, isOpen, onClose }: QuotePDFPreviewProps
   const { translated: toastPDFDownloadedTitleText } = useTranslate('PDF Downloaded');
   const { translated: toastTherewasanerrorgenerDescText } = useTranslate('There was an error generating the PDF preview.');
   const { translated: toastPDFGenerationFailedTitleText } = useTranslate('PDF Generation Failed');
+  const { translated: pdfPreviewTitleText } = useTranslate('PDF Preview');
+  const { translated: previewAndDownloadText } = useTranslate('Preview and download the professional quote PDF');
+  const { translated: englishText } = useTranslate('English');
+  const { translated: portugueseText } = useTranslate('Português');
+  const { translated: downloadPdfText } = useTranslate('Download PDF');
+  const { translated: generatingPdfText } = useTranslate('Generating PDF...');
+  const { translated: pdfNotAvailableText } = useTranslate('PDF preview not available');
+  const { translated: retryPreviewText } = useTranslate('Retry Preview');
+  const { translated: quoteText } = useTranslate('Quote');
+  const { translated: statusText } = useTranslate('Status');
+  const { translated: totalText } = useTranslate('Total');
+  const { translated: closeText } = useTranslate('Close');
 
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -122,10 +134,10 @@ export function QuotePDFPreview({ quote, isOpen, onClose }: QuotePDFPreviewProps
             <div>
               <DialogTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                PDF Preview - {quote.quoteNumber}
+                {pdfPreviewTitleText} - {quote.quoteNumber}
               </DialogTitle>
               <DialogDescription>
-                Preview and download the professional quote PDF
+                {previewAndDownloadText}
               </DialogDescription>
             </div>
             <div className="flex gap-2 items-center">
@@ -136,8 +148,8 @@ export function QuotePDFPreview({ quote, isOpen, onClose }: QuotePDFPreviewProps
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="pt">Português</SelectItem>
+                    <SelectItem value="en">{englishText}</SelectItem>
+                    <SelectItem value="pt">{portugueseText}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -153,7 +165,7 @@ export function QuotePDFPreview({ quote, isOpen, onClose }: QuotePDFPreviewProps
                 ) : (
                   <Download className="h-4 w-4" />
                 )}
-                Download PDF
+                {downloadPdfText}
               </Button>
             </div>
           </div>
@@ -165,14 +177,14 @@ export function QuotePDFPreview({ quote, isOpen, onClose }: QuotePDFPreviewProps
           <div className="p-4 h-full flex flex-col">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              PDF Preview
+              {pdfPreviewTitleText}
             </h3>
             
             <div className="flex-1 border rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center min-h-[70vh]">
               {isGenerating ? (
                 <div className="flex flex-col items-center gap-3">
                   <div className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Generating PDF...</p>
+                  <p className="text-sm text-muted-foreground">{generatingPdfText}</p>
                 </div>
               ) : pdfUrl ? (
                 <iframe
@@ -183,14 +195,14 @@ export function QuotePDFPreview({ quote, isOpen, onClose }: QuotePDFPreviewProps
               ) : (
                 <div className="text-center text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>PDF preview not available</p>
+                  <p>{pdfNotAvailableText}</p>
                   <Button 
                     variant="outline" 
                     size="sm" 
                     className="mt-2"
                     onClick={generatePDFBlob}
                   >
-                    Retry Preview
+                    {retryPreviewText}
                   </Button>
                 </div>
               )}
@@ -202,11 +214,11 @@ export function QuotePDFPreview({ quote, isOpen, onClose }: QuotePDFPreviewProps
         <div className="border-t pt-4">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              Quote: {quote.name} • Status: {quote.status} • Total: €{quote.totalAmount?.toFixed(2)}
+              {quoteText}: {quote.name} • {statusText}: {quote.status} • {totalText}: €{quote.totalAmount?.toFixed(2)}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleClose}>
-                Close
+                {closeText}
               </Button>
               <Button 
                 onClick={downloadPDF}
@@ -218,7 +230,7 @@ export function QuotePDFPreview({ quote, isOpen, onClose }: QuotePDFPreviewProps
                 ) : (
                   <Download className="h-4 w-4" />
                 )}
-                Download PDF
+                {downloadPdfText}
               </Button>
             </div>
           </div>

@@ -124,8 +124,8 @@ export async function DELETE(request: NextRequest) {
   // Categories are part of equipment management
 
   try {
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
+    const body = await request.json()
+    const { id } = body
     
     if (!id) {
       return NextResponse.json({ error: 'Category ID is required' }, { status: 400 })

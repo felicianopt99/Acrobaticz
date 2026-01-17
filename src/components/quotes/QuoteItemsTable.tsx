@@ -4,6 +4,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { X, TrendingUp } from "lucide-react";
 import type { FieldArrayWithId } from "react-hook-form";
+import { useTranslate } from '@/contexts/TranslationContext';
 
 interface QuoteItemsTableProps {
   fields: FieldArrayWithId<any, "items", "id">[];
@@ -22,6 +23,23 @@ export function QuoteItemsTable({
   setFieldValue,
   isDesktop,
 }: QuoteItemsTableProps) {
+  // Translation hooks
+  const { translated: itemText } = useTranslate('Item');
+  const { translated: typeText } = useTranslate('Type');
+  const { translated: qtyText } = useTranslate('Qty');
+  const { translated: rateText } = useTranslate('Rate');
+  const { translated: daysText } = useTranslate('Days');
+  const { translated: totalText } = useTranslate('Total');
+  const { translated: actionText } = useTranslate('Action');
+  const { translated: unnamedItemText } = useTranslate('Unnamed Item');
+  const { translated: partnerText } = useTranslate('Partner');
+  const { translated: profitText } = useTranslate('Profit');
+  const { translated: perDayText } = useTranslate('/day');
+  const { translated: viaText } = useTranslate('via');
+  const { translated: equipmentText } = useTranslate('Equipment');
+  const { translated: serviceText } = useTranslate('Service');
+  const { translated: feeText } = useTranslate('Fee');
+
   if (!isDesktop) {
     // Mobile card view - handled by original component
     return null;
@@ -32,15 +50,15 @@ export function QuoteItemsTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border/60 bg-muted/30">
-            <th className="text-left py-3 px-4 font-semibold text-card-foreground">Item</th>
-            <th className="text-left py-3 px-4 font-semibold text-card-foreground">Type</th>
-            <th className="text-right py-3 px-4 font-semibold text-card-foreground w-20">Qty</th>
-            <th className="text-right py-3 px-4 font-semibold text-card-foreground w-24">Rate</th>
+            <th className="text-left py-3 px-4 font-semibold text-card-foreground">{itemText}</th>
+            <th className="text-left py-3 px-4 font-semibold text-card-foreground">{typeText}</th>
+            <th className="text-right py-3 px-4 font-semibold text-card-foreground w-20">{qtyText}</th>
+            <th className="text-right py-3 px-4 font-semibold text-card-foreground w-24">{rateText}</th>
             {days > 1 && (
-              <th className="text-right py-3 px-4 font-semibold text-card-foreground w-16">Days</th>
+              <th className="text-right py-3 px-4 font-semibold text-card-foreground w-16">{daysText}</th>
             )}
-            <th className="text-right py-3 px-4 font-semibold text-card-foreground w-28">Total</th>
-            <th className="text-right py-3 px-4 font-semibold text-card-foreground w-12">Action</th>
+            <th className="text-right py-3 px-4 font-semibold text-card-foreground w-28">{totalText}</th>
+            <th className="text-right py-3 px-4 font-semibold text-card-foreground w-12">{actionText}</th>
           </tr>
         </thead>
         <tbody>
@@ -67,18 +85,24 @@ export function QuoteItemsTable({
             };
             const typeColor = colorMap[itemType] || 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
 
-            const typeLabel = itemType === 'subrental' ? 'Partner' : itemType?.charAt(0).toUpperCase() + itemType?.slice(1);
+            const typeLabelMap: Record<string, string> = {
+              equipment: equipmentText,
+              service: serviceText,
+              fee: feeText,
+              subrental: partnerText,
+            };
+            const typeLabel = typeLabelMap[itemType] || itemType;
 
             return (
               <tr key={field.id} className="border-b border-border/40 hover:bg-muted/20 transition-colors">
                 <td className="py-3 px-4">
-                  <div className="font-medium text-card-foreground">{itemName || 'Unnamed Item'}</div>
+                  <div className="font-medium text-card-foreground">{itemName || unnamedItemText}</div>
                   {getFieldValue(`items.${index}.description`) && (
                     <div className="text-xs text-muted-foreground mt-1">{getFieldValue(`items.${index}.description`)}</div>
                   )}
                   {itemType === 'subrental' && getFieldValue(`items.${index}.partnerName`) && (
                     <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                      via {getFieldValue(`items.${index}.partnerName`)}
+                      {viaText} {getFieldValue(`items.${index}.partnerName`)}
                     </div>
                   )}
                 </td>
@@ -91,7 +115,7 @@ export function QuoteItemsTable({
                 <td className="py-3 px-4 text-right">
                   <div className="font-semibold">€{unitPrice.toFixed(2)}</div>
                   {(itemType === 'equipment' || itemType === 'service' || itemType === 'subrental') && (
-                    <div className="text-xs text-muted-foreground">{itemType === 'equipment' ? '/day' : ''}</div>
+                    <div className="text-xs text-muted-foreground">{itemType === 'equipment' ? perDayText : ''}</div>
                   )}
                 </td>
                 {days > 1 && (
@@ -102,7 +126,7 @@ export function QuoteItemsTable({
                   {itemType === 'subrental' && (
                     <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center justify-end gap-1 mt-1">
                       <TrendingUp className="h-3 w-3" />
-                      Profit
+                      {profitText}
                     </div>
                   )}
                 </td>

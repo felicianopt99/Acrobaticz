@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useTranslate } from '@/contexts/TranslationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +60,9 @@ const CATEGORIES = [
 
 export default function AdminTranslationsPage() {
   const { toast } = useToast();
+
+  // Translation helper
+  const T = ({ text }: { text: string }) => { const { translated } = useTranslate(text); return <>{translated}</>; };
   
   // Core state
   const [translations, setTranslations] = useState<Translation[]>([]);
@@ -314,16 +318,16 @@ export default function AdminTranslationsPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Languages className="h-6 w-6" />
-            Translation Manager
+            <T text="Translation Manager" />
           </h1>
-          <p className="text-muted-foreground">Manage translations for English ↔ Portuguese (PT-PT)</p>
+          <p className="text-muted-foreground"><T text="Manage translations for English ↔ Portuguese (PT-PT)" /></p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />Export
+            <Download className="h-4 w-4 mr-2" /><T text="Export" />
           </Button>
           <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />Add Translation
+            <Plus className="h-4 w-4 mr-2" /><T text="Add Translation" />
           </Button>
         </div>
       </div>
@@ -338,7 +342,7 @@ export default function AdminTranslationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-muted-foreground">Total Translations</p>
+                <p className="text-sm text-muted-foreground"><T text="Total Translations" /></p>
               </div>
             </div>
           </CardContent>
@@ -351,7 +355,7 @@ export default function AdminTranslationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.averageQuality}%</p>
-                <p className="text-sm text-muted-foreground">Avg Quality</p>
+                <p className="text-sm text-muted-foreground"><T text="Avg Quality" /></p>
               </div>
             </div>
           </CardContent>
@@ -364,7 +368,7 @@ export default function AdminTranslationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.needsReview}</p>
-                <p className="text-sm text-muted-foreground">Needs Review</p>
+                <p className="text-sm text-muted-foreground"><T text="Needs Review" /></p>
               </div>
             </div>
           </CardContent>
@@ -377,7 +381,7 @@ export default function AdminTranslationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.totalUsage.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">Total Usage</p>
+                <p className="text-sm text-muted-foreground"><T text="Total Usage" /></p>
               </div>
             </div>
           </CardContent>
@@ -387,9 +391,9 @@ export default function AdminTranslationsPage() {
       {/* Main Content */}
       <Tabs defaultValue="translations" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="translations">Translations</TabsTrigger>
-          <TabsTrigger value="rules">Override Rules</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="translations"><T text="Translations" /></TabsTrigger>
+          <TabsTrigger value="rules"><T text="Override Rules" /></TabsTrigger>
+          <TabsTrigger value="settings"><T text="Settings" /></TabsTrigger>
         </TabsList>
 
         {/* Translations Tab */}
@@ -447,13 +451,13 @@ export default function AdminTranslationsPage() {
                     {loading && translations.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          Loading translations...
+                          <T text="Loading translations..." />
                         </TableCell>
                       </TableRow>
                     ) : translations.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          No translations found
+                          <T text="No translations found" />
                         </TableCell>
                       </TableRow>
                     ) : (

@@ -48,6 +48,18 @@ export function FeesContent() {
   const { translated: toastFeecreatedsucceDescText } = useTranslate('Fee created successfully');
   const { translated: toastPleasefillinallDescText } = useTranslate('Please fill in all required fields');
   const { translated: toastFailedtofetchfeDescText } = useTranslate('Failed to fetch fees');
+  const { translated: nameRequiredLabel } = useTranslate('Name *');
+  const { translated: amountRequiredLabel } = useTranslate('Amount *');
+  const { translated: autoAddLabel } = useTranslate('Auto-add to all quotes (Required)');
+  const { translated: feeNamePh } = useTranslate('Fee name');
+  const { translated: amountLabel } = useTranslate('Amount');
+  const { translated: statusLabel } = useTranslate('Status');
+  const { translated: noFeesMatchText } = useTranslate('No fees match your search.');
+  const { translated: getStartedFeeText } = useTranslate('Get started by creating your first fee.');
+  const { translated: deleteFeeConfirmText } = useTranslate('Are you sure you want to delete this fee? This action cannot be undone.');
+  const { translated: fixedText } = useTranslate('Fixed');
+  const { translated: categoryLabel } = useTranslate('Category');
+  const { translated: descriptionLabel } = useTranslate('Description');
 
   const [fees, setFees] = useState<Fee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -207,9 +219,9 @@ export function FeesContent() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Fees</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{uiFeesText}</h1>
               <p className="text-muted-foreground mt-2">
-                Manage fees that can be added to quotes
+                {uiManagefeesthatcanbeaText}
               </p>
             </div>
             <Button onClick={() => setIsCreating(!isCreating)}>
@@ -237,7 +249,7 @@ export function FeesContent() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium">Name *</label>
+                    <label className="text-sm font-medium">{nameRequiredLabel}</label>
                     <Input
                       value={newFee.name}
                       onChange={(e) => setNewFee({ ...newFee, name: e.target.value })}
@@ -245,7 +257,7 @@ export function FeesContent() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">{uiCategoryText}</label>
+                    <label className="text-sm font-medium">{categoryLabel}</label>
                     <Input
                       value={newFee.category}
                       onChange={(e) => setNewFee({ ...newFee, category: e.target.value })}
@@ -253,7 +265,7 @@ export function FeesContent() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Amount *</label>
+                    <label className="text-sm font-medium">{amountRequiredLabel}</label>
                     <Input
                       type="number"
                       step="0.01"
@@ -275,7 +287,7 @@ export function FeesContent() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">{uiDescriptionText}</label>
+                  <label className="text-sm font-medium">{descriptionLabel}</label>
                   <textarea
                     value={newFee.description}
                     onChange={(e) => setNewFee({ ...newFee, description: e.target.value })}
@@ -289,7 +301,7 @@ export function FeesContent() {
                     onCheckedChange={(checked) => setNewFee({ ...newFee, isRequired: checked })}
                   />
                   <label className="text-sm font-medium">
-                    Auto-add to all quotes (Required)
+                    {autoAddLabel}
                   </label>
                 </div>
                 <div className="flex space-x-2">
@@ -332,49 +344,49 @@ export function FeesContent() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium">Name *</label>
+                  <label className="text-sm font-medium">{nameRequiredLabel}</label>
                   <Input
                     value={editFee.name}
                     onChange={e => setEditFee({ ...editFee, name: e.target.value })}
-                    placeholder="Fee name"
+                    placeholder={attrFeenameText}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Category</label>
+                  <label className="text-sm font-medium">{categoryLabel}</label>
                   <Input
                     value={editFee.category || ''}
                     onChange={e => setEditFee({ ...editFee, category: e.target.value })}
-                    placeholder="e.g., Delivery, Setup, Insurance"
+                    placeholder={attregDeliverySetupInsurText}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Amount *</label>
+                  <label className="text-sm font-medium">{amountRequiredLabel}</label>
                   <Input
                     type="number"
                     step="0.01"
                     value={editFee.amount}
                     onChange={e => setEditFee({ ...editFee, amount: Number(e.target.value) })}
-                    placeholder="0.00"
+                    placeholder={attr000Text}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Type</label>
+                  <label className="text-sm font-medium">{uiTypeText}</label>
                   <select
                     value={editFee.type}
                     onChange={e => setEditFee({ ...editFee, type: e.target.value as 'fixed' | 'percentage' })}
                     className="w-full p-2 border border-input rounded-md bg-background"
                   >
-                    <option value="fixed">Fixed Amount</option>
-                    <option value="percentage">Percentage</option>
+                    <option value="fixed">{uiFixedAmountText}</option>
+                    <option value="percentage">{uiPercentageText}</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium">Description</label>
+                <label className="text-sm font-medium">{descriptionLabel}</label>
                 <textarea
                   value={editFee.description || ''}
                   onChange={e => setEditFee({ ...editFee, description: e.target.value })}
-                  placeholder="Fee description"
+                  placeholder={attrFeedescriptionText}
                   className="w-full p-2 border border-input rounded-md bg-background min-h-[100px]"
                 />
               </div>
@@ -384,7 +396,7 @@ export function FeesContent() {
                   onCheckedChange={checked => setEditFee({ ...editFee, isRequired: checked })}
                 />
                 <label className="text-sm font-medium">
-                  Auto-add to all quotes (Required)
+                  {autoAddLabel}
                 </label>
               </div>
               <div className="flex space-x-2">

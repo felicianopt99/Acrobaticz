@@ -14,6 +14,8 @@ import { useTranslate } from '@/contexts/TranslationContext';
 export default function EditClientPage() {
   // Translation hooks
   const { translated: uiEditClientDetailsText } = useTranslate('Edit Client Details');
+  const { translated: uiLoadingClientDataText } = useTranslate('Loading client data...');
+  const { translated: uiClientNotFoundText } = useTranslate('Client not found.');
 
   const params = useParams();
   const router = useRouter();
@@ -43,7 +45,7 @@ export default function EditClientPage() {
     return (
         <div className="flex flex-col min-h-screen">
             <div className="flex-grow flex items-center justify-center p-4 md:p-6">
-                <p className="text-lg text-muted-foreground">Loading client data...</p>
+                <p className="text-lg text-muted-foreground">{uiLoadingClientDataText}</p>
             </div>
         </div>
     );
@@ -54,7 +56,7 @@ export default function EditClientPage() {
     return (
         <div className="flex flex-col min-h-screen">
             <div className="flex-grow flex items-center justify-center p-4 md:p-6">
-                <p className="text-lg text-destructive">Client not found.</p>
+                <p className="text-lg text-destructive">{uiClientNotFoundText}</p>
             </div>
         </div>
     );

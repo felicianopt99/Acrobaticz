@@ -3,19 +3,26 @@
 # Multi-service configuration with PostgreSQL, MinIO, and Next.js
 # 
 # Features:
-# - PostgreSQL 16 with health checks
+# - PostgreSQL 16 with robust health checks
 # - MinIO S3-compatible object storage (with external volume mapping)
 # - Next.js 15 standalone application
 # - Nginx reverse proxy (optional SSL/TLS)
-# - Isolated network for security
+# - Isolated network with fixed subnet for predictable DNS
+# - Complete environment variable synchronization with .env.example
 # 
 # Usage:
 #   docker-compose up -d
-#   # Access: http://localhost:3000 (app)
-#   #         http://localhost:9001 (MinIO console - optional)
+#   Access: http://localhost:3000 (app)
+#           http://localhost:9001 (MinIO console - dev only)
+#           http://localhost:5432 (PostgreSQL - dev only)
 # 
 # Configuration:
-#   Create .env file with required variables (see .env.example)
+#   1. Create .env file from .env.example
+#   2. Update DATABASE_URL, JWT_SECRET, S3 credentials
+#   3. Run: docker-compose up -d
+# 
+# Database URL Construction:
+#   postgresql://<DB_USER>:<DB_PASSWORD>@postgres:5432/<DB_NAME>?schema=public
 # ============================================================
 
 version: '3.9'
@@ -23,6 +30,8 @@ version: '3.9'
 services:
   # ============================================================
   # PostgreSQL 16 Database (Primary Datastore)
+  # Purpose: Persistent data storage for all application entities
+  # Health: Required for app startup (depends_on: service_healthy)
   # ============================================================
   postgres:
     image: postgres:16-alpine
@@ -30,19 +39,24 @@ services:
     restart: unless-stopped
     
     # Environment: Database credentials from .env
+    # Must match DATABASE_URL construction in app service
     environment:
       POSTGRES_DB: ${DB_NAME:-acrobaticz}
       POSTGRES_USER: ${DB_USER:-acrobaticz_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_strong_password_123}
-      POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c max_connections=100"
+      # PostgreSQL tuning parameters
+      POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c max_connections=100 -c log_statement=none"
     
     # Persistent storage for database files
+    # Path: ./data/postgres (created if not exists)
     volumes:
       - postgres_data:/var/lib/postgresql/data
     
-    # Robust health check with retries
+    # Robust health check with consistent retry logic
+    # Validates: PostgreSQL is accepting connections
+    # Timing: 15s startup grace → 10s intervals → 5s timeout → 5 retries max
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-acrobaticz_user} -d ${DB_NAME:-acrobaticz}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-acrobaticz_user} -d ${DB_NAME:-acrobaticz} -t 3"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -70,44 +84,47 @@ services:
 
   # ============================================================
   # MinIO S3-Compatible Object Storage
+  # Purpose: File/binary data storage with S3 API compatibility
+  # Access: S3 API (internal): http://minio:9000 (port 9000)
+  #         Web Console (dev):  http://localhost:9001 (port 9001)
   # 
-  # Supports:
-  # - Local storage (default)
-  # - External disk (via STORAGE_PATH in .env)
-  # - NAS/Network paths
-  # 
-  # Access:
-  # - S3 API: http://minio:9000
-  # - Web Console: http://localhost:9001
+  # Storage Configuration:
+  # - Local (default):     ./storage/minio
+  # - External disk:       Set STORAGE_PATH=/path/to/disk in .env
+  # - NAS/Network paths:   STORAGE_PATH=/mnt/nas/acrobaticz-storage
   # ============================================================
   minio:
     image: minio/minio:latest
     container_name: acrobaticz-minio
     restart: unless-stopped
     
-    # Root credentials for MinIO admin
+    # Root credentials for MinIO admin panel
+    # IMPORTANT: Change in .env for production!
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin_change_me_123}
     
     # Volume mapping: Local or external disk
+    # STORAGE_PATH variable allows external disk mounting
+    # Docker volume name: Must be unique per compose file
     volumes:
       # Map to external disk: set STORAGE_PATH=/path/to/external/disk in .env
       # Default: ./storage/minio (relative to docker-compose location)
       - ${STORAGE_PATH:-./storage/minio}:/minio/data
     
-    # Command to start MinIO in server mode
+    # Start MinIO in server mode with console on :9001
     command: server /minio/data --console-address :9001
     
     # Expose ports
     ports:
-      # 9000: MinIO S3 API (internal + external)
-      # 9001: MinIO Web Console (optional - commented for production)
+      # 9000: MinIO S3 API (internal + external access)
       - "9000:9000"
-      # Uncomment below for local development/management
-      # - "9001:9001"
+      # 9001: MinIO Web Console (comment out for production)
+      - "9001:9001"
     
-    # Robust health check with retries
+    # Robust health check with retry logic
+    # Validates: MinIO S3 API is responding to health probes
+    # Timing: 15s startup grace → 10s intervals → 5s timeout → 5 retries max
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -137,6 +154,9 @@ services:
 
   # ============================================================
   # Acrobaticz Application (Next.js 15 Standalone)
+  # Purpose: Main application server
+  # Dependencies: PostgreSQL (healthy) + MinIO (healthy)
+  # Health: /api/health endpoint
   # ============================================================
   app:
     build:
@@ -149,22 +169,45 @@ services:
     container_name: acrobaticz-app
     restart: unless-stopped
     
-    # Environment configuration from .env
+    # Environment configuration - SYNCHRONIZED WITH .env.example
+    # All variables loaded from .env file at startup
     environment:
-      # Next.js Configuration
+      # ============================================================
+      # Next.js Core Configuration
+      # ============================================================
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-3000}
       HOSTNAME: 0.0.0.0
       NEXT_TELEMETRY_DISABLED: 1
       
-      # Database Connection
+      # ============================================================
+      # Database Configuration (PostgreSQL)
+      # URL format: postgresql://user:password@host:port/dbname?schema=public
+      # Components from .env:
+      #   - DB_USER: Database user (default: acrobaticz_user)
+      #   - DB_PASSWORD: User password (MUST change in production)
+      #   - DB_NAME: Database name (default: acrobaticz)
+      # Service name "postgres" resolves to container IP via Docker DNS
+      # ============================================================
       DATABASE_URL: postgresql://${DB_USER:-acrobaticz_user}:${DB_PASSWORD:-change_me_strong_password_123}@postgres:5432/${DB_NAME:-acrobaticz}?schema=public
       
-      # JWT Authentication
+      # ============================================================
+      # JWT Authentication (JSON Web Tokens)
+      # JWT_SECRET: Signing key for token generation/validation
+      # Generate secure secret: openssl rand -base64 32
+      # WARNING: MUST change in production!
+      # ============================================================
       JWT_SECRET: ${JWT_SECRET:-please_change_this_secret_key_in_production_123}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
       
+      # ============================================================
       # MinIO/S3 Configuration
+      # S3_ENDPOINT: Internal DNS name (minio:9000) or external URL
+      # S3_ACCESS_KEY: MinIO root user (from MINIO_ROOT_USER)
+      # S3_SECRET_KEY: MinIO root password (from MINIO_ROOT_PASSWORD)
+      # S3_BUCKET: Default bucket for uploads (must be created by app)
+      # S3_REGION: AWS region identifier (minio uses us-east-1 default)
+      # ============================================================
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
       S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
@@ -172,31 +215,40 @@ services:
       S3_BUCKET: ${S3_BUCKET:-acrobaticz}
       S3_REGION: ${S3_REGION:-us-east-1}
       
-      # Optional: Translation API
+      # ============================================================
+      # Optional: Third-party API Integration
+      # ============================================================
       DEEPL_API_KEY: ${DEEPL_API_KEY:-}
       
-      # Optional: Custom domain
+      # ============================================================
+      # Optional: Custom Domain
+      # Used for email links, redirects, CORS configuration
+      # ============================================================
       DOMAIN: ${DOMAIN:-localhost:3000}
     
-    # Persistent volumes
+    # Persistent volumes for application data
     volumes:
-      # Local app storage (redundant with MinIO, kept for compatibility)
+      # Application storage (local uploads directory)
+      # Fallback if S3/MinIO is unavailable
       - app_storage:/app/public/uploads
       # Optional: Map local directory for development
       # - ./app-data:/app/data
     
-    # Wait for PostgreSQL and MinIO to be healthy
+    # Service dependencies: Wait for healthy services before starting app
+    # condition: service_healthy ensures dependencies are fully initialized
     depends_on:
       postgres:
         condition: service_healthy
       minio:
         condition: service_healthy
     
-    # Ports
+    # Port mapping: Container port 3000 → Host port (from .env PORT)
     ports:
       - "${PORT:-3000}:3000"
     
     # Robust health check
+    # Endpoint: /api/health (must return 200 OK)
+    # Timing: 45s startup grace → 30s intervals → 10s timeout → 3 retries max
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
@@ -226,6 +278,9 @@ services:
 
   # ============================================================
   # Nginx Reverse Proxy (Optional - for SSL/TLS and Load Balancing)
+  # Purpose: TLS termination, static file serving, request routing
+  # Enable: Uncomment this section and configure SSL certificates
+  # Ports: 80 (HTTP) → 3000 (app), 443 (HTTPS) → 3000 (app)
   # ============================================================
   nginx:
     image: nginx:alpine
@@ -241,7 +296,7 @@ services:
     volumes:
       # Nginx configuration
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      # SSL certificates
+      # SSL certificates (create if using HTTPS)
       - nginx_certs:/etc/nginx/certs:ro
       # Static files
       - ./public:/usr/share/nginx/html/static:ro
@@ -250,9 +305,10 @@ services:
     environment:
       - DOMAIN=${DOMAIN:-localhost}
     
-    # Wait for app to be healthy
+    # Wait for app to be healthy before starting nginx
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     
     networks:
       - acrobaticz-network
@@ -282,43 +338,59 @@ services:
 
 # ============================================================
 # Volumes (Persistent Data Storage)
+# 
+# Docker volumes provide data persistence across container restarts
+# Each volume is mapped to a local directory on the host
 # ============================================================
 volumes:
-  # PostgreSQL data
+  # PostgreSQL Data
+  # Purpose: Database files, indexes, WAL logs
+  # Size: Varies by application usage (starts ~100MB)
+  # Backup: Mount ./data/postgres on external drive for redundancy
   postgres_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ./data/postgres
+      device: ${PWD:-/media/feli/38826d41-4b6a-4f13-9e48-d9628771bfe5/AC/Acrobaticz}/data/postgres
   
-  # MinIO S3 storage (local or external disk)
-  # Mapeado via ${STORAGE_PATH} - ver docker-compose config acima
+  # MinIO Storage
+  # Managed via STORAGE_PATH environment variable
+  # Can be local or external disk
   
-  # App storage (local uploads)
+  # Application Storage
+  # Purpose: Local file uploads (redundant with MinIO)
+  # Size: Grows with uploaded files
   app_storage:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ./data/app_storage
+      device: ${PWD:-/media/feli/38826d41-4b6a-4f13-9e48-d9628771bfe5/AC/Acrobaticz}/data/app_storage
   
-  # Nginx SSL certificates
+  # Nginx SSL Certificates
+  # Purpose: TLS certificates for HTTPS
+  # Note: Create ./certs directory and add cert files if using HTTPS
   nginx_certs:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ./certs
+      device: ${PWD:-/media/feli/38826d41-4b6a-4f13-9e48-d9628771bfe5/AC/Acrobaticz}/certs
 
 # ============================================================
 # Networks
+# 
+# Custom bridge network isolates containers from host network
+# Provides predictable DNS resolution between services
 # ============================================================
 networks:
   acrobaticz-network:
     driver: bridge
     driver_opts:
+      # Custom bridge name for easier debugging
       com.docker.network.bridge.name: br-acrobaticz
     ipam:
+      # Fixed subnet for predictable IP assignments
       config:
         - subnet: 172.20.0.0/16

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useTranslate } from '@/contexts/TranslationContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Database, RefreshCw, Download, Calendar } from 'lucide-react';
@@ -29,6 +30,10 @@ interface BackupStatus {
 
 export default function BackupRestorePage() {
   const { toast } = useToast();
+
+  // Translation helper
+  const T = ({ text }: { text: string }) => { const { translated } = useTranslate(text); return <>{translated}</>; };
+
   const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -128,15 +133,15 @@ export default function BackupRestorePage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Database Backup & Restore</h1>
+          <h1 className="text-3xl font-bold"><T text="Database Backup & Restore" /></h1>
           <p className="text-muted-foreground">
-            3-Day Rotation Backup System - Manage and restore your database backups
+            <T text="3-Day Rotation Backup System - Manage and restore your database backups" />
           </p>
         </div>
         
         <Button onClick={loadBackupStatus} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh Status
+          <T text="Refresh Status" />
         </Button>
       </div>
 
@@ -167,10 +172,10 @@ export default function BackupRestorePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
-            3-Day Rotation Backups
+            <T text="3-Day Rotation Backups" />
           </CardTitle>
           <CardDescription>
-            Available database backups in the rotation system. Each backup replaces the previous one for that day.
+            <T text="Available database backups in the rotation system. Each backup replaces the previous one for that day." />
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -252,12 +257,12 @@ export default function BackupRestorePage() {
           ) : (
             <div className="text-center py-8">
               <Database className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Backups Found</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2"><T text="No Backups Found" /></h3>
               <p className="text-gray-500 dark:text-gray-400 mb-4">
-                No rotation backups are currently available. Create your first backup from the Settings page.
+                <T text="No rotation backups are currently available. Create your first backup from the Settings page." />
               </p>
               <Button onClick={() => window.location.href = '/admin/settings'}>
-                Go to Backup Settings
+                <T text="Go to Backup Settings" />
               </Button>
             </div>
           )}
@@ -267,9 +272,9 @@ export default function BackupRestorePage() {
       {/* Manual Restore Instructions */}
       <Card>
         <CardHeader>
-          <CardTitle>Manual Restore Instructions</CardTitle>
+          <CardTitle><T text="Manual Restore Instructions" /></CardTitle>
           <CardDescription>
-            For complete control over the restore process, use the command line tools.
+            <T text="For complete control over the restore process, use the command line tools." />
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

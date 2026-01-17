@@ -4,6 +4,13 @@ import { prisma } from '@/lib/db';
 /**
  * GET /api/translate/preload
  * Returns all existing translations from database for client-side caching
+ * 
+ * CORRIGIDO: Agora busca de AMBAS as tabelas:
+ * - Translation: traduções permanentes com analytics (usageCount, lastUsed)
+ * - TranslationCache: cache TTL do DeepL
+ * 
+ * Isto resolve o problema onde novas traduções iam para TranslationCache
+ * mas o preload só buscava de Translation.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -14,31 +21,104 @@ export async function GET(request: NextRequest) {
 
     console.log(`📝 Preload API: Fetching translations for lang=${targetLang}, limit=${limit}`);
 
-    const where: any = {};
+    // Dividir limite entre as duas tabelas
+    const halfLimit = Math.ceil(limit / 2);
+
+    // Query para tabela Translation (traduções permanentes com analytics)
+    const translationWhere: Record<string, unknown> = {};
     if (targetLang === 'en' || targetLang === 'pt') {
-      where.targetLang = targetLang;
+      translationWhere.targetLang = targetLang;
     }
 
-    const translations = await prisma.translation.findMany({
-      where,
-      select: {
-        sourceText: true,
-        targetLang: true,
-        translatedText: true,
-      },
-      take: limit,
-      orderBy: [
-        { lastUsed: 'desc' },
-        { updatedAt: 'desc' },
-      ],
-    });
+    // Query para tabela TranslationCache (cache TTL do DeepL)
+    const cacheWhere: Record<string, unknown> = {
+      expiresAt: { gte: new Date() }, // Apenas não expiradas
+    };
+    if (targetLang === 'en' || targetLang === 'pt') {
+      cacheWhere.targetLanguage = targetLang;
+    }
 
-    console.log(`✅ Preload API: Found ${translations.length} translations in database`);
+    // Buscar de ambas as tabelas em paralelo
+    const [permanentTranslations, cachedTranslations] = await Promise.all([
+      // Tabela de traduções permanentes (com analytics)
+      prisma.translation.findMany({
+        where: translationWhere,
+        select: {
+          sourceText: true,
+          targetLang: true,
+          translatedText: true,
+        },
+        take: halfLimit,
+        orderBy: [
+          { usageCount: 'desc' },
+          { lastUsed: 'desc' },
+          { updatedAt: 'desc' },
+        ],
+      }),
+      // Tabela de cache DeepL (TTL)
+      prisma.translationCache.findMany({
+        where: cacheWhere,
+        select: {
+          sourceText: true,
+          targetLanguage: true,
+          translatedText: true,
+        },
+        take: halfLimit,
+        orderBy: [
+          { updatedAt: 'desc' },
+        ],
+      }),
+    ]);
+
+    console.log(`📊 Preload API: Found ${permanentTranslations.length} from Translation, ${cachedTranslations.length} from TranslationCache`);
+
+    // Merge e deduplicate - Translation tem prioridade (tem analytics)
+    const seen = new Set<string>();
+    const allTranslations: Array<{
+      sourceText: string;
+      targetLang: string;
+      translatedText: string;
+    }> = [];
+
+    // Primeiro adicionar de Translation (prioridade)
+    for (const t of permanentTranslations) {
+      const key = `${t.sourceText}:${t.targetLang}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        allTranslations.push({
+          sourceText: t.sourceText,
+          targetLang: t.targetLang,
+          translatedText: t.translatedText,
+        });
+      }
+    }
+
+    // Depois adicionar de TranslationCache (se não duplicado)
+    for (const t of cachedTranslations) {
+      const key = `${t.sourceText}:${t.targetLanguage}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        allTranslations.push({
+          sourceText: t.sourceText,
+          targetLang: t.targetLanguage,
+          translatedText: t.translatedText,
+        });
+      }
+    }
+
+    // Limitar ao limite original
+    const finalTranslations = allTranslations.slice(0, limit);
+
+    console.log(`✅ Preload API: Returning ${finalTranslations.length} unique translations (merged from both tables)`);
 
     return NextResponse.json({
       success: true,
-      count: translations.length,
-      translations,
+      count: finalTranslations.length,
+      translations: finalTranslations,
+      sources: {
+        translation: permanentTranslations.length,
+        translationCache: cachedTranslations.length,
+      },
     });
 
   } catch (error) {

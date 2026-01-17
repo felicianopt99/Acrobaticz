@@ -59,13 +59,7 @@ export default async function PartnerCatalogPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold">Equipment Catalog</h1>
-        <p className="text-muted-foreground mt-2">
-          Generate PDF catalogs of available equipment for {partner.name}
-        </p>
-      </div>
-      <PartnerCatalogGenerator partnerId={id} partnerName={partner.name} />
+      <PartnerCatalogGenerator partnerId={id} partnerName={partner.name} showHeader />
     </div>
   );
 }

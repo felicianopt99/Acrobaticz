@@ -459,16 +459,18 @@ export class QuotePDFGenerator {
 
       // Estimate row height based on wrapped name and description
       const nameLines = this.doc.splitTextToSize(itemName, colWidths[0] - 4);
-      const nameHeight = nameLines.length * (9 * 0.35);
+      // Line height for font size 9 is approximately 3.5mm
+      const nameHeight = nameLines.length * 3.5;
       let descHeight = 0;
       const hasDesc = !!(item.description && item.description.trim());
       if (hasDesc) {
         const descLines = this.doc.splitTextToSize(item.description!, colWidths[0] - 8);
-        descHeight = 3 + descLines.length * (8 * 0.35) + 3; // safe padding
+        // Line height for font size 8 is approximately 3mm, plus padding
+        descHeight = 4 + (descLines.length * 3) + 2; // top padding + lines + bottom padding
       } else {
-        descHeight = 5; // default spacing when no description
+        descHeight = 4; // default spacing when no description
       }
-      const rowHeight = Math.max(6, nameHeight) + descHeight;
+      const rowHeight = Math.max(8, nameHeight) + descHeight;
 
       // Page break if not enough space for this row
       if (!this.checkPageSpace(rowHeight + 4)) {
@@ -484,6 +486,7 @@ export class QuotePDFGenerator {
 
       // Draw row
       let colX = this.margin;
+      const rowStartY = this.currentY;
       this.addText(itemName, colX + 2, this.currentY, { fontSize: 9, maxWidth: colWidths[0] - 4 });
       colX += colWidths[0];
       this.addText((item.quantity || 1).toString(), colX, this.currentY, { fontSize: 9, align: 'center' });
@@ -494,14 +497,24 @@ export class QuotePDFGenerator {
       colX += colWidths[3];
       this.addText(`€ ${item.lineTotal.toFixed(2)}`, colX + colWidths[4] - 2, this.currentY, { fontSize: 9, align: 'right' });
 
+      // Move Y past the name lines
+      this.currentY += Math.max(8, nameLines.length * 3.5);
+
       // Description block
       if (hasDesc) {
-        this.currentY += 3;
-        this.addText(item.description!, this.margin + 6, this.currentY, { fontSize: 8, maxWidth: colWidths[0] - 8 });
+        const descLines = this.doc.splitTextToSize(item.description!, colWidths[0] - 8);
+        this.doc.setFontSize(8);
+        this.doc.setFont('helvetica', 'normal');
+        this.doc.setTextColor(100, 100, 100); // Gray color for description
+        descLines.forEach((line: string) => {
+          this.doc.text(line, this.margin + 6, this.currentY);
+          this.currentY += 3;
+        });
+        this.doc.setTextColor(0, 0, 0); // Reset to black
+        this.currentY += 2; // Bottom padding
+      } else {
+        this.currentY += 4; // Spacing when no description
       }
-
-      // Advance Y by full row height
-      this.currentY += rowHeight - (hasDesc ? 3 : 0);
     });
 
     // Bottom spacing after table (tighter)

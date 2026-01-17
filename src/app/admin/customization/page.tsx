@@ -656,7 +656,7 @@ export default function AdminCustomizationPage() {
       </div>
 
       <Tabs defaultValue="branding" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <TabsTrigger value="branding">{uiBrandingText}</TabsTrigger>
           <TabsTrigger value="theme">{uiThemeText}</TabsTrigger>
           <TabsTrigger value="login">{uiLoginPageText}</TabsTrigger>

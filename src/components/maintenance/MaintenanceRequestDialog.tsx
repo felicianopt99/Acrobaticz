@@ -11,6 +11,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslate } from '@/contexts/TranslationContext';
+
+// Translation helper component
+const T = ({ text }: { text: string }) => {
+  const { translated } = useTranslate(text);
+  return <>{translated}</>;
+};
 
 interface MaintenanceRequestDialogProps {
   isOpen: boolean;
@@ -21,6 +28,27 @@ export function MaintenanceRequestDialog({ isOpen, onOpenChange }: MaintenanceRe
   const { equipment, categories } = useAppContext();
   const dispatch = useAppDispatch();
   const { toast } = useToast();
+
+  // Translation hooks
+  const { translated: createMaintenanceRequestText } = useTranslate('Create Maintenance Request');
+  const { translated: selectEquipmentDetailsText } = useTranslate('Select equipment and provide details for the maintenance or repair request.');
+  const { translated: equipmentLabel } = useTranslate('Equipment');
+  const { translated: selectEquipmentText } = useTranslate('Select equipment');
+  const { translated: statusLabel } = useTranslate('Status');
+  const { translated: maintenanceText } = useTranslate('Maintenance');
+  const { translated: damagedText } = useTranslate('Damaged');
+  const { translated: descriptionLabel } = useTranslate('Description');
+  const { translated: descriptionPlaceholder } = useTranslate('Describe the issue or maintenance needed');
+  const { translated: costLabel } = useTranslate('Cost ($)');
+  const { translated: technicianLabel } = useTranslate('Technician');
+  const { translated: technicianPlaceholder } = useTranslate('Technician name');
+  const { translated: cancelText } = useTranslate('Cancel');
+  const { translated: createRequestText } = useTranslate('Create Request');
+  const { translated: creatingText } = useTranslate('Creating...');
+  const { translated: maintenanceRequestCreatedText } = useTranslate('Maintenance request created');
+  const { translated: hasBeenMarkedForText } = useTranslate('has been marked for');
+  const { translated: errorText } = useTranslate('Error');
+  const { translated: failedToCreateText } = useTranslate('Failed to create maintenance request.');
 
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>('');
   const [status, setStatus] = useState<'maintenance' | 'damaged'>('maintenance');
@@ -57,8 +85,8 @@ export function MaintenanceRequestDialog({ isOpen, onOpenChange }: MaintenanceRe
       await dispatch.updateEquipmentItem(updatedItem);
 
       toast({
-        title: "Maintenance request created",
-        description: `${selectedItem.name} has been marked for ${status}.`,
+        title: maintenanceRequestCreatedText,
+        description: `${selectedItem.name} ${hasBeenMarkedForText} ${status}.`,
       });
 
       // Reset form
@@ -70,8 +98,8 @@ export function MaintenanceRequestDialog({ isOpen, onOpenChange }: MaintenanceRe
       onOpenChange(false);
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to create maintenance request.",
+        title: errorText,
+        description: failedToCreateText,
         variant: "destructive",
       });
     } finally {
@@ -83,20 +111,20 @@ export function MaintenanceRequestDialog({ isOpen, onOpenChange }: MaintenanceRe
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create Maintenance Request</DialogTitle>
+          <DialogTitle>{createMaintenanceRequestText}</DialogTitle>
           <DialogDescription>
-            Select equipment and provide details for the maintenance or repair request.
+            {selectEquipmentDetailsText}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="equipment" className="text-right">
-                Equipment
+                {equipmentLabel}
               </Label>
               <Select value={selectedEquipmentId} onValueChange={setSelectedEquipmentId}>
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select equipment" />
+                  <SelectValue placeholder={selectEquipmentText} />
                 </SelectTrigger>
                 <SelectContent>
                   {availableEquipment.map(item => (
@@ -109,34 +137,34 @@ export function MaintenanceRequestDialog({ isOpen, onOpenChange }: MaintenanceRe
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="status" className="text-right">
-                Status
+                {statusLabel}
               </Label>
               <Select value={status} onValueChange={(value: 'maintenance' | 'damaged') => setStatus(value)}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="damaged">Damaged</SelectItem>
+                  <SelectItem value="maintenance">{maintenanceText}</SelectItem>
+                  <SelectItem value="damaged">{damagedText}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">
-                Description
+                {descriptionLabel}
               </Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the issue or maintenance needed"
+                placeholder={descriptionPlaceholder}
                 className="col-span-3"
                 rows={3}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="cost" className="text-right">
-                Cost ($)
+                {costLabel}
               </Label>
               <Input
                 id="cost"
@@ -150,23 +178,23 @@ export function MaintenanceRequestDialog({ isOpen, onOpenChange }: MaintenanceRe
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="technician" className="text-right">
-                Technician
+                {technicianLabel}
               </Label>
               <Input
                 id="technician"
                 value={technician}
                 onChange={(e) => setTechnician(e.target.value)}
-                placeholder="Technician name"
+                placeholder={technicianPlaceholder}
                 className="col-span-3"
               />
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {cancelText}
             </Button>
             <Button type="submit" disabled={isSubmitting || !selectedEquipmentId || !description}>
-              {isSubmitting ? 'Creating...' : 'Create Request'}
+              {isSubmitting ? creatingText : createRequestText}
             </Button>
           </DialogFooter>
         </form>

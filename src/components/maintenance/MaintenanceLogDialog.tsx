@@ -27,6 +27,13 @@ import { EQUIPMENT_STATUSES } from '@/lib/constants';
 import { useAppDispatch } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { getStatusBreakdownString, updateQuantityByStatus } from "@/lib/equipment-utils";
+import { useTranslate } from '@/contexts/TranslationContext';
+
+// Translation helper component
+const T = ({ text }: { text: string }) => {
+  const { translated } = useTranslate(text);
+  return <>{translated}</>;
+};
 
 const logSchema = z.object({
   date: z.date({ required_error: "Date is required." }),
@@ -47,6 +54,24 @@ interface MaintenanceLogDialogProps {
 export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: MaintenanceLogDialogProps) {
   const { addMaintenanceLog, updateEquipmentItem } = useAppDispatch();
   const { toast } = useToast();
+
+  // Translation hooks
+  const { translated: addMaintenanceLogText } = useTranslate('Add Maintenance Log for');
+  const { translated: recordActivityText } = useTranslate('Record a maintenance or repair activity. You can also update the item\'s status.');
+  const { translated: currentStatusText } = useTranslate('Current Status');
+  const { translated: dateOfMaintenanceText } = useTranslate('Date of Maintenance');
+  const { translated: pickDateText } = useTranslate('Pick a date');
+  const { translated: descriptionText } = useTranslate('Description');
+  const { translated: descriptionPlaceholder } = useTranslate('Describe the work performed...');
+  const { translated: costLabel } = useTranslate('Cost ($) (Optional)');
+  const { translated: updateStatusLabel } = useTranslate('Update Status (Optional)');
+  const { translated: noChangeText } = useTranslate('No Change');
+  const { translated: cancelText } = useTranslate('Cancel');
+  const { translated: addLogText } = useTranslate('Add Log');
+  const { translated: maintenanceLogAddedText } = useTranslate('Maintenance Log Added');
+  const { translated: logAddedForText } = useTranslate('Log added for');
+  const { translated: errorText } = useTranslate('Error');
+  const { translated: failedToAddText } = useTranslate('Failed to add log.');
 
   const form = useForm<LogFormValues>({
     resolver: zodResolver(logSchema),
@@ -90,11 +115,11 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
         });
       }
 
-      toast({ title: "Maintenance Log Added", description: `Log added for ${equipmentItem.name}.` });
+      toast({ title: maintenanceLogAddedText, description: `${logAddedForText} ${equipmentItem.name}.` });
       onOpenChange(false);
       form.reset();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to add log." });
+      toast({ variant: "destructive", title: errorText, description: failedToAddText });
     }
   }
 
@@ -102,11 +127,11 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Add Maintenance Log for "{equipmentItem.name}"</DialogTitle>
+          <DialogTitle>{addMaintenanceLogText} "{equipmentItem.name}"</DialogTitle>
           <DialogDescription>
-            Record a maintenance or repair activity. You can also update the item's status.
+            {recordActivityText}
             <div className="mt-2 text-xs text-muted-foreground">
-              Current Status: {statusBreakdown}
+              {currentStatusText}: {statusBreakdown}
             </div>
           </DialogDescription>
         </DialogHeader>
@@ -117,12 +142,12 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
               name="date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Date of Maintenance</FormLabel>
+                  <FormLabel>{dateOfMaintenanceText}</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          {field.value ? format(field.value, "PPP") : <span>{pickDateText}</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </FormControl>
@@ -141,9 +166,9 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{descriptionText}</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Describe the work performed..." {...field} />
+                    <Textarea placeholder={descriptionPlaceholder} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -155,7 +180,7 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
               name="cost"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Cost ($) (Optional)</FormLabel>
+                  <FormLabel>{costLabel}</FormLabel>
                   <FormControl>
                     <Input type="number" placeholder="0.00" {...field} />
                   </FormControl>
@@ -169,15 +194,15 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
               name="updateStatus"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Update Status (Optional)</FormLabel>
+                  <FormLabel>{updateStatusLabel}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="No Change" />
+                        <SelectValue placeholder={noChangeText} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="no-change">No Change</SelectItem>
+                      <SelectItem value="no-change">{noChangeText}</SelectItem>
                       {EQUIPMENT_STATUSES.map(status => (
                         <SelectItem key={status.value} value={status.value}>
                           {status.label}
@@ -216,8 +241,8 @@ export function MaintenanceLogDialog({ isOpen, onOpenChange, equipmentItem }: Ma
             )}
 
             <DialogFooter className="pt-4">
-              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Add Log</Button>
+              <DialogClose asChild><Button type="button" variant="outline">{cancelText}</Button></DialogClose>
+              <Button type="submit">{addLogText}</Button>
             </DialogFooter>
           </form>
         </Form>

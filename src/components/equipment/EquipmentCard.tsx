@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Pencil, Trash2, QrCode, Copy } from 'lucide-react';
 import { CategoryIconMapper } from '@/components/icons/CategoryIconMapper';
 import { useAppContext } from '@/contexts/AppContext';
+import { useTranslate } from '@/contexts/TranslationContext';
 
 interface EquipmentCardProps {
   item: EquipmentItem;
@@ -25,6 +26,24 @@ interface EquipmentCardProps {
 export function EquipmentCard({ item, category, subcategory, onEdit, onDelete, onDuplicate }: EquipmentCardProps) {
   const { categories } = useAppContext();
   const [isQrCodeOpen, setIsQrCodeOpen] = useState(false);
+  
+  // Translation hooks
+  const { translated: uiLocationText } = useTranslate('Location');
+  const { translated: uiAvailableText } = useTranslate('Available');
+  const { translated: uiDayText } = useTranslate('day');
+  const { translated: uiGoodText } = useTranslate('Good');
+  const { translated: uiDamagedText } = useTranslate('Damaged');
+  const { translated: uiMaintenanceText } = useTranslate('In Maintenance');
+  const { translated: uiScanQRText } = useTranslate('Scan this code to quickly access the equipment details page.');
+  
+  const getStatusLabel = (status: EquipmentItem['status']) => {
+    switch (status) {
+      case 'good': return uiGoodText;
+      case 'damaged': return uiDamagedText;
+      case 'maintenance': return uiMaintenanceText;
+      default: return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
   const itemCategory = category || categories.find(c => c.id === item.categoryId);
 
   const getStatusColor = (status: EquipmentItem['status']) => {
@@ -78,14 +97,14 @@ export function EquipmentCard({ item, category, subcategory, onEdit, onDelete, o
                 variant="outline"
                 className={"px-2 py-0.5 text-[10px] sm:text-xs rounded-full " + getStatusColor(item.status)}
               >
-                {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                {getStatusLabel(item.status)}
               </Badge>
             </div>
             {/* bottom overlay for price per day when applicable */}
             {item.dailyRate > 0 && (
               <div className="absolute right-2 bottom-2">
                 <div className="rounded-full bg-background/80 backdrop-blur px-2 py-0.5 text-[10px] sm:text-xs border border-border/50">
-                  €{item.dailyRate.toFixed(2)} / day
+                  €{item.dailyRate.toFixed(2)} / {uiDayText}
                 </div>
               </div>
             )}
@@ -107,8 +126,8 @@ export function EquipmentCard({ item, category, subcategory, onEdit, onDelete, o
             {item.description}
           </CardDescription>
           <div className="grid grid-cols-2 gap-2 text-[10px] sm:text-xs text-muted-foreground/80 mt-auto">
-            <div className="truncate"><span className="font-medium text-foreground/80">Location:</span> {item.location}</div>
-            <div className="text-right"><span className="font-medium text-foreground/80">Available:</span> {item.quantity}</div>
+            <div className="truncate"><span className="font-medium text-foreground/80">{uiLocationText}:</span> {item.location}</div>
+            <div className="text-right"><span className="font-medium text-foreground/80">{uiAvailableText}:</span> {item.quantity}</div>
           </div>
         </CardContent>
         <CardFooter className="p-2.5 sm:p-3 md:p-4 flex justify-end items-center gap-0.5 sm:gap-1 border-t border-border/40">
@@ -162,7 +181,7 @@ export function EquipmentCard({ item, category, subcategory, onEdit, onDelete, o
           <DialogHeader>
             <DialogTitle className="text-base sm:text-lg">{item.name}</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              Scan this code to quickly access the equipment details page.
+              {uiScanQRText}
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center p-3 sm:p-4 bg-card rounded-lg border border-border/40">

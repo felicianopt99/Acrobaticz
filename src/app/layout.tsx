@@ -35,8 +35,10 @@ export const viewport = {
   themeColor: '#3b82f6',
 };
 
+import { getAppURL } from '@/lib/environment-urls'
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(getAppURL()),
   title: 'AV Rentals',
   description: 'Audiovisual Equipment Rental Management',
   manifest: '/manifest.json',

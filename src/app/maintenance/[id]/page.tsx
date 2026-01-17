@@ -4,11 +4,14 @@ import { useParams } from 'next/navigation';
 import { EquipmentDetailView } from '@/components/maintenance/EquipmentDetailView';
 import { useAppContext } from '@/contexts/AppContext';
 import { useEffect, useState } from 'react';
+import { useTranslate } from '@/contexts/TranslationContext';
 
 export default function MaintenanceEquipmentDetailPage() {
   const params = useParams();
   const { isDataLoaded } = useAppContext();
   const [isReady, setIsReady] = useState(false);
+  
+  const { translated: loadingText } = useTranslate('Loading equipment details...');
 
   const itemId = typeof params.id === 'string' ? params.id : undefined;
 
@@ -21,7 +24,7 @@ export default function MaintenanceEquipmentDetailPage() {
   if (!isReady) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p className="text-lg text-muted-foreground">Loading equipment details...</p>
+        <p className="text-lg text-muted-foreground">{loadingText}</p>
       </div>
     );
   }

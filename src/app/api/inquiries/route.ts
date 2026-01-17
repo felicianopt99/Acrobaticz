@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error submitting catalog inquiry:', error);
+    console.error('Error submitting inquiry:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       { error: errorMessage },

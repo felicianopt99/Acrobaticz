@@ -118,6 +118,7 @@ export function BottomNav() {
     const href = getEffectiveHref(item);
     const active = href ? isActive(href) : false;
     const Icon = item.icon || (iconMap[item.label] || (() => null));
+    const translatedLabel = translated(item.label);
     
     return (
       <button
@@ -133,14 +134,14 @@ export function BottomNav() {
         )}
       >
         <Icon className="h-5 w-5 mb-1" />
-        <span className="text-xs">{item.label}</span>
+        <span className="text-xs">{translatedLabel}</span>
       </button>
     );
   };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t">
-      <div className="flex items-center justify-around h-16 px-2">
+      <div className="flex items-center justify-around h-16 px-2 gap-1 sm:gap-2">
         {/* Main navigation items */}
         {mainNavItems.map(item => renderNavItem(item, true))}
         
@@ -158,7 +159,7 @@ export function BottomNav() {
               )}
             >
               <MoreHorizontal className="h-5 w-5 mb-1" />
-              <span className="text-xs">More</span>
+              <span className="text-xs">{translated('More')}</span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent 
@@ -182,7 +183,7 @@ export function BottomNav() {
               <>
                 <DropdownMenuSeparator className="my-1" />
                 <DropdownMenuLabel className="px-2 text-xs font-medium text-muted-foreground">
-                  Admin
+                  {translated('Administration')}
                 </DropdownMenuLabel>
                 {visibleAdminItems.map(item => (
                   <DropdownMenuItem 
