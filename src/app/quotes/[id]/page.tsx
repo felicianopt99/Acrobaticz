@@ -44,7 +44,7 @@ export default function EditQuotePage() {
           endDate: new Date(foundQuote.endDate),
           createdAt: foundQuote.createdAt ? new Date(foundQuote.createdAt) : undefined,
           updatedAt: foundQuote.updatedAt ? new Date(foundQuote.updatedAt) : undefined,
-          items: foundQuote.items.map(item => ({...item})) // Shallow copy items
+            items: (foundQuote.items ?? []).map(item => ({...item})) // Shallow copy items, safe for undefined
         });
       } else {
         toast({ variant: "destructive", title: toastErrorTitleText, description: toastQuotenotfoundDescText});
@@ -80,28 +80,30 @@ export default function EditQuotePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="mb-8">
-          <div className="mb-4">
+      <div className="w-full px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 max-w-7xl mx-auto">
+        <div className="mb-6 sm:mb-8">
+          <div className="mb-3 sm:mb-4">
             <Link href="/quotes">
-              <Button variant="ghost" className="px-0 text-muted-foreground hover:text-foreground">
-                <ArrowLeft className="h-5 w-5 mr-2" />
+              <Button variant="ghost" className="px-0 text-muted-foreground hover:text-foreground text-sm sm:text-base">
+                <ArrowLeft className="h-4 sm:h-5 w-4 sm:w-5 mr-2" />
                 {backToQuotesText}
               </Button>
             </Link>
           </div>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="h-12 w-12 rounded-xl flex items-center justify-center shadow-lg bg-gray-800 dark:bg-gray-700">
-              <FileText className="h-6 w-6 text-white" />
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-10 sm:h-12 w-10 sm:w-12 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg bg-gray-800 dark:bg-gray-700 flex-shrink-0">
+                <FileText className="h-5 sm:h-6 w-5 sm:w-6 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white truncate">{editQuoteTitle}</h1>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{editQuoteTitle}</h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                {(editingQuoteBase || '')
-                  .replace('{number}', String(quote.quoteNumber))
-                  .replace('{date}', new Date(quote.createdAt ?? Date.now()).toLocaleDateString())}
-              </p>
-            </div>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 break-words">
+              {(editingQuoteBase || '')
+                .replace('{number}', String(quote.quoteNumber))
+                .replace('{date}', new Date(quote.createdAt ?? Date.now()).toLocaleDateString())}
+            </p>
           </div>
         </div>
         

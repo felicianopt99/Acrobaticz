@@ -4,6 +4,11 @@ import React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import * as z from "zod";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslate } from '@/contexts/TranslationContext';
 import {
@@ -131,6 +136,314 @@ type QuoteFormValues = z.infer<typeof quoteFormSchema>;
 interface QuoteFormProps {
   initialData?: Quote;
   onSubmitSuccess?: () => void;
+}
+
+// Sortable Item Component for Drag and Drop
+interface SortableQuoteItemProps {
+  id: string;
+  field: any;
+  index: number;
+  remove: (index: number) => void;
+  form: any;
+  days: number;
+  setUserEditedPrices: (fn: (prev: Set<string>) => Set<string>) => void;
+}
+
+function SortableQuoteItem({
+  id,
+  field,
+  index,
+  remove,
+  form,
+  days,
+  setUserEditedPrices,
+}: SortableQuoteItemProps) {
+  const {
+    setNodeRef,
+    attributes,
+    listeners,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  // Skip rendering items without a type (shouldn't happen, but safety check)
+  if (!field.type) {
+    console.warn('Skipping item without type at index', index, field);
+    return null;
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <Card
+        className="group relative p-4 shadow-md hover:shadow-lg hover:border-primary/40 transition-all duration-200 border-l-4"
+        style={{
+          borderLeftColor: field.type === 'equipment' ? '#666' : 
+                         field.type === 'service' ? '#666' :
+                         field.type === 'subrental' ? '#10b981' : '#999'
+        }}
+      >
+        {/* Drag Handle */}
+        <div 
+          {...listeners}
+          className="absolute top-4 left-4 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors"
+          title="Drag to reorder"
+        >
+          <GripVertical className="h-5 w-5" />
+        </div>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="absolute top-2 right-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
+          onClick={() => remove(index)}
+          aria-label="Remove item"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+        
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 pl-6">
+          {/* Item Type Badge */}
+          <div className="flex items-center gap-3">
+            <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-sm backdrop-blur border
+              ${field.type === 'equipment' ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600' :
+                field.type === 'service' ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600' :
+                field.type === 'subrental' ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-600' :
+                'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600'}`}
+            >
+              {field.type === 'equipment' && <FileText className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
+              {field.type === 'service' && <PlusCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
+              {field.type === 'fee' && <CalendarIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
+              {field.type === 'subrental' && <Handshake className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider backdrop-blur border
+                  ${field.type === 'equipment' ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600' :
+                    field.type === 'service' ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600' :
+                    field.type === 'subrental' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600' :
+                    'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'}`}
+                >
+                  {field.type === 'subrental' ? 'Partner' : field.type}
+                </span>
+                {field.type === 'subrental' && field.partnerName && (
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    via {field.partnerName}
+                  </span>
+                )}
+              </div>
+              <div className="mt-1">
+                <input
+                  type="text"
+                  className="w-full px-2 py-1 text-sm border rounded-md bg-background/50 text-card-foreground"
+                  placeholder={field.type === 'equipment' ? 'Equipment name' : field.type === 'service' ? 'Service name' : field.type === 'subrental' ? 'Equipment name' : 'Fee name'}
+                  value={
+                    field.type === 'equipment'
+                      ? (form.getValues(`items.${index}.equipmentName`) || '')
+                      : field.type === 'service'
+                        ? (form.getValues(`items.${index}.serviceName`) || '')
+                        : field.type === 'subrental'
+                          ? (form.getValues(`items.${index}.equipmentName`) || '')
+                          : (form.getValues(`items.${index}.feeName`) || '')
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (field.type === 'equipment' || field.type === 'subrental') {
+                      form.setValue(`items.${index}.equipmentName`, v, { shouldDirty: true, shouldValidate: true });
+                    } else if (field.type === 'service') {
+                      form.setValue(`items.${index}.serviceName`, v, { shouldDirty: true, shouldValidate: true });
+                    } else {
+                      form.setValue(`items.${index}.feeName`, v, { shouldDirty: true, shouldValidate: true });
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Item Details */}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            {(field.type === 'equipment' || field.type === 'service') && (
+              <>
+                <div className="flex items-center gap-2">
+                  <label className="font-medium" htmlFor={`items.${index}.quantity`}>Qty:</label>
+                  <input
+                    id={`items.${index}.quantity`}
+                    type="number"
+                    min={1}
+                    className="flex-1 min-w-fit sm:w-20 h-9 px-2 border rounded-md bg-background/50 text-card-foreground"
+                    value={form.getValues(`items.${index}.quantity`) || 1}
+                    onChange={(e) => {
+                      const q = Math.max(1, Number(e.target.value) || 1);
+                      const price = Number(form.getValues(`items.${index}.unitPrice`)) || 0;
+                      form.setValue(`items.${index}.quantity`, q, { shouldDirty: true, shouldValidate: true });
+                      form.setValue(`items.${index}.lineTotal`, q * price * days, { shouldDirty: true });
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="font-medium" htmlFor={`items.${index}.unitPrice`}>Rate:</label>
+                  <input
+                    id={`items.${index}.unitPrice`}
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="w-full sm:w-28 h-9 px-2 border rounded-md bg-background/50 text-card-foreground"
+                    value={form.watch(`items.${index}.unitPrice`) || 0}
+                    onChange={(e) => {
+                      const price = Math.max(0, Number(e.target.value) || 0);
+                      const q = Number(form.getValues(`items.${index}.quantity`)) || 1;
+                      setUserEditedPrices(prev => new Set([...prev, index.toString()]));
+                      form.setValue(`items.${index}.unitPrice`, price, { shouldDirty: true, shouldValidate: true });
+                      form.setValue(`items.${index}.lineTotal`, q * price * days, { shouldDirty: true });
+                    }}
+                  />
+                  <span className="text-card-foreground font-semibold">{field.type === 'equipment' ? '/day' : ''}</span>
+                </div>
+                {field.type === 'equipment' && (
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium">Days:</span>
+                    <span className="text-card-foreground font-semibold">{days}</span>
+                  </div>
+                )}
+              </>
+            )}
+            {field.type === 'subrental' && (
+              <>
+                <div className="flex items-center gap-2">
+                  <label className="font-medium" htmlFor={`items.${index}.quantity`}>Qty:</label>
+                  <input
+                    id={`items.${index}.quantity`}
+                    type="number"
+                    min={1}
+                    className="flex-1 min-w-fit sm:w-20 h-9 px-2 border rounded-md bg-background/50 text-card-foreground"
+                    value={form.getValues(`items.${index}.quantity`) || 1}
+                    onChange={(e) => {
+                      const q = Math.max(1, Number(e.target.value) || 1);
+                      const price = Number(form.getValues(`items.${index}.unitPrice`)) || 0;
+                      form.setValue(`items.${index}.quantity`, q, { shouldDirty: true, shouldValidate: true });
+                      form.setValue(`items.${index}.lineTotal`, q * price * days, { shouldDirty: true });
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="font-medium text-orange-600 dark:text-orange-400" htmlFor={`items.${index}.subrentalCost`}>Cost:</label>
+                  <input
+                    id={`items.${index}.subrentalCost`}
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="flex-1 min-w-fit sm:w-24 h-9 px-2 border border-orange-300 dark:border-orange-600 rounded-md bg-background/50 text-card-foreground"
+                    value={form.getValues(`items.${index}.subrentalCost`) || 0}
+                    onChange={(e) => {
+                      const cost = Math.max(0, Number(e.target.value) || 0);
+                      form.setValue(`items.${index}.subrentalCost`, cost, { shouldDirty: true, shouldValidate: true });
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="font-medium text-emerald-600 dark:text-emerald-400" htmlFor={`items.${index}.unitPrice`}>Price:</label>
+                  <input
+                    id={`items.${index}.unitPrice`}
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="flex-1 min-w-fit sm:w-24 h-9 px-2 border border-emerald-300 dark:border-emerald-600 rounded-md bg-background/50 text-card-foreground"
+                    value={form.watch(`items.${index}.unitPrice`) || 0}
+                    onChange={(e) => {
+                      const price = Math.max(0, Number(e.target.value) || 0);
+                      const q = Number(form.getValues(`items.${index}.quantity`)) || 1;
+                      setUserEditedPrices(prev => new Set([...prev, index.toString()]));
+                      form.setValue(`items.${index}.unitPrice`, price, { shouldDirty: true, shouldValidate: true });
+                      form.setValue(`items.${index}.lineTotal`, q * price * days, { shouldDirty: true });
+                    }}
+                  />
+                  <span className="text-card-foreground font-semibold">/day</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium">Days:</span>
+                  <span className="text-card-foreground font-semibold">{days}</span>
+                </div>
+                <div className={`px-2 py-1 rounded text-xs font-semibold ${
+                  (form.getValues(`items.${index}.unitPrice`) || 0) > (form.getValues(`items.${index}.subrentalCost`) || 0)
+                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                }`}>
+                  <TrendingUp className="inline h-3 w-3 mr-1" />
+                  €{(((form.getValues(`items.${index}.unitPrice`) || 0) - (form.getValues(`items.${index}.subrentalCost`) || 0)) * (form.getValues(`items.${index}.quantity`) || 1) * days).toFixed(2)} profit
+                </div>
+              </>
+            )}
+            {field.type === 'fee' && (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="font-medium" htmlFor={`items.${index}.feeType`}>Type:</label>
+                  <select
+                    id={`items.${index}.feeType`}
+                    className="h-9 px-2 border rounded-md bg-background/50 text-card-foreground"
+                    value={form.getValues(`items.${index}.feeType`) || 'fixed'}
+                    onChange={(e) => {
+                      const v = e.target.value as 'fixed' | 'percentage';
+                      form.setValue(`items.${index}.feeType`, v, { shouldDirty: true, shouldValidate: true });
+                    }}
+                  >
+                    <option value="fixed">Fixed</option>
+                    <option value="percentage">Percentage</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="font-medium" htmlFor={`items.${index}.amount`}>Amount:</label>
+                  <input
+                    id={`items.${index}.amount`}
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="w-28 h-9 px-2 border rounded-md bg-background/50 text-card-foreground"
+                    value={form.getValues(`items.${index}.amount`) || 0}
+                    onChange={(e) => {
+                      const amt = Math.max(0, Number(e.target.value) || 0);
+                      form.setValue(`items.${index}.amount`, amt, { shouldDirty: true, shouldValidate: true });
+                      const type = form.getValues(`items.${index}.feeType`);
+                      form.setValue(`items.${index}.lineTotal`, type === 'percentage' ? 0 : amt, { shouldDirty: true });
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Line Total */}
+          <div className="ml-auto text-right">
+            <div className="text-xs text-muted-foreground font-medium">Line Total</div>
+            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              €{field.lineTotal?.toFixed(2) || '0.00'}
+            </div>
+          </div>
+        </div>
+
+        {/* Description row */}
+        <div className="mt-3 pt-3 border-t border-border/50 pl-6">
+          <label className="text-xs font-medium text-muted-foreground" htmlFor={`items.${index}.description`}>Description (optional)</label>
+          <textarea
+            id={`items.${index}.description`}
+            rows={2}
+            className="w-full mt-1 px-2 py-1 text-sm border rounded-md bg-background/50 resize-none"
+            placeholder="Add notes or details..."
+            value={form.getValues(`items.${index}.description`) || ''}
+            onChange={(e) => {
+              form.setValue(`items.${index}.description`, e.target.value, { shouldDirty: true, shouldValidate: true });
+            }}
+          />
+        </div>
+      </Card>
+    </div>
+  );
 }
 
 export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
@@ -314,7 +627,8 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
         } else if (item.type === 'service') {
           const svc = services.find((s: any) => s.id === item.serviceId);
           const quantity = item.quantity ?? 1;
-          const unitPrice = item.unitPrice ?? svc?.unitPrice ?? 0;
+          // CRITICAL: Use the form value, don't recalculate from service
+          const unitPrice = item.unitPrice ?? 0;
           const lineTotal = quantity * unitPrice * currentDays;
           return {
             id: item.id || crypto.randomUUID(),
@@ -377,16 +691,23 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
         endDate: data.endDate instanceof Date ? data.endDate : (data.endDate ? new Date(data.endDate) : undefined),
       };
 
+      // DEBUG: Log draft data before sending
+      console.log('[QUOTE FORM onSubmitDraft] Saving DRAFT with items:', {
+        quoteId: initialData?.id,
+        isDraft: true,
+        itemsCount: processedItems.length,
+        itemTypes: processedItems.map(i => i.type),
+        payloadHasItems: !!payload.items && payload.items.length > 0,
+      });
+
       if (initialData) {
-        await updateQuote({
-          ...initialData,
-          ...payload,
-          startDate: (payload.startDate as Date | undefined) ?? initialData.startDate,
-          endDate: (payload.endDate as Date | undefined) ?? initialData.endDate,
-          updatedAt: new Date(),
-        });
+        console.log('[QUOTE FORM onSubmitDraft] UPDATING draft quote:', initialData.id);
+        await updateQuote({ ...initialData, ...payload, updatedAt: new Date() } as any);
+        toast({ title: draftSavedToast });
       } else {
+        console.log('[QUOTE FORM onSubmitDraft] CREATING new draft quote');
         await addQuote(payload as any);
+        toast({ title: draftSavedToast });
       }
       toast({ title: draftSavedToast });
     } catch (err) {
@@ -420,9 +741,9 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
           feeName: t === 'fee' ? (item.feeName || undefined) : undefined,
           amount: t === 'fee' ? (item.amount ?? undefined) : undefined,
           feeType: t === 'fee' ? (item.feeType as 'fixed' | 'percentage' | undefined) : undefined,
-          // Common fields
-          quantity: t !== 'fee' ? (item.quantity ?? undefined) : undefined,
-          unitPrice: t !== 'fee' ? (item.unitPrice ?? undefined) : undefined,
+          // Common fields - IMPORTANT: preserve unitPrice even if 0
+          quantity: t !== 'fee' ? (item.quantity ?? 1) : undefined,
+          unitPrice: t !== 'fee' ? (item.unitPrice !== undefined && item.unitPrice !== null ? item.unitPrice : 0) : undefined,
           days: t !== 'fee' ? (item.days ?? undefined) : undefined,
           lineTotal: item.lineTotal ?? 0,
           description: item.description ?? undefined,
@@ -436,7 +757,9 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
       discountAmount: initialData.discountAmount || 0,
       discountType: initialData.discountType || 'fixed',
       taxRate: (initialData.taxRate || 0) * 100, // Convert decimal to percentage for display/editing
+      notes: initialData.notes || '',
       terms: initialData.terms || '',
+      status: initialData.status || 'Draft',
   } : {
     ...loadDraft(),
     name: "",
@@ -458,10 +781,23 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
   },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, move } = useFieldArray({
     control: form.control,
     name: "items",
   });
+
+  // Handle drag and drop reordering
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const activeIndex = fields.findIndex((f) => f.id === active.id);
+      const overIndex = fields.findIndex((f) => f.id === over.id);
+      if (activeIndex !== -1 && overIndex !== -1) {
+        move(activeIndex, overIndex);
+      }
+    }
+  };
 
   // Watch form values (must be declared before useEffects)
   const watchStartDate = form.watch("startDate");
@@ -609,19 +945,53 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
   // Fetch partners on mount
   useEffect(() => {
     const fetchPartners = async () => {
-      try {
-        const response = await fetch('/api/partners?activeOnly=true');
-        if (response.ok) {
-          const data = await response.json();
-          setPartners(data);
-          if (data.length > 0 && !selectedPartnerId) {
-            setSelectedPartnerId(data[0].id);
+      let retries = 0;
+      const maxRetries = 2;
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      while (retries <= maxRetries) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          
+          const response = await fetch('/api/partners?activeOnly=true', {
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            const data = await response.json();
+            setPartners(data);
+            if (data.length > 0 && !selectedPartnerId) {
+              setSelectedPartnerId(data[0].id);
+            }
+            return; // Success
+          } else {
+            console.error(`Failed to fetch partners: HTTP ${response.status} ${response.statusText}`);
+            const errorText = await response.text().catch(() => '');
+            if (errorText) console.error('Response:', errorText);
+          }
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') {
+            console.error(`Partners fetch attempt ${retries + 1} timeout after 10 seconds`);
+          } else if (error instanceof TypeError) {
+            console.error(`Partners fetch attempt ${retries + 1} failed (network error):`, error.message);
+          } else {
+            console.error(`Partners fetch attempt ${retries + 1} error:`, error);
+          }
+          
+          // Retry with exponential backoff
+          if (retries < maxRetries) {
+            retries++;
+            await delay(Math.pow(2, retries) * 1000); // 2s, 4s delays
+          } else {
+            console.error('All partner fetch retries exhausted');
+            break;
           }
         }
-      } catch (error) {
-        console.error('Error fetching partners:', error);
       }
     };
+    
     fetchPartners();
   }, []);
 
@@ -780,16 +1150,50 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
     }
   };
   
+  // Track which items have been explicitly edited by the user
+  const [userEditedPrices, setUserEditedPrices] = useState<Set<string>>(new Set());
+
+  // CRITICAL FIX: Initialize userEditedPrices on mount or when initialData changes
+  // When loading an existing quote, we need to identify which items have custom prices
+  // (prices that differ from the equipment's dailyRate)
   useEffect(() => {
-    fields.forEach((field, index) => {
-      const selectedEqId = form.watch(`items.${index}.equipmentId`);
-      const currentUnitPrice = form.watch(`items.${index}.unitPrice`);
-      const eq = equipment.find(e => e.id === selectedEqId);
-      if (eq && eq.dailyRate !== currentUnitPrice && !form.getFieldState(`items.${index}.unitPrice`).isDirty) {
-        form.setValue(`items.${index}.unitPrice`, eq.dailyRate, { shouldValidate: true, shouldDirty: true });
-      }
-    });
-  }, [fields, equipment, form]);
+    if (initialData?.items && initialData.items.length > 0 && equipment.length > 0) {
+      const editedPricesSet = new Set<string>();
+      
+      console.log('[QuoteForm] Initializing userEditedPrices for', initialData.items.length, 'items');
+      
+      initialData.items.forEach((item, index) => {
+        if (item.type === 'equipment') {
+          const eq = equipment.find(e => e.id === item.equipmentId);
+          // Use index as the key to match what the second useEffect uses
+          const itemKey = index.toString();
+          
+          // Ensure unitPrice is a number (handle string conversion from JSON)
+          const itemUnitPrice = Number(item.unitPrice) || 0;
+          const eqDailyRate = eq ? Number(eq.dailyRate) || 0 : 0;
+          
+          console.log(`[QuoteForm] Item ${index}:`, {
+            equipmentName: item.equipmentName,
+            equipmentId: item.equipmentId,
+            unitPrice: itemUnitPrice,
+            eqFound: !!eq,
+            eqDailyRate,
+            isDifferent: itemUnitPrice > 0 && itemUnitPrice !== eqDailyRate
+          });
+          
+          // If the item's unitPrice is different from the equipment's dailyRate,
+          // it means the user customized it, so we mark it as edited
+          if (eq && itemUnitPrice > 0 && itemUnitPrice !== eqDailyRate) {
+            editedPricesSet.add(itemKey);
+            console.log(`[QuoteForm] ✅ MARKED AS EDITED: Item ${index} "${item.equipmentName}" (Price: €${itemUnitPrice} vs Catalog: €${eqDailyRate})`);
+          }
+        }
+      });
+      
+      console.log('[QuoteForm] userEditedPrices Set:', Array.from(editedPricesSet));
+      setUserEditedPrices(editedPricesSet);
+    }
+  }, [initialData, equipment]);
 
   // Enhanced auto-save draft with status feedback
   useEffect(() => {
@@ -825,7 +1229,8 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
       if (item.type === 'equipment') {
         const eq = equipment.find(e => e.id === item.equipmentId);
         const quantity = item.quantity ?? 1;
-        const unitPrice = item.unitPrice ?? eq?.dailyRate ?? 0;
+        // CRITICAL: Use the form value, don't recalculate from equipment
+        const unitPrice = item.unitPrice ?? 0;
         const lineTotal = quantity * unitPrice * currentDays;
         return {
           id: item.id || crypto.randomUUID(),
@@ -841,7 +1246,8 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
       } else if (item.type === 'service') {
         const svc = services.find((s: any) => s.id === item.serviceId);
         const quantity = item.quantity ?? 1;
-        const unitPrice = item.unitPrice ?? svc?.unitPrice ?? 0;
+        // CRITICAL: Use the form value, don't recalculate from service
+        const unitPrice = item.unitPrice ?? 0;
         const lineTotal = quantity * unitPrice * currentDays;
         return {
           id: item.id || crypto.randomUUID(),
@@ -906,20 +1312,48 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
       endDate: data.endDate instanceof Date ? data.endDate : new Date(data.endDate),
     };
     
+    // DEBUG: Log the data being sent to API to verify items persistence
+    console.log('[QUOTE FORM onSubmit] Prepared quote data:', {
+      quoteId: initialData?.id,
+      quoteName: quoteData.name,
+      itemsCount: processedItems.length,
+      itemsTypes: processedItems.map(i => i.type),
+      hasAllRequiredFields: !!(quoteData.name && quoteData.location && quoteData.clientName),
+      payload: JSON.stringify(quoteData, null, 2),
+    });
+    
     try {
       if (initialData) {
-        updateQuote({ ...initialData, ...quoteData, updatedAt: new Date() });
-        toast({ title: toastQuoteUpdatedTitleText, description: `Quote "${data.name}" has been successfully updated.` });
-        router.push("/quotes");
+        console.log('[QUOTE FORM onSubmit] UPDATING existing quote:', initialData.id, 'with', processedItems.length, 'items');
+        // CRITICAL FIX: Make sure to await the update and handle errors
+        updateQuote({ ...initialData, ...quoteData, updatedAt: new Date() })
+          .then(() => {
+            console.log('[QUOTE FORM onSubmit] Quote update completed successfully');
+            toast({ title: toastQuoteUpdatedTitleText, description: `Quote "${data.name}" has been successfully updated.` });
+            router.push("/quotes");
+          })
+          .catch((error) => {
+            console.error('[QUOTE FORM onSubmit] Quote update failed:', error);
+            toast({ variant: "destructive", title: toastErrorTitleText, description: toastFailedtosavequotePleDescText});
+          });
       } else {
-        const newQuoteId = addQuote(quoteData);
-        toast({ title: toastQuoteCreatedTitleText, description: `Quote "${data.name}" has been successfully created.` });
-        localStorage.removeItem('quoteDraft'); // Clear draft after successful submit
-        if (onSubmitSuccess) {
-          onSubmitSuccess();
-        } else {
-          router.push(`/quotes/${newQuoteId}`);
-        }
+        console.log('[QUOTE FORM onSubmit] CREATING new quote with', processedItems.length, 'items');
+        // CRITICAL FIX: Make sure to await the create and handle errors
+        addQuote(quoteData)
+          .then((newQuoteId) => {
+            console.log('[QUOTE FORM onSubmit] Quote created successfully with ID:', newQuoteId);
+            toast({ title: toastQuoteCreatedTitleText, description: `Quote "${data.name}" has been successfully created.` });
+            localStorage.removeItem('quoteDraft'); // Clear draft after successful submit
+            if (onSubmitSuccess) {
+              onSubmitSuccess();
+            } else {
+              router.push(`/quotes/${newQuoteId}`);
+            }
+          })
+          .catch((error) => {
+            console.error('[QUOTE FORM onSubmit] Quote creation failed:', error);
+            toast({ variant: "destructive", title: toastErrorTitleText, description: toastFailedtosavequotePleDescText});
+          });
       }
     } catch (error) {
         toast({ variant: "destructive", title: toastErrorTitleText, description: toastFailedtosavequotePleDescText});
@@ -936,7 +1370,8 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
       if (item.type === 'equipment') {
         const eq = equipment.find(e => e.id === item.equipmentId);
         const quantity = item.quantity ?? 1;
-        const unitPrice = item.unitPrice ?? eq?.dailyRate ?? 0;
+        // CRITICAL: Use the form value, don't recalculate from equipment
+        const unitPrice = item.unitPrice ?? 0;
         const lineTotal = quantity * unitPrice * currentDays;
         return {
           id: item.id || crypto.randomUUID(),
@@ -952,7 +1387,8 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
       } else if (item.type === 'service') {
         const svc = services.find((s: any) => s.id === item.serviceId);
         const quantity = item.quantity ?? 1;
-        const unitPrice = item.unitPrice ?? svc?.unitPrice ?? 0;
+        // CRITICAL: Use the form value, don't recalculate from service
+        const unitPrice = item.unitPrice ?? 0;
         const lineTotal = quantity * unitPrice * currentDays;
         return {
           id: item.id || crypto.randomUUID(),
@@ -1084,13 +1520,13 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
         />
 
         {/* Main Content + Sidebar Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
           {/* Left Column: Main Content (3 columns on desktop = 75%) */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="md:col-span-2 lg:col-span-3 space-y-4 md:space-y-6">
 
         {/* Event & Client Details Section - Compact Collapsible */}
         <Card className="shadow-xl border-border/60">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 px-3 md:px-6 py-3 md:py-4">
             <Collapsible defaultOpen={false} className="w-full">
               <CollapsibleTrigger asChild>
                 <button className="flex items-center justify-between w-full hover:bg-muted/30 -m-4 p-4 rounded-t-lg transition-colors">
@@ -1103,7 +1539,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-4 pt-4">
                 {/* Quote Basics */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <FormField
                     control={form.control}
                     name="name"
@@ -1178,7 +1614,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                     )}
                   />
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <FormField control={form.control} name="startDate" render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel className="text-xs">Start Date *</FormLabel>
@@ -1278,7 +1714,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
 
                   {/* Manual Client Entry / Existing Client Display */}
                   {!watchClientId || watchClientId === '__manual_client__' ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <FormField
                         control={form.control}
                         name="clientName"
@@ -1350,7 +1786,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                       />
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       {selectedClient && (
                         <>
                           <div>
@@ -1410,271 +1846,34 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                {fields.map((field, index) => {
-                  // Skip rendering items without a type (shouldn't happen, but safety check)
-                  if (!field.type) {
-                    console.warn('Skipping item without type at index', index, field);
-                    return null;
-                  }
-                  return (
-                    <Card
-                      key={field.id}
-                      className="group relative p-4 shadow-md hover:shadow-lg hover:border-primary/40 transition-all duration-200 border-l-4"
-                      style={{
-                        borderLeftColor: field.type === 'equipment' ? '#666' : 
-                                       field.type === 'service' ? '#666' :
-                                       field.type === 'subrental' ? '#10b981' : '#999'
-                      }}
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        
-                        className="absolute top-2 right-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
-                        onClick={() => remove(index)}
-                        aria-label="Remove item"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                      
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                        {/* Item Type Badge */}
-                        <div className="flex items-center gap-3">
-                          <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-sm backdrop-blur border
-                            ${field.type === 'equipment' ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600' :
-                              field.type === 'service' ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600' :
-                              field.type === 'subrental' ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-600' :
-                              'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600'}`}
-                          >
-                            {field.type === 'equipment' && <FileText className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
-                            {field.type === 'service' && <PlusCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
-                            {field.type === 'fee' && <CalendarIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
-                            {field.type === 'subrental' && <Handshake className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider backdrop-blur border
-                                ${field.type === 'equipment' ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600' :
-                                  field.type === 'service' ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600' :
-                                  field.type === 'subrental' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600' :
-                                  'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'}`}
-                              >
-                                {field.type === 'subrental' ? 'Partner' : field.type}
-                              </span>
-                              {field.type === 'subrental' && field.partnerName && (
-                                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                                  via {field.partnerName}
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-1">
-                              <input
-                                type="text"
-                                className="w-full px-2 py-1 text-sm border rounded-md bg-background/50 text-card-foreground"
-                                placeholder={field.type === 'equipment' ? 'Equipment name' : field.type === 'service' ? 'Service name' : field.type === 'subrental' ? 'Equipment name' : 'Fee name'}
-                                value={
-                                  field.type === 'equipment'
-                                    ? (form.getValues(`items.${index}.equipmentName`) || '')
-                                    : field.type === 'service'
-                                      ? (form.getValues(`items.${index}.serviceName`) || '')
-                                      : field.type === 'subrental'
-                                        ? (form.getValues(`items.${index}.equipmentName`) || '')
-                                        : (form.getValues(`items.${index}.feeName`) || '')
-                                }
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  if (field.type === 'equipment' || field.type === 'subrental') {
-                                    form.setValue(`items.${index}.equipmentName`, v, { shouldDirty: true, shouldValidate: true });
-                                  } else if (field.type === 'service') {
-                                    form.setValue(`items.${index}.serviceName`, v, { shouldDirty: true, shouldValidate: true });
-                                  } else {
-                                    form.setValue(`items.${index}.feeName`, v, { shouldDirty: true, shouldValidate: true });
-                                  }
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Item Details */}
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                          {(field.type === 'equipment' || field.type === 'service') && (
-                            <>
-                              <div className="flex items-center gap-2">
-                          <label className="font-medium" htmlFor={`items.${index}.quantity`}>Qty:</label>
-                          <input
-                            id={`items.${index}.quantity`}
-                            type="number"
-                            min={1}
-                            className="w-20 h-9 px-2 border rounded-md bg-background/50 text-card-foreground"
-                            value={form.getValues(`items.${index}.quantity`) || 1}
-                            onChange={(e) => {
-                              const q = Math.max(1, Number(e.target.value) || 1);
-                              const price = Number(form.getValues(`items.${index}.unitPrice`)) || 0;
-                              form.setValue(`items.${index}.quantity`, q, { shouldDirty: true, shouldValidate: true });
-                              form.setValue(`items.${index}.lineTotal`, q * price * days, { shouldDirty: true });
-                            }}
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <label className="font-medium" htmlFor={`items.${index}.unitPrice`}>Rate:</label>
-                          <input
-                            id={`items.${index}.unitPrice`}
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            className="w-28 h-9 px-2 border rounded-md bg-background/50 text-card-foreground"
-                            value={form.getValues(`items.${index}.unitPrice`) || 0}
-                            onChange={(e) => {
-                              const price = Math.max(0, Number(e.target.value) || 0);
-                              const q = Number(form.getValues(`items.${index}.quantity`)) || 1;
-                              form.setValue(`items.${index}.unitPrice`, price, { shouldDirty: true, shouldValidate: true });
-                              form.setValue(`items.${index}.lineTotal`, q * price * days, { shouldDirty: true });
-                            }}
-                          />
-                          <span className="text-card-foreground font-semibold">{field.type === 'equipment' ? '/day' : ''}</span>
-                        </div>
-                        {field.type === 'equipment' && (
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">Days:</span>
-                            <span className="text-card-foreground font-semibold">{days}</span>
-                          </div>
-                        )}
-                            </>
-                          )}
-                          {field.type === 'subrental' && (
-                            <>
-                              <div className="flex items-center gap-2">
-                          <label className="font-medium" htmlFor={`items.${index}.quantity`}>Qty:</label>
-                          <input
-                            id={`items.${index}.quantity`}
-                            type="number"
-                            min={1}
-                            className="w-20 h-9 px-2 border rounded-md bg-background/50 text-card-foreground"
-                            value={form.getValues(`items.${index}.quantity`) || 1}
-                            onChange={(e) => {
-                              const q = Math.max(1, Number(e.target.value) || 1);
-                              const price = Number(form.getValues(`items.${index}.unitPrice`)) || 0;
-                              form.setValue(`items.${index}.quantity`, q, { shouldDirty: true, shouldValidate: true });
-                              form.setValue(`items.${index}.lineTotal`, q * price * days, { shouldDirty: true });
-                            }}
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <label className="font-medium text-orange-600 dark:text-orange-400" htmlFor={`items.${index}.subrentalCost`}>Cost:</label>
-                          <input
-                            id={`items.${index}.subrentalCost`}
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            className="w-24 h-9 px-2 border border-orange-300 dark:border-orange-600 rounded-md bg-background/50 text-card-foreground"
-                            value={form.getValues(`items.${index}.subrentalCost`) || 0}
-                            onChange={(e) => {
-                              const cost = Math.max(0, Number(e.target.value) || 0);
-                              form.setValue(`items.${index}.subrentalCost`, cost, { shouldDirty: true, shouldValidate: true });
-                            }}
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <label className="font-medium text-emerald-600 dark:text-emerald-400" htmlFor={`items.${index}.unitPrice`}>Price:</label>
-                          <input
-                            id={`items.${index}.unitPrice`}
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            className="w-24 h-9 px-2 border border-emerald-300 dark:border-emerald-600 rounded-md bg-background/50 text-card-foreground"
-                            value={form.getValues(`items.${index}.unitPrice`) || 0}
-                            onChange={(e) => {
-                              const price = Math.max(0, Number(e.target.value) || 0);
-                              const q = Number(form.getValues(`items.${index}.quantity`)) || 1;
-                              form.setValue(`items.${index}.unitPrice`, price, { shouldDirty: true, shouldValidate: true });
-                              form.setValue(`items.${index}.lineTotal`, q * price * days, { shouldDirty: true });
-                            }}
-                          />
-                          <span className="text-card-foreground font-semibold">/day</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium">Days:</span>
-                          <span className="text-card-foreground font-semibold">{days}</span>
-                        </div>
-                        <div className={`px-2 py-1 rounded text-xs font-semibold ${
-                          (form.getValues(`items.${index}.unitPrice`) || 0) > (form.getValues(`items.${index}.subrentalCost`) || 0)
-                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                        }`}>
-                          <TrendingUp className="inline h-3 w-3 mr-1" />
-                          €{(((form.getValues(`items.${index}.unitPrice`) || 0) - (form.getValues(`items.${index}.subrentalCost`) || 0)) * (form.getValues(`items.${index}.quantity`) || 1) * days).toFixed(2)} profit
-                        </div>
-                      </>
+                  <DndContext
+                    sensors={useSensors(
+                      useSensor(PointerSensor),
+                      useSensor(KeyboardSensor, {
+                        coordinateGetter: sortableKeyboardCoordinates,
+                      })
                     )}
-                    {field.type === 'fee' && (
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <label className="font-medium" htmlFor={`items.${index}.feeType`}>Type:</label>
-                          <select
-                            id={`items.${index}.feeType`}
-                            className="h-9 px-2 border rounded-md bg-background/50 text-card-foreground"
-                            value={form.getValues(`items.${index}.feeType`) || 'fixed'}
-                            onChange={(e) => {
-                              const v = e.target.value as 'fixed' | 'percentage';
-                              form.setValue(`items.${index}.feeType`, v, { shouldDirty: true, shouldValidate: true });
-                            }}
-                          >
-                            <option value="fixed">Fixed</option>
-                            <option value="percentage">Percentage</option>
-                          </select>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <label className="font-medium" htmlFor={`items.${index}.amount`}>Amount:</label>
-                          <input
-                            id={`items.${index}.amount`}
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            className="w-28 h-9 px-2 border rounded-md bg-background/50 text-card-foreground"
-                            value={form.getValues(`items.${index}.amount`) || 0}
-                            onChange={(e) => {
-                              const amt = Math.max(0, Number(e.target.value) || 0);
-                              form.setValue(`items.${index}.amount`, amt, { shouldDirty: true, shouldValidate: true });
-                              // For fixed fees, lineTotal equals amount; percentage handled in summary
-                              const type = form.getValues(`items.${index}.feeType`);
-                              form.setValue(`items.${index}.lineTotal`, type === 'percentage' ? 0 : amt, { shouldDirty: true });
-                            }}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-3">
+                        {fields.map((field, index) => (
+                          <SortableQuoteItem
+                            key={field.id}
+                            id={field.id}
+                            field={field}
+                            index={index}
+                            remove={remove}
+                            form={form}
+                            days={days}
+                            setUserEditedPrices={setUserEditedPrices}
                           />
-                        </div>
+                        ))}
                       </div>
-                    )}
-                        </div>
-
-                        {/* Line Total */}
-                        <div className="ml-auto text-right">
-                          <div className="text-xs text-muted-foreground font-medium">Line Total</div>
-                          <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                            €{field.lineTotal?.toFixed(2) || '0.00'}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Description row */}
-                      <div className="mt-3 pt-3 border-t border-border/50">
-                        <label className="text-xs font-medium text-muted-foreground" htmlFor={`items.${index}.description`}>Description (optional)</label>
-                        <textarea
-                          id={`items.${index}.description`}
-                          rows={2}
-                          className="w-full mt-1 px-2 py-1 text-sm border rounded-md bg-background/50 resize-none"
-                          placeholder="Add notes or details..."
-                          value={form.getValues(`items.${index}.description`) || ''}
-                          onChange={(e) => {
-                            form.setValue(`items.${index}.description`, e.target.value, { shouldDirty: true, shouldValidate: true });
-                          }}
-                        />
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+                    </SortableContext>
+                  </DndContext>
+                )}
 
               {form.formState.errors.items && typeof form.formState.errors.items === 'object' && !Array.isArray(form.formState.errors.items) && (
                 <p className="text-sm font-medium text-destructive mt-4">{form.formState.errors.items.message}</p>
@@ -2359,7 +2558,7 @@ export function QuoteForm({ initialData, onSubmitSuccess }: QuoteFormProps) {
           </div>
 
           {/* Right Column: Financial Summary Sidebar */}
-          <div className="lg:col-span-1 space-y-6 sticky top-4 h-fit">
+          <div className="md:col-span-1 lg:col-span-1 space-y-4 md:space-y-6 md:sticky md:top-4 md:h-fit">
             {/* Financial Summary Sidebar */}
             <QuoteSidebar
               form={form}

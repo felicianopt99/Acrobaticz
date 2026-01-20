@@ -363,10 +363,11 @@ export class OfflineSyncService {
       }
 
       // Registra Service Worker para sync em background
-      if ('serviceWorker' in navigator) {
+      if ('serviceWorker' in navigator && 'sync' in navigator.serviceWorker) {
         navigator.serviceWorker.ready.then(reg => {
-          if (reg.sync) {
-            reg.sync.register('sync-glossary').catch(err =>
+          const registration = reg as any;
+          if (registration.sync) {
+            registration.sync.register('sync-glossary').catch((err: any) =>
               console.warn('[OfflineSync] Failed to register sync tag:', err)
             );
           }

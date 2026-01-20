@@ -33,82 +33,131 @@ const translationQueue: QueuedTranslation[] = [];
 let isProcessingQueue = false;
 let queueProcessTimeout: NodeJS.Timeout | null = null;
 
-// Process queued translations in batches
+// Process queued translations in batches with retry logic
 async function processTranslationQueue(targetLang: Language) {
   if (isProcessingQueue || translationQueue.length === 0) return;
   
   isProcessingQueue = true;
   
-  try {
-    // Collect all queued texts
-    const queuedItems = [...translationQueue];
-    translationQueue.length = 0; // Clear queue
-    
-    const texts = queuedItems.map(item => item.text);
-    const uniqueTexts = Array.from(new Set(texts));
-    
-    console.log(`🚀 Processing ${uniqueTexts.length} texts in batch instead of ${texts.length} individual calls`);
-    
-    // Make batch API call
-    const response = await fetch('/api/translate', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        texts: uniqueTexts, 
-        targetLang,
-        progressive: true 
-      }),
-    });
-
-    if (!response.ok) {
-      let errorDetails = '';
-      try {
-        const errorData = await response.json();
-        errorDetails = errorData.error || errorData.message || JSON.stringify(errorData);
-        console.error('Translation API error response:', errorData);
-      } catch (parseErr) {
-        const responseText = await response.text();
-        errorDetails = responseText || `HTTP ${response.status}: ${response.statusText}`;
-        console.error('Translation API response (not JSON):', responseText);
+  let retries = 0;
+  const maxRetries = 2;
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  
+  while (retries <= maxRetries) {
+    try {
+      // Collect all queued texts (only once, on first attempt)
+      let queuedItems = [...translationQueue];
+      if (retries === 0) {
+        translationQueue.length = 0; // Clear queue only on first attempt
       }
-      throw new Error(`Batch translation failed: ${errorDetails}`);
-    }
-
-    const data = await response.json();
-    const translations = data.translations || uniqueTexts;
-    
-    // Create translation map
-    const translationMap = new Map<string, string>();
-    uniqueTexts.forEach((text, index) => {
-      const translated = translations[index] || text;
-      translationMap.set(text, translated);
       
-      // Cache the result
-      const cacheKey = `${targetLang}:${text}`;
-      clientCache.set(cacheKey, translated);
-    });
-    
-    // Resolve all queued promises
-    queuedItems.forEach(item => {
-      const translated = translationMap.get(item.text) || item.text;
-      item.resolve(translated);
-    });
-    
-  } catch (error) {
-    console.error('Batch translation error:', error instanceof Error ? error.message : error);
-    if (error instanceof Error) {
-      console.error('Error details:', error.stack);
+      if (queuedItems.length === 0) {
+        if (retries === 0) {
+          // Queue was already processed
+          isProcessingQueue = false;
+          return;
+        }
+        // Get items again if queue was re-populated
+        queuedItems = [...translationQueue];
+        translationQueue.length = 0;
+      }
+      
+      const texts = queuedItems.map(item => item.text);
+      const uniqueTexts = Array.from(new Set(texts));
+      
+      console.log(`🚀 Processing ${uniqueTexts.length} texts in batch (attempt ${retries + 1})`);
+      
+      // Make batch API call
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      let response;
+      try {
+        response = await fetch('/api/translate', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            texts: uniqueTexts, 
+            targetLang,
+            progressive: true 
+          }),
+          signal: controller.signal,
+        });
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
+          throw new Error('Translation API request timeout (>15s)');
+        } else if (fetchError instanceof TypeError) {
+          throw new Error(`Translation API network error: ${fetchError.message}`);
+        }
+        throw fetchError;
+      }
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        let errorDetails = '';
+        try {
+          const errorData = await response.json();
+          errorDetails = errorData.error || errorData.message || JSON.stringify(errorData);
+          console.error('Translation API error response:', errorData);
+        } catch (parseErr) {
+          const responseText = await response.text();
+          errorDetails = responseText || `HTTP ${response.status}: ${response.statusText}`;
+          console.error('Translation API response (not JSON):', responseText);
+        }
+        throw new Error(`Batch translation failed: ${errorDetails}`);
+      }
+
+      const data = await response.json();
+      const translations = data.translations || uniqueTexts;
+      
+      // Create translation map
+      const translationMap = new Map<string, string>();
+      uniqueTexts.forEach((text, index) => {
+        const translated = translations[index] || text;
+        translationMap.set(text, translated);
+        
+        // Cache the result
+        const cacheKey = `${targetLang}:${text}`;
+        clientCache.set(cacheKey, translated);
+      });
+      
+      // Resolve all queued promises
+      queuedItems.forEach(item => {
+        const translated = translationMap.get(item.text) || item.text;
+        item.resolve(translated);
+      });
+      
+      // Success - exit retry loop
+      break;
+      
+    } catch (error) {
+      console.error(`Batch translation error (attempt ${retries + 1}):`, error instanceof Error ? error.message : error);
+      
+      // If last retry, fallback and stop
+      if (retries >= maxRetries) {
+        if (error instanceof Error) {
+          console.error('Error details:', error.stack);
+        } else {
+          console.error('Unknown error type:', typeof error);
+        }
+        
+        // Resolve all queued promises with fallback to original text
+        const currentQueue = [...translationQueue];
+        translationQueue.length = 0;
+        currentQueue.forEach(item => {
+          item.resolve(item.text); // Fallback to original text instead of rejecting
+        });
+        break;
+      }
+      
+      // Retry with exponential backoff
+      retries++;
+      await delay(Math.pow(2, retries) * 500); // 1s, 2s delays
     }
-    
-    // Reject all queued promises with fallback to original text
-    const currentQueue = [...translationQueue];
-    translationQueue.length = 0;
-    currentQueue.forEach(item => {
-      item.resolve(item.text); // Fallback to original text instead of rejecting
-    });
-  } finally {
-    isProcessingQueue = false;
   }
+  
+  isProcessingQueue = false;
 }
 
 // Add translation to queue with debouncing

@@ -1,97 +1,164 @@
-# 🎯 Acrobaticz - Enterprise Rental Management System
+# 🎯 Acrobaticz Elite - Enterprise Rental Management System
 
-**Professional rental management software built with Next.js 15, React 19, PostgreSQL, and Prisma.**
+**Production-ready rental management platform built with Next.js 15, React 19, PostgreSQL, and Prisma.**
 
-> Transformed into a production-ready product with professional Docker deployment, clean codebase, and comprehensive documentation.
+> Professional software for equipment rental businesses with multi-language support, quote generation, inventory management, and real-time operations.
 
 ---
 
 ## ✨ Key Features
 
-- 🏢 **Equipment Management** - CRUD operations with categories, subcategories, and inventory tracking
-- 📋 **Quote Generation** - Professional PDF quotes with custom branding
-- 🎪 **Event Management** - Complete rental event/job scheduling
-- 👥 **Client & Partner Management** - CRM for customers and vendors
-- 💾 **Cloud Storage** - Integrated file management system
-- 🌍 **Multi-Language** - Automatic translation with DeepL
-- 📊 **Reporting & Analytics** - Real-time inventory and revenue tracking
-- 🔐 **Role-Based Access Control** - Secure user management
-- 📱 **Responsive Design** - Mobile-optimized interface
-- ⚡ **High Performance** - Optimized caching and indexing
+- 🏢 **Equipment Management** - Complete inventory system with categories, subcategories, and stock tracking
+- 📋 **Quote & Order Management** - Professional PDF quotes with automatic translations and custom branding
+- 🎪 **Event Management** - Schedule and manage rental events with real-time updates
+- 👥 **Client & Partner CRM** - Customer and vendor relationship management
+- 💾 **Cloud Storage** - S3-compatible file management (MinIO)
+- 🌍 **Multi-Language Support** - Automatic translation via DeepL API (DB-first approach)
+- 📊 **Real-time Analytics** - Inventory tracking, revenue reports, and business intelligence
+- 🔐 **Role-Based Access Control** - Admin, Manager, Technician roles with granular permissions
+- 📱 **Responsive Design** - Mobile-optimized interface for iOS/Android
+- ⚡ **High Performance** - Optimized for 50K+ equipment SKUs, WebSocket real-time updates
 
 ---
 
 ## 🚀 Quick Start (60 Seconds)
 
-**New to Acrobaticz?** Start here: [QUICK_START.md](./QUICK_START.md)
+**New users? Start here!** The easiest way to get running:
 
 ```bash
-# 1. Set environment variables
-export DB_PASSWORD="secure_password"
-export JWT_SECRET="random_secret_key"
+# One command to deploy everything with seeding
+bash deploy-easy.sh
 
-# 2. Start with Docker
-docker-compose up -d
-
-# 3. Open browser
-open http://localhost:3000
-
-# That's it! System ready with:
-# ✓ PostgreSQL database
-# ✓ Migrations applied
-# ✓ Default admin account (admin@example.com / admin123)
+# That's it! Open http://localhost:3000
 ```
 
-**Requirements:** Docker & Docker Compose only
+**Alternative 5-minute setup:**
+```bash
+# Step 1: Clone
+git clone https://github.com/yourusername/acrobaticz.git
+cd acrobaticz
+
+# Step 2: Configure (copy production template)
+cp .env.prod .env
+
+# Step 3: Deploy (with automatic database seeding)
+docker-compose up -d
+
+# Step 4: Access
+open http://localhost:3000
+```
+
+**What happens automatically:**
+- ✅ PostgreSQL database created and initialized
+- ✅ Prisma migrations run
+- ✅ Database seeded with 65 sample products + users
+- ✅ MinIO S3 storage configured
+- ✅ Next.js application started
+
+**✨ For complete setup guide:** See [QUICK_START.md](./QUICK_START.md)  
+**🌍 For multi-platform deployment:** See [DOCKER_PORTABILITY_GUIDE.md](./DOCKER_PORTABILITY_GUIDE.md)
+
+---
+
+## 🚀 Quick Start (60 Seconds)
+
+### Prerequisites
+- Docker & Docker Compose
+- (Optional) Node.js 22+ for local development
+
+### Installation
+
+```bash
+# 1. Clone repository
+git clone https://github.com/yourusername/acrobaticz.git
+cd acrobaticz
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env with your values (see ENVIRONMENT.md)
+
+# 3. Start application
+docker-compose up -d
+
+# 4. Access application
+open http://localhost:3000
+
+# Default credentials (change in production!)
+# Email: admin@example.com
+# Password: admin123
+```
+
+**That's it!** The system automatically:
+- ✅ Creates PostgreSQL database
+- ✅ Runs Prisma migrations
+- ✅ Seeds sample data (65 products, 3 users)
+- ✅ Initializes MinIO storage
+- ✅ Starts Next.js application
 
 ---
 
 ## 📚 Documentation
 
-### Getting Started
-- 🚀 [QUICK_START.md](./QUICK_START.md) - Installation in 60 seconds
-- 🏗️ [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - System design & structure
-- ✨ [docs/FEATURES.md](./docs/FEATURES.md) - Detailed feature list
+### Quick Navigation
+| Section | Link | Purpose |
+|---------|------|---------|
+| **Architecture** | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design, data flow, technology stack |
+| **Environment** | [ENVIRONMENT.md](./ENVIRONMENT.md) | All configuration variables (required/optional) |
+| **Setup** | [docs/SETUP/](./docs/SETUP/) | Installation methods (Docker, local, production) |
+| **Features** | [docs/FEATURES/](./docs/FEATURES/) | How to use each major feature |
+| **API** | [docs/API/](./docs/API/) | REST endpoints, authentication, WebSocket |
+| **Deployment** | [docs/DEPLOYMENT/](./docs/DEPLOYMENT/) | Production deployment, scaling, monitoring |
 
-### Deployment
-- 🐳 [docs/DEPLOYMENT/DOCKER_GUIDE.md](./docs/DEPLOYMENT/DOCKER_GUIDE.md) - Docker setup & troubleshooting
-- 🌐 [docs/DEPLOYMENT/PRODUCTION_DEPLOYMENT.md](./docs/DEPLOYMENT/PRODUCTION_DEPLOYMENT.md) - Scaling strategies, CI/CD
-- 📊 [docs/DATABASE/MIGRATION_CONSOLIDATION_GUIDE.md](./docs/DATABASE/MIGRATION_CONSOLIDATION_GUIDE.md) - Prisma migrations
+### For Different Roles
 
-### API & Configuration
-- 🔌 [docs/API/API_MANAGEMENT_GUIDE.md](./docs/API/API_MANAGEMENT_GUIDE.md) - API endpoints
-- ⚙️ [docs/API/API_CONFIGURATION_GUIDE.md](./docs/API/API_CONFIGURATION_GUIDE.md) - Configuration settings
+**👨‍💼 Business Users**
+- Start: [Quick Start](#quick-start-60-seconds) above
+- Features: [docs/FEATURES/QUOTE_GENERATION.md](./docs/FEATURES/QUOTE_GENERATION.md)
+- Troubleshooting: [docs/DEPLOYMENT/TROUBLESHOOTING.md](./docs/DEPLOYMENT/TROUBLESHOOTING.md)
 
-### Other
-- 📝 [CHANGELOG.md](./docs/CHANGELOG.md) - Version history
-- 🔄 [docs/INDEX.md](./docs/INDEX.md) - Documentation index
+**👨‍💻 Developers**
+- Architecture: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+- Local Setup: [docs/SETUP/LOCAL_DEVELOPMENT.md](./docs/SETUP/LOCAL_DEVELOPMENT.md)
+- API Guide: [docs/API/ENDPOINTS.md](./docs/API/ENDPOINTS.md)
+- Contributing: [CONTRIBUTING.md](./CONTRIBUTING.md)
+
+**👨‍🔧 DevOps/SysAdmins**
+- Docker Setup: [docs/SETUP/DOCKER_SETUP.md](./docs/SETUP/DOCKER_SETUP.md)
+- Production Deploy: [docs/DEPLOYMENT/PRODUCTION_DEPLOYMENT.md](./docs/DEPLOYMENT/PRODUCTION_DEPLOYMENT.md)
+- Monitoring: [docs/DEPLOYMENT/MONITORING.md](./docs/DEPLOYMENT/MONITORING.md)
 
 ---
 
 ## 🛠️ Technology Stack
 
 ### Frontend
-- **Next.js 15** - React framework with App Router
-- **React 19** - Latest React version
-- **TypeScript** - Type-safe JavaScript
-- **Tailwind CSS** - Utility-first styling
-- **Shadcn/ui** - Component library
-- **Zustand** - State management
-- **TanStack Query** - Data fetching
+- **Next.js 15** - React framework with App Router & Server Components
+- **React 19** - Latest React features
+- **TypeScript 5** - Type-safe development
+- **Tailwind CSS 3** - Utility-first styling
+- **Shadcn/ui** - High-quality React components
+- **Zustand** - Lightweight state management
+- **TanStack Query 5** - Server state management & data fetching
 
 ### Backend
 - **Node.js 22** - JavaScript runtime
-- **Next.js API Routes** - Backend endpoints
-- **Prisma 5.15** - ORM & database management
+- **Next.js API Routes** - RESTful endpoints
+- **Prisma 5.15** - Type-safe ORM
+- **Socket.io** - Real-time bidirectional communication
+- **JWT** - Stateless authentication
 - **Bcrypt** - Password hashing
-- **JWT** - Authentication
-- **Socket.io** - Real-time updates
 
 ### Database & Storage
 - **PostgreSQL 16** - Relational database
-- **Prisma Migrations** - Schema versioning
-- **Cloud Storage** - File management
-- **Redis** - Caching (optional)
+- **Prisma Migrations** - Schema versioning & migrations
+- **MinIO** - S3-compatible object storage
+- **Redis** (optional) - Caching layer
+
+### DevOps & Deployment
+- **Docker & Docker Compose** - Containerization
+- **Nginx** - Reverse proxy (production)
+- **GitHub Actions** - CI/CD pipeline
+- **Let's Encrypt** - SSL/TLS certificates
 
 ### DevOps
 - **Docker** - Containerization

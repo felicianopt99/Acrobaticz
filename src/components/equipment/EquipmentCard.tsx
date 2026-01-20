@@ -41,7 +41,10 @@ export function EquipmentCard({ item, category, subcategory, onEdit, onDelete, o
       case 'good': return uiGoodText;
       case 'damaged': return uiDamagedText;
       case 'maintenance': return uiMaintenanceText;
-      default: return status.charAt(0).toUpperCase() + status.slice(1);
+      default: {
+        const defaultStatus = status as string;
+        return defaultStatus.charAt(0).toUpperCase() + defaultStatus.slice(1);
+      }
     }
   };
   const itemCategory = category || categories.find(c => c.id === item.categoryId);

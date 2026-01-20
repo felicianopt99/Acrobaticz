@@ -1,68 +1,231 @@
+# ============================================================
+# Docker Compose for Testing (Ephemeral, Lightweight)
+# 
+# Ultra-Portable Testing Environment:
+# - Cross-platform support (Linux, macOS, Windows WSL2)
+# - Multi-arch: linux/amd64, linux/arm64, linux/arm/v7
+# - Ephemeral storage (in-memory tmpfs for speed)
+# - Automatic cleanup between runs
+# - Minimal resource footprint
+# 
+# Features:
+# - Fast test execution (no persistent disk writes)
+# - Clean state for each test run
+# - Comprehensive health checks
+# - Easy debugging and logging
+# 
+# Usage:
+#   docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+#   docker-compose -f docker-compose.test.yml down -v  (clean up)
+# 
+# Multi-platform build:
+#   docker buildx build --platform linux/amd64,linux/arm64 -t acrobaticz:test .
+# ============================================================
+
 version: '3.9'
 
 services:
+  # ============================================================
+  # PostgreSQL for Testing (Ephemeral)
+  # Uses in-memory tmpfs for ultra-fast tests
+  # ============================================================
   postgres-test:
     image: postgres:16-alpine
     container_name: acrobaticz-postgres-test
+    pull_policy: if_not_present
+    
     environment:
-      POSTGRES_DB: acrobaticz
+      POSTGRES_DB: acrobaticz_test
       POSTGRES_USER: acrobaticz_user
-      POSTGRES_PASSWORD: change_me_strong_password_123
+      POSTGRES_PASSWORD: test_password_secure_123
+      # Optimized for testing (faster writes)
+      POSTGRES_INITDB_ARGS: >
+        -c shared_buffers=128MB
+        -c max_connections=50
+        -c synchronous_commit=off
+        -c fsync=off
+        -c full_page_writes=off
+    
     ports:
       - "5433:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U acrobaticz_user"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+    
+    # Use tmpfs for ultra-fast in-memory testing
+    # Data is lost on container stop (desired for tests)
     tmpfs:
-      - /var/lib/postgresql/data
+      - /var/lib/postgresql/data:rw,size=512M,noexec,nosuid
+      - /var/run:rw,size=64M
+    
+    # Fast health check for testing
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acrobaticz_user -d acrobaticz_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    
+    networks:
+      - test-network
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+        labels: "service=postgres,environment=test"
 
+  # ============================================================
+  # MinIO for Testing (Ephemeral)
+  # Uses in-memory tmpfs for fast object storage tests
+  # ============================================================
   minio-test:
     image: minio/minio:latest
     container_name: acrobaticz-minio-test
+    pull_policy: if_not_present
+    
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: minioadmin_test
+      MINIO_ROOT_PASSWORD: minioadmin_test_secure_123
+      MINIO_LOG_LEVEL: warn  # Reduce noise in test output
+    
     ports:
       - "9002:9000"
       - "9003:9001"
+    
     command: minio server /data --console-address ":9001"
+    
+    # Use tmpfs for ultra-fast in-memory testing
+    tmpfs:
+      - /data:rw,size=256M,noexec,nosuid
+      - /var/run:rw,size=32M
+    
+    # Fast health check
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    tmpfs:
-      - /data
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    
+    networks:
+      - test-network
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+        labels: "service=minio,environment=test"
 
+  # ============================================================
+  # Acrobaticz App for Testing
+  # Builds from Dockerfile.dev, runs test suite
+  # ============================================================
   app-test:
     build:
       context: .
       dockerfile: Dockerfile.dev
+      cache_from:
+        - type=registry,ref=acrobaticz:dev
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    
+    image: acrobaticz:test
     container_name: acrobaticz-app-test
+    pull_policy: if_not_present
+    
     depends_on:
       postgres-test:
         condition: service_healthy
       minio-test:
         condition: service_healthy
+    
     environment:
       NODE_ENV: test
-      DATABASE_URL: postgresql://acrobaticz_user:change_me_strong_password_123@postgres-test:5432/acrobaticz
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      NEXT_TELEMETRY_TOLEDO: 1
+      NODE_OPTIONS: "--max_old_space_size=1024"
+      
+      # Test database (different from prod/dev)
+      DATABASE_URL: postgresql://acrobaticz_user:test_password_secure_123@postgres-test:5432/acrobaticz_test?schema=public&connect_timeout=5
+      
+      # JWT Secret for tests
       JWT_SECRET: test-secret-key-1234567890abcdefghijklmnop
+      JWT_EXPIRATION: 1d
+      
+      # MinIO Test Credentials
       MINIO_ENDPOINT: http://minio-test:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
+      S3_ENDPOINT: http://minio-test:9000
+      S3_ACCESS_KEY: minioadmin_test
+      S3_SECRET_KEY: minioadmin_test_secure_123
+      S3_BUCKET: acrobaticz-test
+      S3_REGION: us-east-1
+      
+      # API Configuration
       API_BASE_URL: http://localhost:3000
+      DOMAIN: localhost:3000
+      
+      # Test-specific flags
+      SEED_ON_START: "true"
+      SEED_VERBOSE: "false"
+      DEBUG: "acrobaticz:test"
+    
     ports:
       - "3000:3000"
+    
     volumes:
       - .:/app
       - /app/node_modules
+      - /app/.next
+    
+    # Run test suite
     command: npm run test:api
+    
     networks:
       - test-network
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+        labels: "service=app,environment=test"
 
+# ============================================================
+# Test Networks
+# ============================================================
 networks:
   test-network:
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-acrobaticz-test
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

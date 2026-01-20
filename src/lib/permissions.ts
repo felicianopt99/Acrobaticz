@@ -77,7 +77,7 @@ export function getRolePermissions(role: UserRole | string): RolePermissions {
 export function hasPermission(role: UserRole | string, permission: keyof RolePermissions): boolean {
   const normalized = normalizeRole(role);
   const permissions = ROLE_PERMISSIONS_MAP[normalized] || ROLE_PERMISSIONS_MAP.viewer;
-  return permissions[permission];
+  return permissions[permission] || false;
 }
 
 export const ROLE_DESCRIPTIONS: Record<string, string> = {

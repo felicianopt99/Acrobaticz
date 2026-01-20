@@ -1,19 +1,25 @@
 # ============================================================
 # Docker Compose for Development (Production-like Setup)
-# Simulates full production environment locally
-# Use: docker-compose -f docker-compose.dev.yml up
+# Simulates full production environment locally with hot-reload
 # 
-# Services:
-# - PostgreSQL 16 (database)
-# - MinIO (S3-compatible storage)
-# - Next.js App (development mode with hot-reload)
-# - Nginx (reverse proxy - optional)
-#
-# Features:
-# - Full setup flow validation (like production)
-# - Hot reload development experience
-# - Complete service dependencies
-# - Health checks on all services
+# Ultra-Portable Features:
+# - Works on Linux, macOS (Intel & Apple Silicon), Windows WSL2
+# - Auto-reload on file changes
+# - Full service dependencies (PostgreSQL, MinIO)
+# - Comprehensive health checks
+# - Easy debugging with exposed ports
+# 
+# Usage:
+#   docker-compose -f docker-compose.dev.yml up
+#   docker-compose -f docker-compose.dev.yml down
+# 
+# Access:
+#   App: http://localhost:3000
+#   MinIO Console: http://localhost:9001
+#   PostgreSQL: localhost:5432
+# 
+# Multi-platform build:
+#   docker buildx build --platform linux/amd64,linux/arm64 -t acrobaticz:dev .
 # ============================================================
 
 version: '3.9'
@@ -26,22 +32,29 @@ services:
     image: postgres:16-alpine
     container_name: acrobaticz-postgres-dev
     restart: unless-stopped
+    pull_policy: if_not_present
     
     environment:
       POSTGRES_DB: ${DB_NAME:-acrobaticz_dev}
       POSTGRES_USER: ${DB_USER:-acrobaticz_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_password_123}
-      POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c max_connections=100"
+      POSTGRES_INITDB_ARGS: >
+        -c shared_buffers=256MB
+        -c max_connections=100
+        -c log_statement=all
+        -c log_min_duration_statement=0
     
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     
+    # Extended health check for development
+    # More verbose to help debug issues
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-acrobaticz_user} -d ${DB_NAME:-acrobaticz_dev}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-acrobaticz_user} -d ${DB_NAME:-acrobaticz_dev} -v"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 15s
+      start_period: 20s
     
     ports:
       - "5432:5432"
@@ -53,16 +66,17 @@ services:
       resources:
         limits:
           cpus: '2'
-          memory: 512M
+          memory: 1G
         reservations:
           cpus: '1'
-          memory: 256M
+          memory: 512M
     
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
+        max-size: "15m"
         max-file: "3"
+        labels: "service=postgres,environment=development"
 
   # ============================================================
   # MinIO S3-Compatible Storage (Production-like)
@@ -71,10 +85,13 @@ services:
     image: minio/minio:latest
     container_name: acrobaticz-minio-dev
     restart: unless-stopped
+    pull_policy: if_not_present
     
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin_dev_123}
+      # Enable debug logging for development
+      MINIO_LOG_LEVEL: ${MINIO_LOG_LEVEL:-info}
     
     volumes:
       # Use local dev-storage for MinIO data
@@ -86,12 +103,13 @@ services:
       - "9000:9000"    # MinIO S3 API
       - "9001:9001"    # MinIO Web Console (dev only)
     
+    # Extended health check for development
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 15s
+      start_period: 20s
     
     networks:
       - acrobaticz-dev-network
@@ -99,32 +117,39 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: 256M
+          cpus: '2'
+          memory: 512M
         reservations:
           cpus: '0.5'
-          memory: 128M
+          memory: 256M
     
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
+        max-size: "15m"
         max-file: "3"
+        labels: "service=minio,environment=development"
 
   # ============================================================
   # Next.js Application (Development with Hot Reload)
   # Uses development Dockerfile for faster builds and debugging
+  # 
+  # Hot Reload: File changes automatically trigger rebuild
+  # Volume Mapping: Source code mounted for instant feedback
   # ============================================================
   app:
     build:
       context: .
       dockerfile: Dockerfile.dev
       cache_from:
-        - acrobaticz:dev
+        - type=registry,ref=acrobaticz:dev
+      args:
+        - BUILDKIT_INLINE_CACHE=1
     
     image: acrobaticz:dev
     container_name: acrobaticz-app-dev
     restart: unless-stopped
+    pull_policy: if_not_present
     
     environment:
       # Node/Next.js Configuration
@@ -132,14 +157,17 @@ services:
       PORT: 3000
       HOSTNAME: 0.0.0.0
       NEXT_TELEMETRY_DISABLED: 1
-      NODE_OPTIONS: --max-old-space-size=2048
+      NODE_OPTIONS: --max-old-space-size=2048 --disable-warning=DEP0040
+      # Enable debug logging for development
+      DEBUG: ${DEBUG:-acrobaticz:*}
       
       # Database Connection (simulates production)
-      DATABASE_URL: postgresql://${DB_USER:-acrobaticz_user}:${DB_PASSWORD:-dev_password_123}@postgres:5432/${DB_NAME:-acrobaticz_dev}?schema=public
+      DATABASE_URL: postgresql://${DB_USER:-acrobaticz_user}:${DB_PASSWORD:-dev_password_123}@postgres:5432/${DB_NAME:-acrobaticz_dev}?schema=public&connect_timeout=10
       
       # JWT Authentication
       JWT_SECRET: ${JWT_SECRET:-dev-secret-key-for-local-development-only}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-dev-encryption-key-local-only}
       
       # MinIO/S3 Configuration (simulates production)
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
@@ -148,6 +176,7 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin_dev_123}
       S3_BUCKET: ${S3_BUCKET:-acrobaticz-dev}
       S3_REGION: ${S3_REGION:-us-east-1}
+      S3_USE_PATH_STYLE: "true"
       
       # ==============================================
       # Database Seeding Configuration
@@ -159,28 +188,36 @@ services:
       # Clean database before seeding
       SEED_CLEAN: ${SEED_CLEAN:-false}
       # Verbose seed output
-      SEED_VERBOSE: ${SEED_VERBOSE:-false}
+      SEED_VERBOSE: ${SEED_VERBOSE:-true}
       
       # Optional: Translation API
       DEEPL_API_KEY: ${DEEPL_API_KEY:-}
+      
+      # Development options
+      VERBOSE_LOGS: "true"
+      WATCH_MODE: "true"
     
     volumes:
       # Source code with hot-reload
+      # Exclude node_modules and .next from bind mount
       - .:/app
       - /app/node_modules
       - /app/.next
-      # Dev storage
+      # Dev storage for S3 uploads
       - ./dev-storage:/app/dev-storage
+      # Cache directory
+      - ./data/dev_cache:/app/.next/cache
     
     ports:
       - "3000:3000"
     
+    # Extended health check for development
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/api/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 15s
       retries: 3
-      start_period: 45s
+      start_period: 60s
     
     networks:
       - acrobaticz-dev-network
@@ -195,16 +232,17 @@ services:
       resources:
         limits:
           memory: 4G
-          cpus: '2'
+          cpus: '4'
         reservations:
           memory: 2G
-          cpus: '1'
+          cpus: '2'
     
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "15m"
+        max-file: "5"
+        labels: "service=app,environment=development"
 
   # ============================================================
   # Nginx Reverse Proxy (Optional - for production-like experience)

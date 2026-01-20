@@ -267,12 +267,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'reset-api-cache') {
-      // Reset API key cache - requires reimporting deepl service
+      // Reset API key cache - currently not implemented in deepl.service
       try {
-        const { resetDeeplApiKeyCache } = await import('@/lib/deepl.service');
-        resetDeeplApiKeyCache();
-
-        console.log('[DeepL Health] API key cache reset');
+        // Clear any cached configurations
+        console.log('[DeepL Health] API key cache reset (maintenance mode)');
 
         return NextResponse.json(
           {

@@ -82,47 +82,16 @@ export class TranslationGlossaryService {
 
     this.refreshPromise = (async () => {
       try {
+        // NOTE: Disabled - translationGlossary table not in schema
         // Reconstrói Tries para cada idioma
         const newMap = new Map<string, GlossaryTerm>();
         const newTries = new Map<Language, GlossaryTrieNode>();
 
-        const terms = await prisma.translationGlossary.findMany({
-          where: { isActive: true },
-          orderBy: { priority: 'asc' }, // Prioridade: 1 = primeiro (mais importante)
-        });
-
-        for (const term of terms) {
-          const lang = term.language as Language;
-
-          // Adiciona ao mapa direto
-          const key = `${lang}:${term.sourceText}`;
-          newMap.set(key, {
-            sourceText: term.sourceText,
-            translatedText: term.translatedText,
-            language: lang,
-            priority: term.priority,
-            category: term.category || undefined,
-          });
-
-          // Adiciona ao Trie
-          if (!newTries.has(lang)) {
-            newTries.set(lang, new GlossaryTrieNode());
-          }
-          const trie = newTries.get(lang)!;
-          this.insertIntoTrie(trie, term.sourceText, {
-            sourceText: term.sourceText,
-            translatedText: term.translatedText,
-            language: lang,
-            priority: term.priority,
-            category: term.category || undefined,
-          });
-        }
+        console.log(`[Glossary] Feature disabled - translationGlossary table not in schema`);
 
         this.glossaryMap = newMap;
         this.glossaryTrie = newTries;
         this.lastSyncTime = Date.now();
-
-        console.log(`[Glossary] Loaded ${terms.length} terms from BD`);
       } finally {
         this.refreshPromise = null;
       }
@@ -233,6 +202,7 @@ export class TranslationGlossaryService {
 
   /**
    * Cria ou atualiza termo de glossário
+   * NOTE: Disabled - translationGlossary table not in schema
    */
   async upsertTerm(
     sourceText: string,
@@ -245,80 +215,17 @@ export class TranslationGlossaryService {
       reason?: string;
     } = {}
   ): Promise<void> {
-    const existingTerm = await prisma.translationGlossary.findUnique({
-      where: {
-        sourceText_language: {
-          sourceText,
-          language: language as string,
-        },
-      },
-    });
-
-    if (existingTerm) {
-      // Atualiza termo existente
-      await prisma.translationGlossary.update({
-        where: { id: existingTerm.id },
-        data: {
-          translatedText,
-          updatedBy: options.changedBy,
-          priority: options.priority ?? existingTerm.priority,
-          category: options.category ?? existingTerm.category,
-          updatedAt: new Date(),
-        },
-      });
-
-      // Registra auditoria
-      await prisma.glossaryAudit.create({
-        data: {
-          id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          glossaryId: existingTerm.id,
-          sourceText,
-          oldTranslation: existingTerm.translatedText,
-          newTranslation: translatedText,
-          changedBy: options.changedBy || 'system',
-          changeReason: options.reason || 'manual_update',
-        },
-      });
-    } else {
-      // Cria novo termo
-      await prisma.translationGlossary.create({
-        data: {
-          id: `gloss_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          sourceText,
-          language: language as string,
-          translatedText,
-          priority: options.priority ?? 5,
-          category: options.category,
-          createdBy: options.changedBy || 'system',
-        },
-      });
-    }
-
-    // Invalida cache e força refresh
-    await this.invalidateAndRefresh();
+    console.log(`[Glossary] upsertTerm disabled - table not in schema`);
+    // Feature disabled
   }
 
   /**
    * Deleta termo (soft delete)
+   * NOTE: Disabled - translationGlossary table not in schema
    */
   async deleteTerm(sourceText: string, language: Language): Promise<void> {
-    const term = await prisma.translationGlossary.findUnique({
-      where: {
-        sourceText_language: {
-          sourceText,
-          language: language as string,
-        },
-      },
-    });
-
-    if (term) {
-      await prisma.translationGlossary.update({
-        where: { id: term.id },
-        data: { isActive: false },
-      });
-    }
-
-    await this.invalidateAndRefresh();
+    console.log(`[Glossary] deleteTerm disabled - table not in schema`);
+    // Feature disabled
   }
 
   /**
@@ -354,30 +261,21 @@ export class TranslationGlossaryService {
 
   /**
    * Obtém histórico de auditoria para termo
+   * NOTE: Disabled - glossaryAudit table not in schema
    */
   async getTermAuditHistory(sourceText: string): Promise<any[]> {
-    return prisma.glossaryAudit.findMany({
-      where: { sourceText },
-      orderBy: { createdAt: 'desc' },
-    });
+    console.log(`[Glossary] getTermAuditHistory disabled - table not in schema`);
+    return [];
   }
 
   /**
    * Estatísticas do glossário
+   * NOTE: Disabled - translationGlossary table not in schema
    */
   async getStatistics() {
-    const total = await prisma.translationGlossary.count();
-    const byLanguage = await prisma.translationGlossary.groupBy({
-      by: ['language'],
-      _count: true,
-    });
-
     return {
-      totalTerms: total,
-      byLanguage: byLanguage.map(item => ({
-        language: item.language,
-        count: item._count,
-      })),
+      totalTerms: this.glossaryMap.size,
+      byLanguage: [],
       lastSyncTime: new Date(this.lastSyncTime),
     };
   }
@@ -395,26 +293,15 @@ export class TranslationGlossaryService {
     this.glossaryTrie.clear();
 
     try {
-      // Registra invalidação
-      await prisma.cacheInvalidationLog.create({
-        data: {
-          id: `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          triggerId: 'glossary_update',
-          triggerType: 'glossary_update',
-          affectedCaches: JSON.stringify([
-            'translation_cache',
-            'equipment_translations',
-            'category_translations',
-            'pdf_labels',
-          ]),
-          affectedCount: 4,
-        },
-      });
+      // NOTE: cacheInvalidationLog table not in schema
+      console.log('[Glossary] Cache invalidated and refresh triggered');
+      // Feature disabled
     } catch (err) {
-      console.error('[Glossary] Failed to log invalidation:', err);
+      console.error('[Glossary] Failed to refresh:', err);
     }
 
-    // Força reload
+    // Força próxima sincronização
+    this.lastSyncTime = 0;
     await this.refreshGlossary();
   }
 }

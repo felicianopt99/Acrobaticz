@@ -59,7 +59,9 @@ export function BottomNav() {
   const { currentUser } = useAppContext();
   const pathname = usePathname();
   const router = useRouter();
-  const { t: translated } = useTranslation();
+  // Use tSync instead of t to avoid state updates during render phase
+  // This prevents "Cannot update a component while rendering" warnings
+  const { tSync: translated } = useTranslation();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   // Get visible nav items based on user role

@@ -4,6 +4,16 @@ import { z } from 'zod'
 import { requireReadAccess, requirePermission } from '@/lib/api-auth'
 
 
+// Helper function to transform Prisma Quote response to frontend Quote format
+// Maps QuoteItem[] to items[] and handles field name conversions
+const transformQuoteResponse = (quote: any) => {
+  const { QuoteItem, ...baseQuote } = quote
+  return {
+    ...baseQuote,
+    items: QuoteItem || [],
+  }
+}
+
 const QuoteItemSchema = z.object({
   id: z.string().optional(),
   type: z.enum(['equipment', 'service', 'fee', 'subrental']),
@@ -75,7 +85,9 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
     
-    return NextResponse.json(quotes)
+    // Transform response: map QuoteItem to items
+    const transformedQuotes = quotes.map(transformQuoteResponse)
+    return NextResponse.json(transformedQuotes)
   } catch (error) {
     console.error('Error fetching quotes:', error)
     return NextResponse.json({ error: 'Failed to fetch quotes' }, { status: 500 })
@@ -88,6 +100,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { draft, items, ...rest } = body as any
+
+    console.log('[QUOTES POST] Received body:', {
+      hasDraft: !!draft,
+      hasItems: Array.isArray(items),
+      itemsCount: Array.isArray(items) ? items.length : 0,
+      restKeys: Object.keys(rest),
+    })
+    console.log('[QUOTES POST] Items:', items)
 
     // Validation: strict when draft is falsey; relaxed when draft=true
     let validatedBase: any
@@ -170,7 +190,9 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(quote, { status: 201 })
+    // Transform response: map QuoteItem to items
+    const transformedQuote = transformQuoteResponse(quote)
+    return NextResponse.json(transformedQuote, { status: 201 })
   } catch (error) {
     console.error('Error creating quote:', error)
     if (error instanceof z.ZodError) {
@@ -186,6 +208,14 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
     const { id, items, quoteNumber, createdAt, updatedAt, ...updateData } = body
+
+    console.log('[QUOTES PUT] Received body:', {
+      quoteId: id,
+      hasItems: Array.isArray(items),
+      itemsCount: Array.isArray(items) ? items.length : 0,
+      updateDataKeys: Object.keys(updateData),
+    })
+    console.log('[QUOTES PUT] Items:', items)
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json({ error: 'Quote ID is required' }, { status: 400 })
@@ -228,7 +258,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // If items provided, just clean them for Prisma without strict validation
-    let validatedItems: any[] | undefined = undefined
+    let validatedItems: any[] = []
     if (Array.isArray(items) && items.length > 0) {
       try {
         console.log('Items being processed for update:', JSON.stringify(items.slice(0, 1), null, 2), `... (${items.length} total)`)
@@ -240,32 +270,59 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Build update payload (exclude items for now)
-    const updatePayload: any = {
-      ...baseValidated,
-      clientEmail: baseValidated.clientEmail || undefined,
+    // Build update payload with only valid Quote scalar fields
+    // Filter out relations, non-existent fields, and internal fields
+    const validQuoteFields = [
+      'name', 'location', 'clientId', 'clientName', 'clientEmail', 'clientPhone', 'clientAddress',
+      'startDate', 'endDate', 'subTotal', 'discountAmount', 'discountType', 'taxRate', 'taxAmount',
+      'totalAmount', 'status', 'notes', 'terms', 'updatedAt'
+    ]
+    
+    const updatePayload: any = {}
+    for (const field of validQuoteFields) {
+      if (field in baseValidated) {
+        updatePayload[field] = baseValidated[field]
+      }
     }
+    // Ensure clientEmail is undefined if empty
+    if (updatePayload.clientEmail === '') {
+      updatePayload.clientEmail = undefined
+    }
+    updatePayload.updatedAt = new Date()
 
     // Run in a transaction if items are being replaced
     const result = await prisma.$transaction(async (tx) => {
-      // Only replace items if explicitly provided AND they appear to be new data
-      // (i.e., don't have database timestamps or have been explicitly modified)
-      const shouldUpdateItems = validatedItems && validatedItems.length > 0 && items?.some((item: any) => !item.id || item.isNew)
+      // CRITICAL FIX: ALWAYS update items when present in request, even if empty
+      // This prevents the bug where items array gets lost during update
+      // When items key exists in body, we MUST respect it and sync the DB
+      const shouldUpdateItems = 'items' in body // Check if items key exists in body, not just if length > 0
       
       if (shouldUpdateItems) {
-        // Replace items atomically
-        console.log('Updating quote items')
-        await tx.quoteItem.deleteMany({ where: { quoteId: id } })
-        await tx.quote.update({
-          where: { id },
-          data: {
-            ...updatePayload,
-            QuoteItem: { create: validatedItems },
-          },
-        })
+        // Replace items atomically - delete ALL old items and create new ones
+        console.log(`[QUOTES PUT] Updating quote items. Current items: ${Array.isArray(items) ? items.length : 0}`)
+        
+        // Always delete old items first
+        const deletedCount = await tx.quoteItem.deleteMany({ where: { quoteId: id } })
+        console.log(`[QUOTES PUT] Deleted ${deletedCount.count} old items`)
+        
+        // Then create new items if any provided
+        if (Array.isArray(items) && items.length > 0) {
+          console.log(`[QUOTES PUT] Creating ${validatedItems.length} new items`)
+          await tx.quote.update({
+            where: { id },
+            data: {
+              ...updatePayload,
+              QuoteItem: { create: validatedItems },
+            },
+          })
+        } else {
+          // Even if no items, still update quote fields
+          console.log(`[QUOTES PUT] No items to create, updating quote fields only`)
+          await tx.quote.update({ where: { id }, data: updatePayload })
+        }
       } else {
-        // Only update quote fields
-        console.log('Updating quote fields only')
+        // Only update quote fields (items not included in request)
+        console.log('[QUOTES PUT] Items not in request body, updating quote fields only')
         await tx.quote.update({ where: { id }, data: updatePayload })
       }
 
@@ -281,7 +338,9 @@ export async function PUT(request: NextRequest) {
       return updated
     })
 
-    return NextResponse.json(result)
+    // Transform response: map QuoteItem to items
+    const transformedResult = transformQuoteResponse(result)
+    return NextResponse.json(transformedResult)
   } catch (error) {
     console.error('Error updating quote:', error)
     if (error instanceof z.ZodError) {

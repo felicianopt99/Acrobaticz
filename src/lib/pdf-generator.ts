@@ -57,7 +57,8 @@ export class QuotePDFGenerator {
     const totalPages = (this.doc as any).getNumberOfPages ? (this.doc as any).getNumberOfPages() : (this.doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       (this.doc as any).setPage(i);
-      const text = `Page ${i} of ${totalPages}`;
+      const pageLabel = this.getTranslatedText('pageOf', 'Page {page} of {total}');
+      const text = pageLabel.replace('{page}', String(i)).replace('{total}', String(totalPages));
       this.addText(text, this.pageWidth / 2, this.pageHeight - 10, { fontSize: 8, align: 'center' });
     }
   }
@@ -357,21 +358,25 @@ export class QuotePDFGenerator {
     // this.addLine(leftColX, this.currentY + 2, rightColX - 10, this.currentY + 2, 0.5);
     this.currentY += 8;
 
-    this.addText(`Name: ${quote.clientName}`, leftColX, this.currentY, { fontSize: 10 });
+    const nameLabel = this.getTranslatedText('name', 'Name');
+    this.addText(`${nameLabel}: ${quote.clientName}`, leftColX, this.currentY, { fontSize: 10 });
     this.currentY += 5;
 
     if (quote.clientEmail) {
-      this.addText(`Email: ${quote.clientEmail}`, leftColX, this.currentY, { fontSize: 10 });
+      const emailLabel = this.getTranslatedText('email', 'Email');
+      this.addText(`${emailLabel}: ${quote.clientEmail}`, leftColX, this.currentY, { fontSize: 10 });
       this.currentY += 5;
     }
 
     if (quote.clientPhone) {
-      this.addText(`Phone: ${quote.clientPhone}`, leftColX, this.currentY, { fontSize: 10 });
+      const phoneLabel = this.getTranslatedText('phone', 'Phone');
+      this.addText(`${phoneLabel}: ${quote.clientPhone}`, leftColX, this.currentY, { fontSize: 10 });
       this.currentY += 5;
     }
 
     if (quote.clientAddress) {
-      this.addText(`Address: ${quote.clientAddress}`, leftColX, this.currentY, { 
+      const addressLabel = this.getTranslatedText('address', 'Address');
+      this.addText(`${addressLabel}: ${quote.clientAddress}`, leftColX, this.currentY, { 
         fontSize: 10, 
         maxWidth: rightColX - leftColX - 10 
       });
@@ -404,7 +409,8 @@ export class QuotePDFGenerator {
     
     const days = Math.ceil((new Date(quote.endDate).getTime() - new Date(quote.startDate).getTime()) / (1000 * 60 * 60 * 24));
     const durationLabel = this.getTranslatedText('duration', 'Duration');
-    this.addText(`${durationLabel}: ${days} day(s)`, rightColX, eventY, { fontSize: 10 });
+    const daysLabel = this.getTranslatedText('days', 'Days');
+    this.addText(`${durationLabel}: ${days} ${daysLabel}`, rightColX, eventY, { fontSize: 10 });
 
     // Ensure currentY accounts for both columns
     this.currentY = Math.max(this.currentY, eventY) + 10;
@@ -446,15 +452,15 @@ export class QuotePDFGenerator {
       // Resolve display name
       let itemName = 'Item';
       if (item.type === 'equipment') {
-        itemName = item.equipmentName || 'Equipment Item';
+        itemName = item.equipmentName || this.getTranslatedText('equipmentItem', 'Equipment Item');
       } else if (item.type === 'service') {
         const translatedNames = this.translatedTexts?.dynamicContent?.serviceNames;
         const serviceIndex = quote.items.filter((i, idx) => idx <= index && i.type === 'service').length - 1;
-        itemName = item.serviceName || translatedNames?.[serviceIndex] || 'Service Item';
+        itemName = item.serviceName || translatedNames?.[serviceIndex] || this.getTranslatedText('serviceItem', 'Service Item');
       } else if (item.type === 'fee') {
         const translatedNames = this.translatedTexts?.dynamicContent?.feeNames;
         const feeIndex = quote.items.filter((i, idx) => idx <= index && i.type === 'fee').length - 1;
-        itemName = item.feeName || translatedNames?.[feeIndex] || 'Fee Item';
+        itemName = item.feeName || translatedNames?.[feeIndex] || this.getTranslatedText('feeItem', 'Fee Item');
       }
 
       // Estimate row height based on wrapped name and description

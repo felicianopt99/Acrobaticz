@@ -325,12 +325,8 @@ export class EquipmentLabelPDFGenerator {
     quantities?: Record<string, number>
   ): Promise<Buffer> {
     // 1. Aquece cache com traduções predictivas
-    for (const item of items) {
-      await predictiveTranslationService.getTranslationStatus(
-        'equipment',
-        item.id
-      );
-    }
+    // NOTE: Feature disabled - predictiveTranslationService methods not available
+    console.log(`[EquipmentLabelPDFGenerator] Generating labels for ${items.length} items`);
 
     // 2. Gera PDF
     const generator = new EquipmentLabelPDFGenerator({

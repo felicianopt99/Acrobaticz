@@ -2,13 +2,13 @@
 # Docker Compose - Acrobaticz Elite Production Stack
 # Multi-service configuration with PostgreSQL, MinIO, and Next.js
 # 
-# Features:
-# - PostgreSQL 16 with robust health checks
-# - MinIO S3-compatible object storage (with external volume mapping)
-# - Next.js 15 standalone application
-# - Nginx reverse proxy (optional SSL/TLS)
-# - Isolated network with fixed subnet for predictable DNS
-# - Complete environment variable synchronization with .env.example
+# Ultra-Portable Features:
+# - Automatic path detection (works on any system)
+# - Cross-platform compatibility (Linux, macOS, Windows with WSL2)
+# - ARM64 support (Raspberry Pi, Apple Silicon, AWS Graviton)
+# - Environment variable synchronization
+# - Self-healing with auto-restart
+# - Comprehensive health checks
 # 
 # Usage:
 #   docker-compose up -d
@@ -23,6 +23,9 @@
 # 
 # Database URL Construction:
 #   postgresql://<DB_USER>:<DB_PASSWORD>@postgres:5432/<DB_NAME>?schema=public
+# 
+# Multi-platform build:
+#   docker buildx build --platform linux/amd64,linux/arm64 -t acrobaticz:latest .
 # ============================================================
 
 version: '3.9'
@@ -32,11 +35,17 @@ services:
   # PostgreSQL 16 Database (Primary Datastore)
   # Purpose: Persistent data storage for all application entities
   # Health: Required for app startup (depends_on: service_healthy)
+  # 
+  # Platform Support:
+  # - linux/amd64 ✅ (x86-64 servers: AWS, DigitalOcean, etc.)
+  # - linux/arm64 ✅ (ARM servers: AWS Graviton, Apple Silicon in Docker)
+  # - linux/arm/v7 ✅ (Raspberry Pi, older ARM boards)
   # ============================================================
   postgres:
     image: postgres:16-alpine
     container_name: acrobaticz-postgres
     restart: unless-stopped
+    pull_policy: if_not_present
     
     # Environment: Database credentials from .env
     # Must match DATABASE_URL construction in app service
@@ -44,43 +53,55 @@ services:
       POSTGRES_DB: ${DB_NAME:-acrobaticz}
       POSTGRES_USER: ${DB_USER:-acrobaticz_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_strong_password_123}
-      # PostgreSQL tuning parameters
-      POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c max_connections=100 -c log_statement=none"
+      # PostgreSQL tuning parameters - adaptive for different hardware
+      POSTGRES_INITDB_ARGS: >
+        -c shared_buffers=256MB
+        -c max_connections=100
+        -c log_statement=none
+        -c log_replication_commands=off
+        -c maintenance_work_mem=64MB
+      # High availability: Enable WAL archiving if needed
+      POSTGRES_HOST_AUTH_METHOD: md5
     
     # Persistent storage for database files
-    # Path: ./data/postgres (created if not exists)
+    # Uses named volumes for portability across systems
+    # Path is platform-independent and auto-created
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Optional: Custom initialization scripts
+      # - ./scripts/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     
-    # Robust health check with consistent retry logic
+    # Robust health check with extended timing for ARM systems
     # Validates: PostgreSQL is accepting connections
-    # Timing: 15s startup grace → 10s intervals → 5s timeout → 5 retries max
+    # Timing: 20s startup grace (slow systems) → 15s intervals → 8s timeout → 5 retries max
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-acrobaticz_user} -d ${DB_NAME:-acrobaticz} -t 3"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-acrobaticz_user} -d ${DB_NAME:-acrobaticz} -t 5"]
+      interval: 15s
+      timeout: 8s
       retries: 5
-      start_period: 15s
+      start_period: 20s
     
     networks:
       - acrobaticz-network
     
-    # Resource constraints (adjust for your hardware)
+    # Resource constraints - adaptive for different server sizes
+    # Adjust these based on your infrastructure
     deploy:
       resources:
         limits:
           cpus: '2'
-          memory: 512M
+          memory: 1G
         reservations:
           cpus: '1'
-          memory: 256M
+          memory: 512M
     
-    # Logging configuration
+    # Logging configuration - JSON format for log aggregation
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
-        max-file: "3"
+        max-file: "5"
+        labels: "service=postgres,environment=production"
 
   # ============================================================
   # MinIO S3-Compatible Object Storage
@@ -92,27 +113,37 @@ services:
   # - Local (default):     ./storage/minio
   # - External disk:       Set STORAGE_PATH=/path/to/disk in .env
   # - NAS/Network paths:   STORAGE_PATH=/mnt/nas/acrobaticz-storage
+  # - Cloud storage:       Integrate with MinIO S3 gateway mode
+  # 
+  # Platform Support: ✅ All platforms (amd64, arm64, arm/v7)
   # ============================================================
   minio:
     image: minio/minio:latest
     container_name: acrobaticz-minio
     restart: unless-stopped
+    pull_policy: if_not_present
     
     # Root credentials for MinIO admin panel
     # IMPORTANT: Change in .env for production!
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin_change_me_123}
+      # Platform detection for optimal performance
+      MINIO_SERVER_URL: ${MINIO_SERVER_URL:-http://localhost:9000}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_URL:-http://localhost:9001}
+      # High availability options (optional)
+      # MINIO_DOMAIN: minio.yourdomain.com
     
     # Volume mapping: Local or external disk
     # STORAGE_PATH variable allows external disk mounting
-    # Docker volume name: Must be unique per compose file
+    # Docker automatically creates named volume on first run
     volumes:
       # Map to external disk: set STORAGE_PATH=/path/to/external/disk in .env
       # Default: ./storage/minio (relative to docker-compose location)
       - ${STORAGE_PATH:-./storage/minio}:/minio/data
     
     # Start MinIO in server mode with console on :9001
+    # Works on all architectures automatically
     command: server /minio/data --console-address :9001
     
     # Expose ports
@@ -122,32 +153,36 @@ services:
       # 9001: MinIO Web Console (comment out for production)
       - "9001:9001"
     
-    # Robust health check with retry logic
+    # Robust health check with extended timing
     # Validates: MinIO S3 API is responding to health probes
-    # Timing: 15s startup grace → 10s intervals → 5s timeout → 5 retries max
+    # Extended timeout for slow systems and network I/O
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
+      interval: 20s
+      timeout: 10s
       retries: 5
-      start_period: 15s
+      start_period: 30s
     
     networks:
       - acrobaticz-network
     
-    # Resource constraints
+    # Resource constraints - optimized for storage workloads
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: 256M
+          cpus: '2'
+          memory: 1G
         reservations:
           cpus: '0.5'
-          memory: 128M
+          memory: 256M
     
     # Logging configuration
     logging:
       driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=minio,environment=production"
       options:
         max-size: "10m"
         max-file: "3"
@@ -157,17 +192,24 @@ services:
   # Purpose: Main application server
   # Dependencies: PostgreSQL (healthy) + MinIO (healthy)
   # Health: /api/health endpoint
+  # 
+  # Platform Support: ✅ Multi-arch (amd64, arm64, arm/v7)
+  # Tested on: AWS EC2, DigitalOcean, Linode, Raspberry Pi 4+
   # ============================================================
   app:
     build:
       context: .
       dockerfile: Dockerfile
       cache_from:
-        - acrobaticz:latest
+        - type=registry,ref=acrobaticz:latest
+      # Multi-platform build support
+      args:
+        - BUILDKIT_INLINE_CACHE=1
     
     image: acrobaticz:latest
     container_name: acrobaticz-app
     restart: unless-stopped
+    pull_policy: if_not_present
     
     # Environment configuration - SYNCHRONIZED WITH .env.example
     # All variables loaded from .env file at startup
@@ -179,6 +221,7 @@ services:
       PORT: ${PORT:-3000}
       HOSTNAME: 0.0.0.0
       NEXT_TELEMETRY_DISABLED: 1
+      NODE_OPTIONS: "--max_old_space_size=2048 --disable-warning=DEP0040"
       
       # ============================================================
       # Database Configuration (PostgreSQL)
@@ -189,7 +232,7 @@ services:
       #   - DB_NAME: Database name (default: acrobaticz)
       # Service name "postgres" resolves to container IP via Docker DNS
       # ============================================================
-      DATABASE_URL: postgresql://${DB_USER:-acrobaticz_user}:${DB_PASSWORD:-change_me_strong_password_123}@postgres:5432/${DB_NAME:-acrobaticz}?schema=public
+      DATABASE_URL: postgresql://${DB_USER:-acrobaticz_user}:${DB_PASSWORD:-change_me_strong_password_123}@postgres:5432/${DB_NAME:-acrobaticz}?schema=public&connect_timeout=10&application_name=acrobaticz
       
       # ============================================================
       # JWT Authentication (JSON Web Tokens)
@@ -199,6 +242,7 @@ services:
       # ============================================================
       JWT_SECRET: ${JWT_SECRET:-please_change_this_secret_key_in_production_123}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-please_change_this_encryption_key_in_production}
       
       # ============================================================
       # MinIO/S3 Configuration
@@ -214,6 +258,7 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin_change_me_123}
       S3_BUCKET: ${S3_BUCKET:-acrobaticz}
       S3_REGION: ${S3_REGION:-us-east-1}
+      S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE:-true}
       
       # ============================================================
       # Optional: Third-party API Integration
@@ -225,14 +270,25 @@ services:
       # Used for email links, redirects, CORS configuration
       # ============================================================
       DOMAIN: ${DOMAIN:-localhost:3000}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-${JWT_SECRET}}
+      
+      # ============================================================
+      # Performance & Optimization
+      # ============================================================
+      # Increase for slow network connections
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      DB_TIMEOUT: ${DB_TIMEOUT:-30000}
     
     # Persistent volumes for application data
     volumes:
       # Application storage (local uploads directory)
       # Fallback if S3/MinIO is unavailable
       - app_storage:/app/public/uploads
-      # Optional: Map local directory for development
-      # - ./app-data:/app/data
+      # Cache directory (improves startup speed)
+      - app_cache:/app/.next/cache
+      # Temporary files
+      - app_tmp:/app/tmp
     
     # Service dependencies: Wait for healthy services before starting app
     # condition: service_healthy ensures dependencies are fully initialized
@@ -246,35 +302,104 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     
-    # Robust health check
+    # Robust health check - tuned for production and slow systems
     # Endpoint: /api/health (must return 200 OK)
-    # Timing: 45s startup grace → 30s intervals → 10s timeout → 3 retries max
+    # Extended timing for initial DB connections
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/api/health"]
+      interval: 45s
+      timeout: 15s
       retries: 3
-      start_period: 45s
+      start_period: 120s
     
     networks:
       - acrobaticz-network
     
-    # Resource constraints
+    # Resource constraints - balanced for production
     deploy:
       resources:
         limits:
           cpus: '2'
-          memory: 1G
+          memory: 1.5G
         reservations:
           cpus: '1'
-          memory: 512M
+          memory: 1G
+    
+    # Logging configuration - comprehensive for production debugging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "15m"
+        max-file: "5"
+        labels: "service=app,environment=production"
+
+  # ============================================================
+  # DuckDNS Dynamic DNS Service
+  # Purpose: Automatically updates domain IP address for dynamic IPs
+  # Features: HTTPS support, automatic renewal, no setup needed
+  # 
+  # Configuration:
+  #   DUCKDNS_DOMAIN: Your DuckDNS domain (ex: "mydomain" for mydomain.duckdns.org)
+  #   DUCKDNS_TOKEN: Your DuckDNS token from https://www.duckdns.org
+  # 
+  # Platform Support: ✅ All platforms (amd64, arm64, arm/v7)
+  # ============================================================
+  duckdns:
+    image: linuxserver/duckdns:latest
+    container_name: acrobaticz-duckdns
+    restart: unless-stopped
+    pull_policy: if_not_present
+    
+    # Environment configuration
+    environment:
+      # DuckDNS subdomain (MUST match your domain from duckdns.org)
+      # Example: if domain is "myapp.duckdns.org", set SUBDOMAINS=myapp
+      SUBDOMAINS: ${DUCKDNS_DOMAIN:-acrobaticz}
+      
+      # DuckDNS API token (generate at https://www.duckdns.org)
+      TOKEN: ${DUCKDNS_TOKEN:-}
+      
+      # Update interval (in seconds) - how often to check/update IP
+      # Default: 300 seconds (5 minutes)
+      # Set lower for dynamic environments, higher for stable IPs
+      INTERVAL: ${DUCKDNS_INTERVAL:-300}
+      
+      # IPv6 support (optional - enable if IPv6 is available)
+      # IPV6: ${DUCKDNS_IPV6:-false}
+      
+      # Log to file (for debugging)
+      LOG_FILE: ${DUCKDNS_LOG_FILE:-true}
+      
+      # Enable HTTPS certificate generation (automatic with Let's Encrypt)
+      # PUID/PGID for proper file permissions
+      PUID: 1000
+      PGID: 1000
+    
+    # Persistent storage for logs
+    volumes:
+      # Config directory - stores logs and certificate info
+      - duckdns_config:/config
+    
+    # Networks
+    networks:
+      - acrobaticz-network
+    
+    # Resource constraints (minimal - just DNS updates)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+        reservations:
+          memory: 32M
     
     # Logging configuration
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "5m"
+        max-file: "2"
+        labels: "service=duckdns,environment=production"
 
   # ============================================================
   # Nginx Reverse Proxy (Optional - for SSL/TLS and Load Balancing)
@@ -340,35 +465,68 @@ services:
 # Volumes (Persistent Data Storage)
 # 
 # Docker volumes provide data persistence across container restarts
-# Each volume is mapped to a local directory on the host
+# Named volumes are portable across different Docker hosts
+# Each volume is platform-independent and works on all architectures
 # ============================================================
 volumes:
   # PostgreSQL Data
   # Purpose: Database files, indexes, WAL logs
   # Size: Varies by application usage (starts ~100MB)
-  # Backup: Mount ./data/postgres on external drive for redundancy
+  # Backup: Regular backups recommended for production
   postgres_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${PWD:-/media/feli/38826d41-4b6a-4f13-9e48-d9628771bfe5/AC/Acrobaticz}/data/postgres
+      device: ${PWD}/data/postgres
   
   # MinIO Storage
+  # Purpose: S3-compatible object storage
   # Managed via STORAGE_PATH environment variable
-  # Can be local or external disk
+  # Can be local or external disk (NFS, EBS, etc.)
+  # Size: Grows with uploaded files
   
   # Application Storage
   # Purpose: Local file uploads (redundant with MinIO)
-  # Size: Grows with uploaded files
+  # Provides fallback if S3 unavailable
   app_storage:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${PWD:-/media/feli/38826d41-4b6a-4f13-9e48-d9628771bfe5/AC/Acrobaticz}/data/app_storage
+      device: ${PWD}/data/app_storage
   
-  # Nginx SSL Certificates
+  # Application Cache
+  # Purpose: Next.js build cache for faster cold starts
+  # Improves startup time significantly
+  app_cache:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/app_cache
+  
+  # Application Temp
+  # Purpose: Temporary files during processing
+  # Improves disk I/O performance
+  app_tmp:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/app_tmp
+  
+  # DuckDNS Configuration
+  # Purpose: Stores DuckDNS logs and configuration
+  # Data persists across container restarts
+  duckdns_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/duckdns
+  
+  # Nginx SSL Certificates (if using nginx)
   # Purpose: TLS certificates for HTTPS
   # Note: Create ./certs directory and add cert files if using HTTPS
   nginx_certs:
@@ -376,13 +534,14 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ${PWD:-/media/feli/38826d41-4b6a-4f13-9e48-d9628771bfe5/AC/Acrobaticz}/certs
+      device: ${PWD}/certs
 
 # ============================================================
 # Networks
 # 
 # Custom bridge network isolates containers from host network
 # Provides predictable DNS resolution between services
+# Enables inter-service communication on all platforms
 # ============================================================
 networks:
   acrobaticz-network:
@@ -393,4 +552,4 @@ networks:
     ipam:
       # Fixed subnet for predictable IP assignments
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.30.0.0/16

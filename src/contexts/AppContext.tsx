@@ -446,7 +446,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateQuote = useCallback(async (updatedQuote: Quote) => {
     try {
+      // DEBUG: Log before sending to API
+      console.log('[AppContext updateQuote] Sending to API:', {
+        quoteId: updatedQuote.id,
+        quoteName: updatedQuote.name,
+        itemsCount: updatedQuote.items?.length ?? 0,
+        itemTypes: updatedQuote.items?.map(i => i.type),
+      });
+      
       const updated = await quotesAPI.update(updatedQuote);
+      
+      // DEBUG: Log response from API
+      console.log('[AppContext updateQuote] Received from API:', {
+        quoteId: updated.id,
+        itemsCount: updated.items?.length ?? 0,
+        itemTypes: updated.items?.map((i: any) => i.type),
+      });
+      
       setQuotes(prev => prev.map(quote => quote.id === updated.id ? updated : quote));
     } catch (err) {
       console.error('Error updating quote:', err);

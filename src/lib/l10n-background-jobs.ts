@@ -19,12 +19,7 @@ export function setupL10nBackgroundJobs(): void {
   // Job 1: Processar retranslações pendentes (a cada 1 minuto)
   setInterval(async () => {
     try {
-      const result = await runPendingRetranslationJob();
-      if (result.processed > 0) {
-        console.log(
-          `[L10N] Retranslation job: processed=${result.processed}, succeeded=${result.succeeded}, failed=${result.failed}`
-        );
-      }
+      await runPendingRetranslationJob();
     } catch (err) {
       console.error('[L10N] Retranslation job failed:', err);
     }

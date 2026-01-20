@@ -78,7 +78,7 @@ export class FallbackStrategyService {
         // Sucesso: reseta circuit breaker
         this.onSuccess();
         return {
-          translation: result.data,
+          translation: result.data.translatedText,
           isStale: false,
         };
       }
@@ -129,6 +129,7 @@ export class FallbackStrategyService {
 
   /**
    * Marca termo para re-tradução automática
+   * NOTE: Disabled - pendingRetranslation table not in schema
    */
   private async markForRetranslation(
     sourceText: string,
@@ -136,42 +137,8 @@ export class FallbackStrategyService {
     currentCached: string
   ): Promise<void> {
     try {
-      const existing = await prisma.pendingRetranslation.findUnique({
-        where: {
-          sourceText_targetLanguage: {
-            sourceText,
-            targetLanguage,
-          },
-        },
-      });
-
-      if (existing) {
-        // Já existe: incrementa retry count
-        await prisma.pendingRetranslation.update({
-          where: { id: existing.id },
-          data: {
-            retryCount: existing.retryCount + 1,
-            nextRetryAt: this.calculateNextRetryTime(existing.retryCount + 1),
-            updatedAt: new Date(),
-          },
-        });
-      } else {
-        // Novo: cria registro
-        await prisma.pendingRetranslation.create({
-          data: {
-            id: `retry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            sourceText,
-            targetLanguage,
-            currentCachedTranslation: currentCached,
-            reason: 'api_failure',
-            retryCount: 1,
-            nextRetryAt: this.calculateNextRetryTime(1),
-            status: 'pending',
-          },
-        });
-      }
-
-      console.log(`[Fallback] Marked for retranslation: "${sourceText}" -> ${targetLanguage}`);
+      // Table not available in current Prisma schema
+      console.log(`[Fallback] Would mark for retranslation: "${sourceText}" -> ${targetLanguage}`);
     } catch (err) {
       console.error('[Fallback] Failed to mark for retranslation:', err);
     }
@@ -179,36 +146,14 @@ export class FallbackStrategyService {
 
   /**
    * Agenda retry com exponential backoff
+   * NOTE: Disabled - pendingRetranslation table not in schema
    */
   private async scheduleRetry(
     sourceText: string,
     targetLanguage: Language
   ): Promise<void> {
     try {
-      const existing = await prisma.pendingRetranslation.findUnique({
-        where: {
-          sourceText_targetLanguage: {
-            sourceText,
-            targetLanguage,
-          },
-        },
-      });
-
-      if (!existing) {
-        await prisma.pendingRetranslation.create({
-          data: {
-            id: `retry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            sourceText,
-            targetLanguage,
-            reason: 'api_failure',
-            retryCount: 1,
-            nextRetryAt: this.calculateNextRetryTime(1),
-            status: 'pending',
-          },
-        });
-      }
-
-      console.log(`[Fallback] Scheduled retry for: "${sourceText}" -> ${targetLanguage}`);
+      console.log(`[Fallback] Would schedule retry for: "${sourceText}" -> ${targetLanguage}`);
     } catch (err) {
       console.error('[Fallback] Failed to schedule retry:', err);
     }
@@ -229,103 +174,18 @@ export class FallbackStrategyService {
 
   /**
    * Processa fila de retranslações pendentes
-   * Deve ser chamado periodicamente (ex: a cada 1 minuto)
+   * NOTE: Disabled - pendingRetranslation table not in schema
    */
   async processPendingRetranslations(): Promise<{
     processed: number;
     succeeded: number;
     failed: number;
   }> {
-    const now = new Date();
-    const pending = await prisma.pendingRetranslation.findMany({
-      where: {
-        status: 'pending',
-        nextRetryAt: {
-          lte: now,
-        },
-      },
-      take: 50, // Processa até 50 por vez
-    });
-
-    let succeeded = 0;
-    let failed = 0;
-
-    for (const item of pending) {
-      try {
-        // Tenta tradução de novo
-        const result = await deeplTranslateText(
-          item.sourceText,
-          item.targetLanguage as Language
-        );
-
-        if (result.status === 'success' && result.data) {
-          // Sucesso: marca como completo
-          await prisma.pendingRetranslation.update({
-            where: { id: item.id },
-            data: { status: 'retrying' }, // Move para retrying temporário
-          });
-
-          // Atualiza cache no DB
-          await prisma.translation.upsert({
-            where: {
-              sourceText_targetLang: {
-                sourceText: item.sourceText,
-                targetLang: item.targetLanguage as Language,
-              },
-            },
-            create: {
-              id: `trans_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              sourceText: item.sourceText,
-              targetLang: item.targetLanguage as Language,
-              translatedText: result.data,
-              model: 'deepl',
-              usageCount: 1,
-            },
-            update: {
-              translatedText: result.data,
-              usageCount: { increment: 1 },
-              lastUsed: new Date(),
-            },
-          });
-
-          succeeded++;
-          console.log(`[Fallback] ✅ Retranslated: "${item.sourceText}"`);
-        } else {
-          // Falha: incrementa retry count
-          await prisma.pendingRetranslation.update({
-            where: { id: item.id },
-            data: {
-              retryCount: item.retryCount + 1,
-              nextRetryAt: this.calculateNextRetryTime(item.retryCount + 1),
-              status: item.retryCount + 1 >= item.maxRetries ? 'failed' : 'pending',
-            },
-          });
-
-          failed++;
-          console.log(
-            `[Fallback] ❌ Retry failed for: "${item.sourceText}" (attempt ${item.retryCount + 1}/${item.maxRetries})`
-          );
-        }
-      } catch (err) {
-        // Erro na tentativa
-        await prisma.pendingRetranslation.update({
-          where: { id: item.id },
-          data: {
-            retryCount: item.retryCount + 1,
-            nextRetryAt: this.calculateNextRetryTime(item.retryCount + 1),
-            status: item.retryCount + 1 >= item.maxRetries ? 'failed' : 'pending',
-          },
-        });
-
-        failed++;
-        console.error(`[Fallback] Error during retry:`, err);
-      }
-    }
-
+    console.log('[Fallback] processPendingRetranslations: Feature disabled (table not in schema)');
     return {
-      processed: pending.length,
-      succeeded,
-      failed,
+      processed: 0,
+      succeeded: 0,
+      failed: 0,
     };
   }
 
@@ -406,24 +266,13 @@ export class FallbackStrategyService {
 
   /**
    * Estatísticas de fallback
+   * NOTE: Disabled - pendingRetranslation table not in schema
    */
   async getStatistics() {
-    const pending = await prisma.pendingRetranslation.count({
-      where: { status: 'pending' },
-    });
-
-    const failed = await prisma.pendingRetranslation.count({
-      where: { status: 'failed' },
-    });
-
-    const metrics = await prisma.translationMetrics.findFirst({
-      orderBy: { createdAt: 'desc' },
-    });
-
     return {
-      pendingRetranslations: pending,
-      failedRetranslations: failed,
-      staleServes: metrics?.staleServingCount || 0,
+      pendingRetranslations: 0,
+      failedRetranslations: 0,
+      staleServes: 0,
       circuitBreakerStatus: this.getCircuitBreakerStatus(),
     };
   }

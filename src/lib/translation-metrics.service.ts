@@ -154,21 +154,21 @@ export class TranslationMetricsService {
         staleServes: this.requestBuffer.staleServes,
       };
 
-      // Armazena na BD
-      await prisma.translationMetrics.create({
-        data: {
-          id: `metrics_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          period: snapshot.period,
-          cacheHitRate: snapshot.cacheHitRate,
-          cacheMissRate: snapshot.cacheMissRate,
-          totalRequests: snapshot.totalRequests,
-          deeplApiLatencyMs: snapshot.deeplLatencyMs,
-          dbLatencyMs: snapshot.dbLatencyMs,
-          memoryLatencyMs: snapshot.memoryLatencyMs,
-          failedTranslations: snapshot.failedTranslations,
-          staleServingCount: snapshot.staleServes,
-        },
-      });
+      // Armazena na BD (DISABLED: translationMetrics table not in Prisma schema)
+      // await prisma.translationMetrics.create({
+      //   data: {
+      //     id: `metrics_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      //     period: snapshot.period,
+      //     cacheHitRate: snapshot.cacheHitRate,
+      //     cacheMissRate: snapshot.cacheMissRate,
+      //     totalRequests: snapshot.totalRequests,
+      //     deeplApiLatencyMs: snapshot.deeplLatencyMs,
+      //     dbLatencyMs: snapshot.dbLatencyMs,
+      //     memoryLatencyMs: snapshot.memoryLatencyMs,
+      //     failedTranslations: snapshot.failedTranslations,
+      //     staleServingCount: snapshot.staleServes,
+      //   },
+      // });
 
       // Verifica se hit rate está abaixo do objetivo (95%)
       if (snapshot.cacheHitRate < 95) {
@@ -206,8 +206,19 @@ export class TranslationMetricsService {
 
   /**
    * Obtém estatísticas em tempo real (últimas 24 horas)
+   * DISABLED: translationMetrics table not in Prisma schema
    */
   async getRealtimeStats() {
+    return {
+      period: 'last_24h',
+      metrics: [],
+      averageHitRate: 0,
+      averageDeeplLatency: 0,
+      totalFailedTranslations: 0,
+      totalStaleServes: 0,
+      warningFlag: 'METRICS_TABLE_DISABLED',
+    };
+    /*
     const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     const metrics = await prisma.translationMetrics.findMany({
@@ -222,16 +233,16 @@ export class TranslationMetricsService {
 
     const avgHitRate =
       metrics.length > 0
-        ? metrics.reduce((sum, m) => sum + m.cacheHitRate, 0) / metrics.length
+        ? metrics.reduce((sum: number, m: any) => sum + m.cacheHitRate, 0) / metrics.length
         : 0;
 
     const avgDeeplLatency =
       metrics.length > 0
-        ? metrics.reduce((sum, m) => sum + m.deeplApiLatencyMs, 0) / metrics.length
+        ? metrics.reduce((sum: number, m: any) => sum + m.deeplApiLatencyMs, 0) / metrics.length
         : 0;
 
-    const totalFailed = metrics.reduce((sum, m) => sum + m.failedTranslations, 0);
-    const totalStale = metrics.reduce((sum, m) => sum + m.staleServingCount, 0);
+    const totalFailed = metrics.reduce((sum: number, m: any) => sum + m.failedTranslations, 0);
+    const totalStale = metrics.reduce((sum: number, m: any) => sum + m.staleServingCount, 0);
 
     return {
       period: 'last_24h',
@@ -242,12 +253,25 @@ export class TranslationMetricsService {
       totalStaleServes: totalStale,
       warningFlag: avgHitRate < 95 ? 'LOW_HIT_RATE' : null,
     };
+    */
   }
 
   /**
    * Obtém histórico por período
+   * DISABLED: translationMetrics table not in Prisma schema
    */
   async getHistoricalStats(days: number = 7) {
+    return {
+      period: `last_${days}_days`,
+      byDay: {},
+      summary: {
+        avgHitRate: 0,
+        avgLatency: 0,
+        totalFailed: 0,
+      },
+      warningFlag: 'METRICS_TABLE_DISABLED',
+    };
+    /*
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     const metrics = await prisma.translationMetrics.findMany({
@@ -292,12 +316,14 @@ export class TranslationMetricsService {
     return {
       period: `last_${days}_days`,
       byDay,
-      trend: this.calculateTrend(metrics),
+      trend: 'stable', // this.calculateTrend(metrics),
     };
+    */
   }
 
   /**
    * Calcula tendência (melhorando ou piorando?)
+   * DISABLED: translationMetrics table not in Prisma schema
    */
   private calculateTrend(metrics: any[]): string {
     if (metrics.length < 2) return 'insufficient_data';
@@ -312,8 +338,15 @@ export class TranslationMetricsService {
 
   /**
    * Detecta anomalias (padrões de cache misses)
+   * DISABLED: translationMetrics table not in Prisma schema
    */
   async detectAnomalies() {
+    return {
+      anomalies: [],
+      severity: 'none',
+      recommendations: [],
+    };
+    /*
     const last1h = new Date(Date.now() - 60 * 60 * 1000);
 
     const recentMetrics = await prisma.translationMetrics.findMany({
@@ -371,9 +404,10 @@ export class TranslationMetricsService {
 
     return {
       period: 'last_1h',
-      anomalies,
-      hasAnomalies: anomalies.length > 0,
+      anomalies: [],
+      hasAnomalies: false,
     };
+    */
   }
 
   /**
@@ -383,7 +417,8 @@ export class TranslationMetricsService {
     const realtime = await this.getRealtimeStats();
     const anomalies = await this.detectAnomalies();
 
-    const healthy = realtime.averageHitRate > 95 && !anomalies.hasAnomalies;
+    const hasAnomalies = anomalies.anomalies ? anomalies.anomalies.length > 0 : false;
+    const healthy = realtime.averageHitRate > 95 && !hasAnomalies;
 
     return {
       healthy,
@@ -391,7 +426,7 @@ export class TranslationMetricsService {
       cacheHitRate: realtime.averageHitRate,
       avgLatency: realtime.averageDeeplLatency,
       failedTranslations: realtime.totalFailedTranslations,
-      anomalyCount: anomalies.anomalies.length,
+      anomalyCount: hasAnomalies ? anomalies.anomalies.length : 0,
       lastUpdated: new Date(),
     };
   }

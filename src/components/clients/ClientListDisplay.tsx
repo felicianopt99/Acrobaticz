@@ -175,7 +175,7 @@ export function ClientListDisplay() {
                         <DropdownMenuItem onClick={(e) => {e.stopPropagation(); router.push(`/clients/${client.id}`)}}>
                           <Eye className="mr-2 h-4 w-4" /> {viewDetails}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => {e.stopPropagation(); router.push(`/clients/${client.id}/edit`)}}
+                        <DropdownMenuItem onClick={(e) => {e.stopPropagation(); router.push(`/clients/${client.id}/edit`)}}>
                           <Edit className="mr-2 h-4 w-4" /> {editLabel}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => {e.stopPropagation(); openDeleteDialog(client)}} className="text-destructive focus:text-destructive focus:bg-destructive/10">

@@ -1,289 +1,382 @@
-# 🚀 Acrobaticz - Installation in 60 Seconds
+# 🚀 Acrobaticz - Quick Start Guide (End-User Edition)
 
-**Welcome! Get Acrobaticz running in less than a minute.**
+## ⚡ 5-Minute Setup
 
----
+### Step 1: Prerequisites (One-Time)
 
-## ✅ Requirements
-
-- Docker Desktop installed ([Download](https://www.docker.com/products/docker-desktop))
-- 2GB RAM available
-- Port 3000 free (or change in `.env`)
-
-**That's it! No databases, no dependencies to install.**
-
----
-
-## 🎯 3 Steps to Launch
-
-### Step 1: Set Your Passwords (30 seconds)
-
+**For Linux (Ubuntu/Debian):**
 ```bash
-cd acrobaticz
+# Install Docker & Docker Compose
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Verify installation
+docker --version
+docker-compose --version
 ```
 
-Create a file named `.env`:
+**For macOS:**
+```bash
+# Install Docker Desktop
+# Download from: https://www.docker.com/products/docker-desktop
 
-```env
-DB_PASSWORD=MySecurePassword123!
-JWT_SECRET=YourLongRandomSecretKeyHere12345678
+# Verify installation
+docker --version
+docker-compose --version
 ```
 
-✨ **Make these strong!** These are your security keys.
+**For Windows (WSL2):**
+```bash
+# Install Docker Desktop with WSL2
+# Follow: https://docs.docker.com/desktop/install/windows-install/
+
+# In WSL2 terminal:
+docker --version
+docker-compose --version
+```
 
 ---
 
-### Step 2: Start Services (20 seconds)
+### Step 2: Clone & Configure (5 minutes)
 
 ```bash
+# Navigate to project
+cd /path/to/Acrobaticz
+
+# Copy production configuration
+cp .env.prod .env
+
+# Edit configuration (optional, has working defaults)
+nano .env
+
+# Key things to change:
+# - DB_PASSWORD: Change to something strong
+# - JWT_SECRET: Generate with: openssl rand -base64 32
+# - DOMAIN: Change from localhost to your domain
+```
+
+---
+
+### Step 3: Deploy (2 minutes)
+
+```bash
+# Start all services (creates directories automatically)
 docker-compose up -d
-```
 
-🔄 **Docker will:**
-- Create PostgreSQL database
-- Build the application
-- Run migrations automatically
-- Start everything
+# Watch the startup process
+docker-compose logs -f app
 
-**Wait ~30 seconds for initialization...**
-
----
-
-### Step 3: Access Your App (10 seconds)
-
-Open browser: **http://localhost:3000**
-
-```
-✓ Application ready
-✓ Database initialized
-✓ Default admin created
-
-Admin Login:
-  Email: admin@example.com
-  Password: admin123
+# Wait ~60 seconds for full startup
 ```
 
 ---
 
-## 🛑 You're Done!
+### Step 4: Seed the Database (1 minute - OPTIONAL)
 
-Your Acrobaticz installation is **live and ready to use**.
-
-### Next Steps
-
-1. **Change default admin password** immediately
-2. **Add your companies logo** in Settings → Branding
-3. **Configure API keys** (translations, etc.) - optional
-4. **Create your first equipment** and start renting!
-
----
-
-## 📊 What's Running?
-
-| Service | URL | Purpose |
-|---------|-----|---------|
-| **Web App** | http://localhost:3000 | Your rental management system |
-| **Database** | (Internal) | PostgreSQL database |
-| **API** | http://localhost:3000/api | REST endpoints |
-
----
-
-## 🎨 Customization (Optional)
-
-### Change Application Port
-
-Edit `.env`:
-```env
-PORT=8000  # Change from 3000 to 8000
-```
-
-Restart:
 ```bash
+# Option A: Automatic seeding (on first run)
+# Set SEED_ON_START=true in .env, then restart:
 docker-compose restart app
+
+# Option B: Manual seeding via API
+curl -X POST http://localhost:3000/api/setup/seed-catalog \
+  -H "Content-Type: application/json" \
+  -d '{"force": false}'
+
+# Option C: CLI seeding
+docker-compose exec app npm run seed
 ```
 
-### Database Backups
+---
+
+### Step 5: Access Application
+
+```
+🌐 Web App:       http://localhost:3000
+🪣 MinIO Console: http://localhost:9001 (minioadmin / miniopass123)
+🐘 Database:      localhost:5432
+```
+
+**Default Admin Credentials** (if seeded):
+- Email: `admin@acrobaticz.com`
+- Password: Check logs or `.env` file
+
+---
+
+## ✅ Verify Everything Works
 
 ```bash
-# Backup your data
-docker-compose exec postgres pg_dump -U acrobaticz_user acrobaticz > backup.sql
+# Check all services are running
+docker-compose ps
 
-# Restore from backup
-docker-compose exec -T postgres psql -U acrobaticz_user acrobaticz < backup.sql
+# Should show all containers as "Up"
+# If any show "Exit", check logs:
+docker-compose logs app
+docker-compose logs postgres
+docker-compose logs minio
 ```
+
+---
+
+## 🛠️ Common Tasks
 
 ### View Application Logs
 
 ```bash
+# Last 50 lines
+docker-compose logs app --tail=50
+
+# Follow in real-time
+docker-compose logs -f app
+
+# All services
+docker-compose logs -f
+```
+
+### Stop Services
+
+```bash
+# Stop (data persists)
+docker-compose down
+
+# Stop & delete all data (clean slate)
+docker-compose down -v
+```
+
+### Restart Services
+
+```bash
+docker-compose restart
+
+# Or specific service
+docker-compose restart app
+```
+
+### Access Database Shell
+
+```bash
+# Connect to PostgreSQL
+docker-compose exec postgres psql -U acrobaticz_user -d acrobaticz
+
+# Useful commands:
+# \dt - list tables
+# SELECT * FROM users; - query users
+# \q - quit
+```
+
+### Access MinIO Console
+
+```
+URL: http://localhost:9001
+User: minioadmin
+Password: miniopass123
+
+# Or use MinIO CLI
+docker-compose exec minio mc ls minio/acrobaticz
+```
+
+---
+
+## 🌍 Deploy to Production Server
+
+### On AWS EC2 / DigitalOcean / Linode
+
+```bash
+# SSH into server
+ssh ubuntu@your-server.com
+
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker ubuntu
+
+# Clone repository
+git clone https://github.com/yourusername/acrobaticz.git
+cd acrobaticz
+
+# Copy production config
+cp .env.prod .env
+nano .env  # Update with your settings
+
+# Deploy
+docker-compose up -d
+
+# Setup SSL/HTTPS (optional but recommended)
+# Follow: https://certbot.eff.org/instructions
+```
+
+### On Raspberry Pi 4+ (ARM64)
+
+```bash
+# Same steps as Linux above
+# Build automatically detects ARM64 and optimizes
+
+# May take longer (20-30 minutes for build)
+# But will work perfectly
+```
+
+---
+
+## 📊 Database Seeding Options
+
+### Auto-Seed on First Run (Recommended)
+
+**In `.env`:**
+```env
+SEED_ON_START=true    # Auto-seed on first startup
+FORCE_SEED=false      # Don't delete existing data
+SEED_CLEAN=false      # Don't clean before seeding
+SEED_VERBOSE=false    # Quiet output
+```
+
+**Then restart:**
+```bash
+docker-compose restart app
+```
+
+### Manual Seed via API
+
+```bash
+# Seed with default data
+curl -X POST http://localhost:3000/api/setup/seed-catalog
+
+# Force reseed (deletes existing data)
+curl -X POST http://localhost:3000/api/setup/seed-catalog \
+  -H "Content-Type: application/json" \
+  -d '{"force": true}'
+```
+
+### Reset Database Completely
+
+```bash
+# Delete all data and restart
+docker-compose down -v
+docker-compose up -d
+
+# Re-seed if needed
+docker-compose exec app npm run seed
+```
+
+---
+
+## 🔐 Security Tips
+
+1. **Change all passwords in `.env`:**
+   ```bash
+   openssl rand -base64 32  # Generate strong secret
+   ```
+
+2. **Use HTTPS in production:**
+   - Update `DOMAIN` to your actual domain
+   - Set `ENABLE_HTTPS=true`
+   - Generate SSL certificate with Let's Encrypt
+
+3. **Backup regularly:**
+   ```bash
+   # Backup database
+   docker-compose exec postgres pg_dump -U acrobaticz_user acrobaticz > backup.sql
+   
+   # Backup MinIO storage
+   docker-compose exec minio mc cp --recursive minio/acrobaticz ./backups/
+   ```
+
+---
+
+## ❌ Troubleshooting
+
+### Application won't start
+
+```bash
+# Check logs
+docker-compose logs app
+
+# Common issues:
+# 1. Database not ready - wait 30 seconds
+# 2. Port 3000 in use - change PORT in .env
+# 3. Out of memory - check available RAM
+```
+
+### Database connection error
+
+```bash
+# Check PostgreSQL is running
+docker-compose ps postgres
+
+# Check logs
+docker-compose logs postgres
+
+# Reset database
+docker-compose down
+docker-compose up -d postgres
+```
+
+### MinIO storage issues
+
+```bash
+# Check MinIO logs
+docker-compose logs minio
+
+# Create missing bucket
+docker-compose exec minio mc mb minio/acrobaticz
+```
+
+### Port conflicts
+
+```bash
+# Check what's using ports
+lsof -i :3000
+lsof -i :5432
+lsof -i :9000
+lsof -i :9001
+
+# Or change ports in .env
+PORT=3001  # Use different port
+```
+
+---
+
+## 📞 Getting Help
+
+**Check logs first:**
+```bash
 docker-compose logs -f app
 ```
 
-### Stop Everything
+**Common log errors & solutions:**
 
-```bash
-docker-compose down
-```
-
-Restart anytime with `docker-compose up -d`
-
----
-
-## 🆘 Troubleshooting
-
-### Port 3000 Already in Use?
-
-```bash
-# Find what's using port 3000
-lsof -i :3000
-
-# Use different port in .env
-PORT=8080
-docker-compose restart app
-```
-
-### Docker Won't Start?
-
-```bash
-# Make sure Docker Desktop is running
-# Then try:
-docker-compose up -d
-
-# Check status
-docker-compose ps
-```
-
-### Database Connection Error?
-
-```bash
-# Restart database
-docker-compose restart postgres
-
-# Wait 10 seconds, then restart app
-sleep 10
-docker-compose restart app
-```
-
-### Forgot Admin Password?
-
-```bash
-# Reset via database
-docker-compose exec postgres psql -U acrobaticz_user acrobaticz <<EOF
-UPDATE "User" SET password = 'bcrypt_hashed_admin123' WHERE email = 'admin@example.com';
-EOF
-```
+| Error | Solution |
+|-------|----------|
+| `connect ECONNREFUSED 127.0.0.1:5432` | PostgreSQL not ready - wait 30 seconds |
+| `Cannot write to /app/tmp` | Permission issue - restart Docker |
+| `port already in use` | Change PORT in .env |
+| `OutOfMemory` | Increase Docker memory limit |
 
 ---
 
-## 📚 Need More Help?
+## 🎓 Next Steps
 
-### Full Documentation
-
-- **Docker Setup:** [DOCKER_GUIDE.md](./docs/DEPLOYMENT/DOCKER_GUIDE.md)
-- **Architecture:** [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
-- **API Reference:** [API_MANAGEMENT_GUIDE.md](./docs/API/API_MANAGEMENT_GUIDE.md)
-- **Features:** [FEATURES.md](./docs/FEATURES.md)
-
-### Getting Started
-
-1. Login to dashboard
-2. Create equipment categories
-3. Add equipment items
-4. Generate quotes
-5. Manage events/rentals
+1. **First startup**: Application should be ready in 1-2 minutes
+2. **Seed data**: Use one of the seeding options above
+3. **Access**: Open http://localhost:3000
+4. **Customize**: Update `.env` for your needs
+5. **Backup**: Set up automated backups
 
 ---
 
-## 🔐 Security Checklist
+## 📋 Checklist
 
-**Before Going Live:**
-
-- [ ] Change `DB_PASSWORD` to strong value
-- [ ] Change `JWT_SECRET` to random string
-- [ ] Change admin email & password
-- [ ] Enable HTTPS (use Nginx)
-- [ ] Configure firewalls
-- [ ] Set up backups
-- [ ] Review user permissions
+- [ ] Docker installed and running
+- [ ] `.env` configured
+- [ ] Services started with `docker-compose up -d`
+- [ ] All containers show "Up" in `docker-compose ps`
+- [ ] Application accessible at http://localhost:3000
+- [ ] Database seeded (if needed)
+- [ ] Backups configured
 
 ---
 
-## 💡 Pro Tips
-
-### Backup Regularly
-```bash
-# Daily backups
-docker-compose exec postgres pg_dump -U acrobaticz_user acrobaticz > backup-$(date +%Y%m%d).sql
-```
-
-### Monitor Performance
-```bash
-# Check resource usage
-docker stats
-```
-
-### Scale Up
-```bash
-# Run multiple instances
-docker-compose up -d --scale app=3
-```
-
-### Update Application
-```bash
-# Get latest code
-git pull origin main
-
-# Rebuild and restart
-docker-compose up -d --build
-```
-
----
-
-## 📞 Support
-
-- **Issues:** Check [DOCKER_GUIDE.md Troubleshooting](./docs/DEPLOYMENT/DOCKER_GUIDE.md#troubleshooting)
-- **Database:** [DATABASE Docs](./docs/DATABASE/)
-- **Configuration:** [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
-
----
-
-## 🎉 Success!
-
-You now have a **complete rental management system** running locally or on your server.
-
-**Total time invested:** Less than 1 minute ⚡
-
-### What You Get
-
-✅ Equipment management system  
-✅ Quote generation & PDF export  
-✅ Event/rental scheduling  
-✅ Client management  
-✅ Partner integration  
-✅ Real-time inventory  
-✅ Multi-language support  
-✅ Cloud storage integration  
-✅ API access  
-✅ Reporting & analytics  
-
----
-
-## 📋 File Reference
-
-After installation, your directory contains:
-
-```
-acrobaticz/
-├── docker-compose.yml      ← Start/stop services here
-├── .env                    ← Your passwords (keep safe!)
-├── Dockerfile              ← Application container
-├── docs/                   ← Full documentation
-└── [source code...]
-```
-
----
-
-**Version:** 1.0.0  
-**Last Updated:** 2026-01-14  
-**Status:** ✅ Production Ready
-
-**Happy Renting! 🎉**
+**Version:** 1.0  
+**Last Updated:** 2026-01-18  
+**Support:** Check DOCKER_PORTABILITY_GUIDE.md for advanced topics
