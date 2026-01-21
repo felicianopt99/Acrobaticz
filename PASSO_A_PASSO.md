@@ -72,13 +72,13 @@ curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 ```
 
-### Passo 4: Configurar `.env`
+### Passo 4: Configurar `.env.production`
 ```bash
-# Copiar template
-cp .env.example .env
+# Copiar template para produção
+cp .env.production .env.production.local
 
 # Editar com suas credenciais
-nano .env
+nano .env.production.local
 ```
 
 **Variáveis OBRIGATÓRIAS para editar:**
@@ -89,6 +89,7 @@ DB_PASSWORD=senhaforte123456
 
 # JWT (gerar: openssl rand -base64 32)
 JWT_SECRET=sua_chave_secreta_aqui
+NEXTAUTH_SECRET=sua_chave_secreta_min_32_chars
 
 # MinIO (storage)
 MINIO_ROOT_PASSWORD=minioadmin123456
@@ -99,6 +100,9 @@ DUCKDNS_TOKEN=seu_token_duckdns
 
 # Domínio final
 DOMAIN=seu_dominio.duckdns.org
+NEXT_PUBLIC_SITE_URL=https://seu_dominio.duckdns.org
+NEXT_PUBLIC_API_URL=https://seu_dominio.duckdns.org/api
+NEXTAUTH_URL=https://seu_dominio.duckdns.org
 ```
 
 **Como obter DuckDNS:**
@@ -109,7 +113,7 @@ DOMAIN=seu_dominio.duckdns.org
 5. `DUCKDNS_DOMAIN=meu-app`
 6. `DUCKDNS_TOKEN=cola_aqui_o_token`
 
-### Passo 5: Salvar `.env`
+### Passo 5: Salvar `.env.production.local`
 ```bash
 # No nano:
 Ctrl+O (enter) Ctrl+X
@@ -117,6 +121,8 @@ Ctrl+O (enter) Ctrl+X
 # Ou no vim:
 :wq
 ```
+
+**Importante:** Use `.env.production.local` para não sobrescrever o template `.env.production`
 
 ✅ **Setup concluído! Faça isso apenas UMA VEZ.**
 
@@ -170,6 +176,7 @@ docker compose logs -f
 - **App**: http://localhost:3000
 - **MinIO**: http://localhost:9001
 - **Nginx**: http://seu_dominio.duckdns.org
+- **HTTPS**: https://seu_dominio.duckdns.org (após Nginx configurado)
 
 ✅ **Deploy concluído!**
 

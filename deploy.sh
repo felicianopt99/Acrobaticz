@@ -12,12 +12,12 @@ set -e
 echo "🚀 Deploying Acrobaticz..."
 echo ""
 
-# Check if .env exists
-if [ ! -f ".env" ]; then
-  echo "⚠️  Creating .env from .env.example..."
-  if [ -f ".env.example" ]; then
-    cp .env.example .env
-    echo "✅ .env created. Update it with your configuration:"
+# Check if .env.production.local exists
+if [ ! -f ".env.production.local" ]; then
+  echo "⚠️  Creating .env.production.local from .env.production..."
+  if [ -f ".env.production" ]; then
+    cp .env.production .env.production.local
+    echo "✅ .env.production.local created. Update it with your configuration:"
     echo "   - DB_PASSWORD"
     echo "   - JWT_SECRET"
     echo "   - MINIO credentials"
