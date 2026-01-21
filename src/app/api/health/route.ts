@@ -58,7 +58,7 @@ async function checkDatabaseHealth(): Promise<{
 
   try {
     // Try to get database connection from pool (non-blocking)
-    const { prisma } = require('@/lib/prisma');
+    const { prisma } = require('@/lib/prisma-extended');
     
     // Simple query to test connection (fast path)
     const start = Date.now();

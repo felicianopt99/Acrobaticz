@@ -1,4 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -10,7 +12,7 @@ async function main() {
       console.log('Creating default settings...');
       settings = await prisma.customization_settings.create({
         data: {
-          id: require('crypto').randomUUID(),
+          id: randomUUID(),
           companyName: 'AV Rentals',
           companyTagline: 'Professional Audio Visual Equipment Rental',
           contactEmail: 'info@avrental.com',

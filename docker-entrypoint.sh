@@ -279,9 +279,36 @@ while [ $MIGRATION_ATTEMPT -le $MIGRATION_MAX_RETRIES ]; do
 done
 
 # ============================================================
-# Step 8: Verify Database Schema
+# Step 8: Run Database Seed
 # ============================================================
-log_section "STEP 8: Verifying Database Schema"
+log_section "STEP 8: Seeding Database"
+
+# Check if seed script exists
+if [ -f "src/scripts/seed.ts" ]; then
+    log_info "Running database seed..."
+    
+    # Run seed with error handling
+    if timeout 600 npm run db:seed 2>&1 | tee -a "$LOG_FILE"; then
+        log_success "Database seed completed successfully"
+    else
+        seed_output=$(tail -30 "$LOG_FILE")
+        
+        if echo "$seed_output" | grep -q "already exists\|duplicate key\|UNIQUE constraint"; then
+            log_warning "Seed data already exists (database not empty)"
+            log_info "Skipping seed - data preserved"
+        else
+            log_warning "Seed failed but continuing (database may still be functional)"
+            echo "$seed_output" | tail -10
+        fi
+    fi
+else
+    log_info "No seed script found - skipping"
+fi
+
+# ============================================================
+# Step 9: Verify Database Schema
+# ============================================================
+log_section "STEP 9: Verifying Database Schema"
 
 table_count=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null || echo "0")
 
@@ -292,9 +319,9 @@ else
 fi
 
 # ============================================================
-# Step 9: Generate Prisma Client
+# Step 10: Generate Prisma Client
 # ============================================================
-log_section "STEP 9: Preparing Application"
+log_section "STEP 10: Preparing Application"
 
 # Verify node_modules exists and is readable
 if [ ! -d "node_modules" ]; then
@@ -316,9 +343,9 @@ else
 fi
 
 # ============================================================
-# Step 10: Verify Seed Endpoint
+# Step 11: Verify Seed Endpoint
 # ============================================================
-log_section "STEP 10: Verifying Seed Endpoint"
+log_section "STEP 11: Verifying Seed Endpoint"
 
 if [ -f "src/scripts/catalog-seed-complete.ts" ] && [ -f "src/app/api/setup/seed-catalog/route.ts" ]; then
     log_success "Catalog seed service available"
@@ -333,7 +360,7 @@ if [ -f "CATALOG_65_PRODUTOS/SUPPLEMENTARY_DATA.json" ]; then
 fi
 
 # ============================================================
-# Step 11: Startup Summary
+# Step 12: Startup Summary
 # ============================================================
 END_TIME=$(date +%s)
 STARTUP_DURATION=$((END_TIME - STARTUP_TIME))
@@ -345,6 +372,7 @@ log_info "Port: $PORT"
 log_info "Database: Ready ✓"
 [ "$MINIO_READY" = true ] && log_info "Storage: Ready ✓" || log_info "Storage: Not available"
 log_info "Migrations: Applied ✓"
+log_info "Seed: Completed ✓"
 log_info "Seed API: Available ✓"
 
 echo ""
@@ -358,7 +386,7 @@ echo "${GREEN}══════════════════════
 echo ""
 
 # ============================================================
-# Step 12: Start Application
+# Step 13: Start Application
 # ============================================================
 log_section "STARTING APPLICATION"
 

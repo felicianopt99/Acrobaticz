@@ -47,14 +47,12 @@ services:
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     
-    # Extended health check for development
-    # More verbose to help debug issues
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-acrobaticz_user} -d ${DB_NAME:-acrobaticz_dev} -v"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+      test: ["CMD-SHELL", "pg_isready -U acrobaticz_user || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     
     ports:
       - "5432:5432"

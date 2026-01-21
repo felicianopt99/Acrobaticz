@@ -13,8 +13,8 @@
 # testing
 /coverage
 
-# next.js
-/.next/
+# next.js - DO NOT IGNORE .next/ FOR DEPLOYMENT
+# /.next/ - COMMENTED OUT: We commit .next/ for pre-built deployment
 /out/
 
 # production
@@ -38,16 +38,40 @@ yarn-error.log*
 next-env.d.ts
 
 .genkit/*
-.env*
+.env
+.env.local
+.env.*.local
+.env.production
 !.env.example
-env
-env.production
 
 # firebase
 firebase-debug.log
 firestore-debug.log
 
-# project artifacts
+# Docker volumes and local data
+data/
+dev-storage/
+storage/
+/certs/*.pem
+/certs/*.key
+.minio/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Runtime
+tmp/
+*.pid
+dist/
+
+# Build cache
+.turbo/
+.next/.cache/
+.next/cache/
 logs/*.log
 scripts/logs/*.log
 reports/

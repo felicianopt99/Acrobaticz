@@ -3,8 +3,116 @@ import type { Config } from "tailwindcss";
 export default {
     darkMode: ["class"],
     content: [
+    // ========================================================
+    // CRÍTICO: Cobertura COMPLETA de todos os diretórios
+    // que contêm componentes React com classes Tailwind.
+    // Em production (NODE_ENV=production), Tailwind faz
+    // aggressive tree-shaking baseado estes patterns.
+    // Diretórios faltando aqui = CSS REMOVIDO!
+    // ========================================================
+    
+    // Core application structure
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/providers/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/contexts/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/hooks/**/*.{js,ts,jsx,tsx,mdx}",
+    
+    // 🆕 ADICIONAR: Feature modules e sub-componentes
+    "./src/ui/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/features/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/modules/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/sections/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/templates/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/layouts/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/blocks/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/widgets/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/views/**/*.{js,ts,jsx,tsx,mdx}",
+    
+    // Utilities and shared
+    "./src/utils/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/constants/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/helpers/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  // Safelist for dynamically generated classes that Tailwind can't detect at build time
+  safelist: [
+    // Login page dynamic classes
+    "rounded-none",
+    "border-0",
+    "border-b-2",
+    "bg-transparent",
+    "px-0",
+    "px-3",
+    "px-4",
+    "pr-10",
+    "rounded-full",
+    "rounded-lg",
+    "rounded-md",
+    "shadow-sm",
+    "shadow-md",
+    "shadow-lg",
+    "shadow-xl",
+    "mr-auto",
+    "ml-auto",
+    "mx-auto",
+    "hover:scale-[1.02]",
+    "hover:opacity-90",
+    "transition-all",
+    "duration-200",
+    "duration-300",
+    "ease-out",
+    // Dynamic sizing
+    "w-full",
+    "max-w-md",
+    "h-8",
+    "w-8",
+    "h-5",
+    "w-5",
+    "h-4",
+    "w-4",
+    // Utility classes
+    "bg-card",
+    "text-card-foreground",
+    "text-foreground",
+    "text-muted-foreground",
+    "border",
+    "transition-colors",
+    "absolute",
+    "relative",
+    "z-10",
+    "z-20",
+    "z-5",
+    "inset-0",
+    "top-4",
+    "right-4",
+    "right-2",
+    "top-1/2",
+    "-translate-y-1/2",
+    "mb-4",
+    "mb-2",
+    "mb-1",
+    "mb-6",
+    "mt-6",
+    "space-y-4",
+    "gap-4",
+    "items-center",
+    "justify-center",
+    "items-end",
+    "text-center",
+    "text-lg",
+    "text-2xl",
+    "text-sm",
+    "font-bold",
+    "font-semibold",
+    "min-h-screen",
+    "flex",
+    "px-4",
+    "overflow-hidden",
+    "animate-spin",
+    "focus:outline-none",
+    "hover:text-foreground",
   ],
   theme: {
   	screens: {
